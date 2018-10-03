@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+
+import json, getpass
+from chaosindy.common import *
+from chaosindy.probes.validator_info import get_validator_info
+from os.path import expanduser
+from os import environ
+from shutil import rmtree
+
+username = getpass.getuser()
+
+# TODO: use argparse to get user input
+genesis_file = environ.get('CHAOS_GENESIS_FILE', '/home/{}/pool1/pool_transactions_genesis'.format(username))
+
+# Generate a temp dir containing JSON for each validator node
+get_validator_info(genesis_file, timeout=DEFAULT_CHAOS_GET_VALIDATOR_INFO_TIMEOUT)
+temp_dir = get_chaos_temp_dir()
+
+aliases = []
+with open(expanduser(genesis_file), 'r') as genesisfile:
+    for line in genesisfile:
+        aliases.append(json.loads(line)['txn']['data']['data']['alias'])
+
+# Extract Catchup_status for the domain ledger for each validator_node
+print("Node\tMaster")
+print("")
+for node in sorted(aliases):
+    filename = "{}/{}-validator-info".format(temp_dir, node)
+    try:
+        with open(filename, 'r') as f:
+            validator_info = json.load(f)
+        if 'data' in validator_info.keys():
+            print("{}\t{}".format( node,
+                validator_info['data']['Node_info']['Replicas_status']['{}:0'.format(node)]['Primary'] ))
+        else:
+            print("{}\t{}".format( node,
+                validator_info['Node_info']['Replicas_status']['{}:0'.format(node)]['Primary'] ))
+    except:
+        print("{}\t{}".format( node, 'Unknown' ))
+
+# Cleanup
+rmtree(temp_dir)
