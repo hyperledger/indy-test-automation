@@ -1,0 +1,142 @@
+{
+    "version": "1.0.0",
+    "title": "Induce consensus failure and recovery by removing and then restoring a sufficient number of nodes",
+    "description": "Kill f random nodes to cause the cluster to fall out of consensus, test to ensure the cluster is out of consensus, bring one node back, and re-test; expecting the cluster to be in consensus.",
+    "tags": [
+        "service",
+        "indy-node",
+        "concensus"
+    ],
+    "configuration": {
+        "seed": {
+            "type": "env",
+            "key": "CHAOS_SEED"
+        },
+        "ssh_config_file": {
+            "type": "env",
+            "key": "CHAOS_SSH_CONFIG_FILE"
+        },
+        "genesis_file": {
+            "type": "env",
+            "key": "CHAOS_GENESIS_FILE"
+        },
+        "write_nym_timeout": {
+            "type": "env",
+            "key": "CHAOS_WRITE_NYM_TIMEOUT"
+        },
+        "kill_count": {
+            "type": "env",
+            "key": "CHAOS_KILL_COUNT"
+        },
+        "up_count": {
+            "type": "env",
+            "key": "CHAOS_UP_COUNT"
+        }
+    },
+    "steady-state-hypothesis": {
+        "title": "Can write nym",
+        "probes": [
+            {
+                "type": "probe",
+                "name": "all-nodes-are-up",
+                "tolerance": true,
+                "provider": {
+                    "type": "python",
+                    "module": "chaosindy.actions.node",
+                    "func": "all_nodes_up",
+                    "arguments": {
+                        "genesis_file": "${genesis_file}",
+                        "ssh_config_file": "${ssh_config_file}"
+                    }
+                }
+            },
+            {
+                "type": "probe",
+                "name": "can-write-nym",
+                "tolerance": true,
+                "provider": {
+                    "type": "python",
+                    "module": "chaosindy.probes.write_nym",
+                    "func": "write_nym",
+                    "arguments": {
+                        "seed": "${seed}",
+                        "genesis_file": "${genesis_file}",
+                        "pool_name": "consensus_recovery_pool1",
+                        "my_wallet_name": "consensus_recovery_my_wallet1",
+                        "their_wallet_name": "consensus_recovery_their_wallet1",
+                        "timeout": "${write_nym_timeout}"
+                    }
+                }
+            }
+        ]
+    },
+    "method": [
+        {
+            "type": "action",
+            "name": "kill-random-nodes",
+            "provider": {
+                "type": "python",
+                "module": "chaosindy.actions.node",
+                "func": "kill_random_nodes",
+                "arguments": {
+                    "genesis_file": "${genesis_file}",
+                    "ssh_config_file": "${ssh_config_file}",
+                    "count": "${kill_count}"
+                }
+            },
+            "pauses": {
+                "after": 5
+            }
+        },
+        {
+            "type": "probe",
+            "name": "cannot-write-nym",
+            "tolerance": false,
+            "provider": {
+                "type": "python",
+                "module": "chaosindy.probes.write_nym",
+                "func": "write_nym",
+                "arguments": {
+                    "seed": "${seed}",
+                    "genesis_file": "${genesis_file}",
+                    "pool_name": "consensus_recovery_pool2",
+                    "my_wallet_name": "consensus_recovery_my_wallet2",
+                    "their_wallet_name": "consensus_recovery_their_wallet2",
+                    "timeout": "${write_nym_timeout}"
+                }
+            }
+        },
+        {
+            "type": "action",
+            "name": "ensure-all-nodes-up",
+            "provider": {
+                "type": "python",
+                "module": "chaosindy.actions.node",
+                "func": "all_nodes_up",
+                "arguments": {
+                    "genesis_file": "${genesis_file}",
+                    "ssh_config_file": "${ssh_config_file}"
+                }
+            },
+            "pauses": {
+                "after": 10
+            }
+        }
+
+    ],
+    "rollbacks": [
+        {
+            "type": "probe",
+            "name": "all-nodes-up",
+            "provider": {
+                "type": "python",
+                "module": "chaosindy.actions.node",
+                "func": "all_nodes_up",
+                "arguments": {
+                    "genesis_file": "${genesis_file}",
+                    "ssh_config_file": "${ssh_config_file}"
+                }
+            }
+        }
+    ]
+}
