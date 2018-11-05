@@ -266,6 +266,18 @@ echo CHAOS_CLEANUP=${CHAOS_CLEANUP}
 echo PYTHONPATH=${PYTHONPATH}
 echo number_of_executions=${number_of_executions}
 
+# Validation should be done here, because the defaults may be invalid
+if [ ! -f "${CHAOS_SSH_CONFIG_FILE}" ]
+then
+    echo "SSH configuration file ${CHAOS_SSH_CONFIG_FILE} does not exist."
+    usage
+fi
+if [ ! -f "${CHAOS_GENESIS_FILE}" ]
+then
+    echo "Pool genesis transaction file ${CHAOS_GENESIS_FILE} does not exist."
+    usage
+fi
+
 # Run the experiment
 for i in $(seq 1 ${number_of_executions})
 do
