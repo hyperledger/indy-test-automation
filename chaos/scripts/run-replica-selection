@@ -4,7 +4,7 @@
 # Default parameters are as follows:
 export CHAOS_SEED=000000000000000000000000Trustee1
 export CHAOS_GENESIS_FILE=/home/${USER}/pool1/pool_transactions_genesis
-export CHAOS_SSH_CONFIG_FILE=/home/${USER}/.ssh/config
+export CHAOS_SSH_CONFIG_FILE=/home/${USER}/pool1/ssh_config
 export CHAOS_PING_TIMEOUT=10
 export CHAOS_WRITE_NYM_TIMEOUT=60
 export CHAOS_CLEANUP=Y
