@@ -19,12 +19,17 @@ class CliRunner:
     def _create_batch_file_name(self):
         return "cli-batch-" + str(time.time()).replace(".", "-", 1)
 
-    def _find_available_batch_name(self, run_name: str, num_modifier: int=0):
-        if num_modifier > 0:
-            run_name = run_name + "-" + str(num_modifier).zfill(2)
-        if len(glob.glob(os.path.join(self.output_dir, run_name)+"*")) != 0:
-            run_name = self._find_available_batch_name(run_name, num_modifier=num_modifier+1)
-        return run_name
+    def _find_available_batch_name(self, run_name, num_modifier=0):
+        # if num_modifier > 0:
+        #     run_name = run_name + "-" + str(num_modifier).zfill(2)
+
+        name_to_test = run_name if not num_modifier > 0 else run_name + "-" + str(num_modifier).zfill(2)
+
+        if len(glob.glob(os.path.join(self.output_dir, name_to_test)+"*")) != 0:
+            return self._find_available_batch_name(run_name, num_modifier=num_modifier+1)
+        else:
+            return name_to_test
+
 
     def run(self, batch: str, run_name: str=None):
         logger.info("Running batch. name: %s", run_name)
