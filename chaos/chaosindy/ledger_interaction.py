@@ -62,6 +62,8 @@ async def write_nym_and_check(seed: str = None, pool_name: str = None,
         my_wallet_name = DEFAULT_CHAOS_MY_WALLET_NAME
 
     now = datetime.now()
+    pool_name = "{}-{}".format(pool_name,
+                               now.strftime("%Y%m%dT%H%M%S"))
     my_wallet_name = "{}-{}".format(my_wallet_name,
                                     now.strftime("%Y%m%dT%H%M%S"))
 
@@ -199,9 +201,6 @@ async def write_nym_and_check(seed: str = None, pool_name: str = None,
             pass
 
 
-# NOTE: Workaround: Until https://jira.hyperledger.org/browse/IS-903 is
-#       completed, create, populate, use and then delete a new wallet each time
-#       write_nym_and_check is called.
 async def get_validator_state(genesis_file: str = None, seed: str = None,
                               pool_name: str = None, wallet_name: str = None,
                               wallet_key: str = None, cleanup=True) -> None:
@@ -252,6 +251,8 @@ async def get_validator_state(genesis_file: str = None, seed: str = None,
         wallet_name = DEFAULT_CHAOS_WALLET_NAME
 
     now = datetime.now()
+    pool_name = "{}-{}".format(pool_name,
+                                 now.strftime("%Y%m%dT%H%M%S"))
     wallet_name = "{}-{}".format(wallet_name,
                                  now.strftime("%Y%m%dT%H%M%S"))
 
