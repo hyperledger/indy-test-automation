@@ -62,6 +62,7 @@ does not already exist) and adding the following lines to config.properties:
 ```
 # Sovrin Test Automation
 repos.sovrin.test.automation.path=
+repos.sovrin.test.automation.username=
 repos.sovrin.test.automation.url=git@github.com:<USERNAME>/sovrin-test-automation.git
 repos.sovrin.test.automation.git.private.key=~/.ssh/id_rsa
 repos.sovrin.test.automation.branch=master
