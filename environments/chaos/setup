@@ -1,0 +1,284 @@
+#!/bin/bash -e
+
+# Black        0;30     Dark Gray     1;30
+# Red          0;31     Light Red     1;31
+# Green        0;32     Light Green   1;32
+# Brown/Orange 0;33     Yellow        1;33
+# Blue         0;34     Light Blue    1;34
+# Purple       0;35     Light Purple  1;35
+# Cyan         0;36     Light Cyan    1;36
+# Light Gray   0;37     White         1;37
+BLUE='[34m' # Blue
+RED='[31m' # Red
+NC='[0m' # No Color
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  TARGET="$(readlink "$SOURCE")"
+  if [[ $TARGET == /* ]]; then
+    SOURCE="$TARGET"
+  else
+    DIR="$( dirname "$SOURCE" )"
+    SOURCE="$DIR/$TARGET"
+  fi
+done
+RDIR="$( dirname "$SOURCE" )"
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+if [ -d "${DIR}/ssh" ]; then
+    read -r -p "Delete and recreate directory ${DIR}/ssh? [Y/n] " input
+    if [ "${input}foo" == "foo" ]
+    then
+        echo "Defaulting to \"Y\""
+        input="Y"
+    fi
+    case $input in
+        [yY][eE][sS]|[yY])
+            echo "Removing ${DIR}/ssh..."
+            rm -rf ${DIR}/ssh
+        ;;
+        [nN][oO]|[nN])
+            echo "Skipping removal of ${DIR}/ssh..."
+        ;;
+        *)
+            echo "Invalid input..."
+            exit 1
+        ;;
+    esac
+fi
+
+# Begin helper functions
+function get_property()
+{
+  name=${1}
+  #echo "Getting property ${name} from ${DIR}/config.properties..." >&2
+  match=$(grep ^${name} ${DIR}/config.properties | cut -d"=" -f2)
+  # Turn on globbing extension
+  shopt -s extglob
+  # Trim leading and trailing whitespace
+  match="${match##*([[:space:]])}"
+  echo "${match%%*([[:space:]])}"
+  # Turn off globbing extension
+  shopt -u extglob
+}
+
+function set_property()
+{
+  pname=${1}
+  pvalue=${2}
+
+  echo "Setting ${pname}=${pvalue} in ${DIR}/config.properties..." >&2
+  re=${pname//\./\\\.}
+  properties_file="${DIR}/config.properties"
+  echo "re=${re}"
+  echo "replacement: ${pname}=${pvalue}"
+  echo "Replacing property $pname with $pvalue in ${properties_file}"
+  sed -i '' "s|^${re}=.*$|${pname}=${pvalue}|g" ${properties_file}
+}
+
+function prompt_and_set_property()
+{
+  name=${1}
+  message=${2}
+  default=${3}
+
+  while read -p "${BLUE}${message}${NC} " str_value; do
+    if [[ -z "${str_value}" && ! -z "${default}" ]]
+    then
+       echo "Using default of ${default}"
+       str_value="${default}"
+    fi
+    if [ ! -z "${str_value}" ]
+    then
+      break
+    fi
+    echo "${name} property cannot be blank."
+  done
+  set_property "${name}" "${str_value}"
+}
+
+function set_int_property()
+{
+  name=${1}
+  min=${2}
+  max=${3}
+  message=${4}
+  default=${5}
+
+  if [[ "${min}" -eq "-1" ]]
+  then
+    min="–2147483648"
+  fi
+  if [[ "${max}" -eq "-1" ]]
+  then
+    max="2147483647"
+  fi
+  
+  while read -p "${BLUE}${message}${NC} " int_value; do
+    if [ -z "${int_value}" ]
+    then
+       echo "Using default of ${default}"
+       int_value="${default}"
+    fi
+
+    if [[ "${int_value}" -lt ${min} || "${int_value}" -gt ${max} ]]
+    then
+      echo "${int_value} must be a number between ${min} and ${max} inclusive."
+      continue
+    fi
+    break
+  done
+  set_property ${name} ${int_value}
+}
+# End helper functions
+
+# Ensure git is installed
+echo "Checking if git is installed..."
+if ! command -v git
+then
+    echo "...git command does not exist. Install git and try again."
+    exit 1
+else
+    echo "...git is installed"
+fi
+
+# Create a config.properties file if it does not yet exist.
+if [ ! -f "${DIR}/config.properties" ]
+then
+  echo "Creating config.properties..."
+  cp ${DIR}/config.properties.template ${DIR}/config.properties
+fi
+
+echo "Creating ssh directory ${DIR}/ssh..."
+mkdir -m 700 -p ${DIR}/ssh
+
+echo "Generating RSA key pair..."
+ssh-keygen -t rsa -N "" -f ${DIR}/ssh/id_rsa #-e -m pem
+
+echo "Generating PEM file from RSA key pair..."
+echo "Generating PEM file from RSA public key..."
+ssh-keygen -f ${DIR}/ssh/id_rsa -e -m pem > ${DIR}/ssh/chaos.pem
+echo "Securing PEM file before appending private key..."
+chmod 600 ${DIR}/ssh/chaos.pem
+echo "Appending RSA private key to PEM file..."
+cat ${DIR}/ssh/id_rsa >> ${DIR}/ssh/chaos.pem
+
+# Note: Associative arrays were introduced in bash 4.0
+#       Mac uses a sub-4.0 version of bash :(. Therefore, we are required to use
+#       an array and making assumptions about the URL.
+SOURCES=($(grep ^repos ${DIR}/config.properties | grep \.url=  | cut -d"=" -f1 | cut -d"." -f2- | rev | cut -d"." -f2- | rev | tr "." "-"))
+
+echo "Ensuring all chaos source repos are present..."
+for repo in "${SOURCES[@]}"
+do
+  echo "Checking if directory ${DIR}/${repo} exists..."
+
+  # Replace dashes with dots. Perperties do not use dashes (ruby/vagrantfile
+  # problem).
+  encoded_repo_name=$(echo ${repo} | tr "-" ".")
+
+  # Get the repo path from the config.properties file
+  repo_path_property="repos.${encoded_repo_name}.path"
+  repopath=$(get_property "${repo_path_property}")
+
+  # Default to look in the Vagrant project directory if not set in properties
+  # file.
+  if [ -z "${repopath}" ]; then
+    # If blank, by default, look for a clone in the root of the Vagrant project
+    repopath="${DIR}/${repo}"
+  fi
+
+  # If the directory does not exist, ask what the user wants to do to get/set
+  # a clone/path
+  while [ ! -d "${repopath}" ]
+  do
+    echo "${RED}Unable to detect a clone of repo '${repo}' at path '${repopath}'${NC}".
+    echo "${BLUE}What would you like to do?"
+    echo "  1. Enter/Update the full path to repo '${repo}' on my Vagrant host."
+    echo "  2. I have forked '${repo}' on github. Clone it for me."
+    echo "  3. Exit. I will fork and/or clone the repo and run setup again."
+    read -r -p "> ${NC}" choice
+
+    case $choice in
+      1)
+        # Prompt for the absolute path for the clone
+        prompt_and_set_property "${repo_path_property}" "Enter the full path to repo '${repo}':"
+        repopath=$(get_property ${repo_path_property})
+        echo "You entered path >${repopath}<"
+        echo "Checking if the clone exists..."
+        continue
+      ;;
+      2)
+        # Get the repo username
+        github_username_property="repos.${encoded_repo_name}.username"
+        github_username=$(get_property ${github_username_property})
+
+        # Check if the username is empty
+        if [ "${github_username}foo" = "foo" ]
+        then
+          # Prompt for the username
+          prompt_and_set_property "${github_username_property}" "Please enter your github username:"
+          github_username=$(get_property ${github_username_property})
+          echo "You entered username >${github_username}<"
+          echo "Assuming you have a fork of ${repo} on github under username ${github_username}"
+        fi
+
+        # Set the URL
+        github_url_property="repos.${encoded_repo_name}.url"
+        url="https://github.com/${github_username}/${repo}.git"
+        set_property "${github_url_property}" ${url}
+
+        # Get the branch property
+        branch_property="repos.${encoded_repo_name}.branch"
+        branch=$(get_property ${branch_property})
+        branch_switch=""
+        if [ ! -z "${branch}" ]
+        then
+          # Set the branch switch if the branch is defined and not blank
+          branch_switch="-b ${branch}"
+        fi
+
+        # Clone the repo
+        echo "Cloning the ${repo} repo from ${url}..."
+        clonedir="${DIR}/${repo}"
+        echo "Command: git clone ${url} ${branch_switch} ${clonedir}"
+        if ! git clone ${url} ${branch_switch} ${clonedir}
+        then
+          echo "Failed to clone ${repo} from ${url}."
+          echo "Please correct the ${github_username_property} and/or ${github_url_property} property in ${DIR}/config.properties and run setup again."
+          exit 1
+        else
+          set_property "${repo_path_property}" "${clonedir}"
+        fi
+        break
+      ;;
+      3)
+        echo "Please run setup again after you fork and/or clone repo ${repo}"
+        exit 1
+      ;;
+      *)
+        echo "Invalid input. Must be 1, 2, or 3."
+        continue
+      ;;
+    esac
+  done
+done
+
+# Make sure client.count is set in config.properties
+client_count=$(get_property 'client.count')
+if [ "${client_count}" == "<CLIENTCOUNT>" ]
+then
+  message="How many client nodes should be created? (default: 1)"
+  set_int_property "client.count" 1 5 "${message}" 1
+fi
+
+# Make sure validator.count is set in config.properties
+validator_count=$(get_property 'validator.count')
+if [ "${validator_count}" == "<VALIDATORCOUNT>" ]
+then
+  message="How many validator nodes should be created? (default: 4)"
+  set_int_property "validator.count" 4 25 "${message}" 4
+fi
+
+echo ""
+echo "Setup complete"
