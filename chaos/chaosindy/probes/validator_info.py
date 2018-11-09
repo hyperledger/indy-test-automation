@@ -301,7 +301,7 @@ def get_validator_info_from_cli(genesis_file: str, did: str,
 
     # Pool creation
     indy_cli_command_batch = join(output_dir, "indy-cli-create-pool.in")
-    with open(indy_cli_command_batch, "a") as f:
+    with open(indy_cli_command_batch, "w") as f:
         f.write("pool create {} gen_txn_file={}\n".format(pool, genesis_file))
         f.write("exit")
     create_pool = subprocess.check_output(["indy-cli", indy_cli_command_batch],
@@ -309,7 +309,7 @@ def get_validator_info_from_cli(genesis_file: str, did: str,
 
     # Wallet creation
     indy_cli_command_batch = join(output_dir, "indy-cli-create-wallet.in")
-    with open(indy_cli_command_batch, "a") as f:
+    with open(indy_cli_command_batch, "w") as f:
         if wallet_key:
           f.write("wallet create {} key={}\n".format(wallet_name, wallet_key))
         else:
@@ -322,7 +322,7 @@ def get_validator_info_from_cli(genesis_file: str, did: str,
     # DID creation
     if seed:
         indy_cli_command_batch = join(output_dir, "indy-cli-create-did.in")
-        with open(indy_cli_command_batch, "a") as f:
+        with open(indy_cli_command_batch, "w") as f:
             if wallet_key:
               f.write("wallet open {} key={}\n".format(wallet_name, wallet_key))
             else:
@@ -335,7 +335,7 @@ def get_validator_info_from_cli(genesis_file: str, did: str,
 
     # Get validator information
     indy_cli_command_batch = join(output_dir, "indy-cli-get-validator-info.in")
-    with open(indy_cli_command_batch, "a") as f:
+    with open(indy_cli_command_batch, "w") as f:
         if wallet_key:
           f.write("wallet open {} key={}\n".format(wallet_name, wallet_key))
         else:
@@ -343,6 +343,7 @@ def get_validator_info_from_cli(genesis_file: str, did: str,
         f.write("did use {}\n".format(did))
         f.write("pool connect {}\n".format(pool))
         f.write("ledger get-validator-info timeout={}\n".format(timeout))
+        f.write("pool disconnect\n")
         f.write("exit")
     # NOTE: Allow the subprocess to execute 5 seconds longer than the
     #       'ledger get-validator-info' CLI command
@@ -482,16 +483,21 @@ def get_validator_info(genesis_file: str, did: str = DEFAULT_CHAOS_DID,
     :type source: int
     :return: bool
     """
+    logger.debug("Getting validator info timeout: %d", int(timeout))
     if source == ValidatorInfoSource.NODE.value:
+        logger.debug("Getting validator info using the validator-info script " \
+                     "on each node.")
         return get_validator_info_from_node(genesis_file, timeout=timeout,
                                             ssh_config_file=ssh_config_file)
     elif source == ValidatorInfoSource.CLI.value:
+        logger.debug("Getting validator info using indy-cli")
         return get_validator_info_from_cli(genesis_file, did=did, seed=seed,
                                            wallet_name=wallet_name,
                                            wallet_key=wallet_key, pool=pool,
                                            timeout=timeout,
                                            ssh_config_file=ssh_config_file)
     elif source == ValidatorInfoSource.SDK.value:
+        logger.debug("Getting validator info using indy-sdk")
         return get_validator_info_from_sdk(genesis_file, did=did, seed=seed,
                                            wallet_name=wallet_name,
                                            wallet_key=wallet_key, pool=pool,

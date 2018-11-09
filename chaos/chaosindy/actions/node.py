@@ -1875,6 +1875,10 @@ def start_by_strategy(genesis_file: str, alias: str,
 
 
 def get_primary(genesis_file: str,
+                wallet_name: str = DEFAULT_CHAOS_WALLET_NAME,
+                wallet_key: str = DEFAULT_CHAOS_WALLET_KEY,
+                pool: str = DEFAULT_CHAOS_POOL,
+                timeout: Union[str,int] = DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT,
                 ssh_config_file: str = DEFAULT_CHAOS_SSH_CONFIG_FILE,
                 compile_stats: bool = True) -> str:
     """
@@ -1883,6 +1887,22 @@ def get_primary(genesis_file: str,
     :param genesis_file: The relative or absolute path to a genesis file.
         Required.
     :type genesis_file: str
+    :param wallet_name: The name of the wallet to use when getting validator
+        info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_NAME)
+    :type wallet_name: str
+    :param wallet_key: The key to use when opening the wallet designated by
+        wallet_name.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_KEY)
+    :type wallet_key: str
+    :param pool: The pool to connect to when getting validator info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_POOL)
+    :type pool: str
+    :param timeout: How long indy-cli can take to perform the operation before
+        timing out.
+        Optional.
+        (Default: chaosindy.common.DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT)
+    :type timeout: Union[str,int]
     :param ssh_config_file: The relative or absolute path to the SSH config
         file.
         Optional. (Default: chaosindy.common.DEFAULT_CHAOS_SSH_CONFIG_FILE)
@@ -1902,7 +1922,12 @@ def get_primary(genesis_file: str,
     """
     primary = None
     if compile_stats:
-        detect_primary(genesis_file, ssh_config_file=ssh_config_file)
+        detect_primary(genesis_file,
+                       wallet_name=wallet_name,
+                       wallet_key=wallet_key,
+                       pool=pool,
+                       timeout=timeout,
+                       ssh_config_file=ssh_config_file)
 
     output_dir = get_chaos_temp_dir()
     with open("{}/primaries".format(output_dir), 'r') as primaries:
@@ -1913,6 +1938,10 @@ def get_primary(genesis_file: str,
 
 
 def stop_primary(genesis_file: str,
+                 wallet_name: str = DEFAULT_CHAOS_WALLET_NAME,
+                 wallet_key: str = DEFAULT_CHAOS_WALLET_KEY,
+                 pool: str = DEFAULT_CHAOS_POOL,
+                 timeout: Union[str,int] = DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT,
                  stop_strategy: int = StopStrategy.SERVICE.value,
                  ssh_config_file: str = DEFAULT_CHAOS_SSH_CONFIG_FILE) -> bool:
     """
@@ -1931,6 +1960,22 @@ def stop_primary(genesis_file: str,
     :param genesis_file: The relative or absolute path to a genesis file.
         Required.
     :type genesis_file: str
+    :param wallet_name: The name of the wallet to use when getting validator
+        info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_NAME)
+    :type wallet_name: str
+    :param wallet_key: The key to use when opening the wallet designated by
+        wallet_name.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_KEY)
+    :type wallet_key: str
+    :param pool: The pool to connect to when getting validator info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_POOL)
+    :type pool: str
+    :param timeout: How long indy-cli can take to perform the operation before
+        timing out.
+        Optional.
+        (Default: chaosindy.common.DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT)
+    :type timeout: Union[str,int]
     :param stop_strategy: A stop strategy defined by the
         chaosindy.common.StopStrategy enum. Examples include:
         StopStrategy.SERVICE - Stop the indy-node service (graceful)
@@ -1946,6 +1991,10 @@ def stop_primary(genesis_file: str,
     :return: bool
     """
     primary = get_primary(genesis_file, compile_stats=True,
+                          wallet_name=wallet_name,
+                          wallet_key=wallet_key,
+                          pool=pool,
+                          timeout=timeout,
                           ssh_config_file=ssh_config_file)
     if primary:
         output_dir = get_chaos_temp_dir()
@@ -1967,7 +2016,12 @@ def stop_primary(genesis_file: str,
     return False
 
 
-def wait_for_view_change(genesis_file: str,
+def wait_for_view_change(
+    genesis_file: str,
+    wallet_name: str = DEFAULT_CHAOS_WALLET_NAME,
+    wallet_key: str = DEFAULT_CHAOS_WALLET_KEY,
+    pool: str = DEFAULT_CHAOS_POOL,
+    timeout: Union[str,int] = DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT,
     previous_primary: str = None, max_checks_for_primary: int = 6,
     sleep_between_checks: int = 10,
     ssh_config_file: str = DEFAULT_CHAOS_SSH_CONFIG_FILE) -> int:
@@ -1980,6 +2034,22 @@ def wait_for_view_change(genesis_file: str,
     :param genesis_file: The relative or absolute path to a genesis file.
         Required.
     :type genesis_file: str
+    :param wallet_name: The name of the wallet to use when getting validator
+        info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_NAME)
+    :type wallet_name: str
+    :param wallet_key: The key to use when opening the wallet designated by
+        wallet_name.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_KEY)
+    :type wallet_key: str
+    :param pool: The pool to connect to when getting validator info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_POOL)
+    :type pool: str
+    :param timeout: How long indy-cli can take to perform the operation before
+        timing out.
+        Optional.
+        (Default: chaosindy.common.DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT)
+    :type timeout: Union[str,int]
     :param previous_primary: The previous known primary
         Optional. (Default: None)
     :type previous_primary: str
@@ -2000,6 +2070,10 @@ def wait_for_view_change(genesis_file: str,
     tries = 0
     while tries < max_checks_for_primary:
         current_primary = get_primary(genesis_file,
+                                      wallet_name=wallet_name,
+                                      wallet_key=wallet_key,
+                                      pool=pool,
+                                      timeout=timeout,
                                       ssh_config_file=ssh_config_file,
                                       compile_stats=True)
         logger.debug("Check %d of %d if view change is complete", tries,
@@ -2017,8 +2091,14 @@ def wait_for_view_change(genesis_file: str,
     return tries
 
 
-def start_stopped_primary_after_view_change(genesis_file: str,
-    max_checks_for_primary: int = 6, sleep_between_checks: int = 10,
+def start_stopped_primary_after_view_change(
+    genesis_file: str,
+    wallet_name: str = DEFAULT_CHAOS_WALLET_NAME,
+    wallet_key: str = DEFAULT_CHAOS_WALLET_KEY,
+    pool: str = DEFAULT_CHAOS_POOL,
+    timeout: Union[str,int] = DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT,
+    max_checks_for_primary: int = 6,
+    sleep_between_checks: int = 10,
     start_backup_primaries: bool = True,
     ssh_config_file: str = DEFAULT_CHAOS_SSH_CONFIG_FILE) -> bool:
     """
@@ -2046,6 +2126,22 @@ def start_stopped_primary_after_view_change(genesis_file: str,
     :param genesis_file: The relative or absolute path to a genesis file.
         Required.
     :type genesis_file: str
+    :param wallet_name: The name of the wallet to use when getting validator
+        info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_NAME)
+    :type wallet_name: str
+    :param wallet_key: The key to use when opening the wallet designated by
+        wallet_name.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_KEY)
+    :type wallet_key: str
+    :param pool: The pool to connect to when getting validator info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_POOL)
+    :type pool: str
+    :param timeout: How long indy-cli can take to perform the operation before
+        timing out.
+        Optional.
+        (Default: chaosindy.common.DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT)
+    :type timeout: Union[str,int]
     :param max_checks_for_primary: How many times to poll validator info for
         primary information.
         Optional. (Default: 6)
@@ -2080,6 +2176,10 @@ def start_stopped_primary_after_view_change(genesis_file: str,
     stopped_primary = stopped_primary_dict.get('stopped_primary', None)
     if stopped_primary:
         tries = wait_for_view_change(genesis_file=genesis_file,
+            wallet_name=wallet_name,
+            wallet_key=wallet_key,
+            pool=pool,
+            timeout=timeout,
             previous_primary=stopped_primary,
             max_checks_for_primary=max_checks_for_primary,
             sleep_between_checks=sleep_between_checks,
@@ -2169,6 +2269,10 @@ def start_stopped_primary(genesis_file: str,
 
 
 def stop_f_backup_primaries_before_primary(genesis_file: str,
+    wallet_name: str = DEFAULT_CHAOS_WALLET_NAME,
+    wallet_key: str = DEFAULT_CHAOS_WALLET_KEY,
+    pool: str = DEFAULT_CHAOS_POOL,
+    timeout: Union[str,int] = DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT,
     f: Union[str, int] = None, stop_strategy: int = StopStrategy.SERVICE.value,
     ssh_config_file: str = DEFAULT_CHAOS_SSH_CONFIG_FILE) -> bool:
     """
@@ -2203,6 +2307,22 @@ def stop_f_backup_primaries_before_primary(genesis_file: str,
     :param genesis_file: The relative or absolute path to a genesis file.
         Required.
     :type genesis_file: str
+    :param wallet_name: The name of the wallet to use when getting validator
+        info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_NAME)
+    :type wallet_name: str
+    :param wallet_key: The key to use when opening the wallet designated by
+        wallet_name.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_KEY)
+    :type wallet_key: str
+    :param pool: The pool to connect to when getting validator info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_POOL)
+    :type pool: str
+    :param timeout: How long indy-cli can take to perform the operation before
+        timing out.
+        Optional.
+        (Default: chaosindy.common.DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT)
+    :type timeout: Union[str,int]
     :param f: This is typically the number of nodes that can fail w/o losing
         consensus and can be found in validator-info. It is exposed as a
         parameter as a means for experimentation.
@@ -2221,7 +2341,12 @@ def stop_f_backup_primaries_before_primary(genesis_file: str,
     :type ssh_config_file: str
     :return: bool
     """
-    primary = get_primary(genesis_file, compile_stats=True,
+    primary = get_primary(genesis_file,
+                          wallet_name=wallet_name,
+                          wallet_key=wallet_key,
+                          pool=pool,
+                          timeout=timeout,
+                          compile_stats=True,
                           ssh_config_file=ssh_config_file)
     if primary:
         output_dir = get_chaos_temp_dir()
@@ -2265,7 +2390,12 @@ def stop_f_backup_primaries_before_primary(genesis_file: str,
         return True
     return False
 
-def stop_n_nodes(genesis_file: str, number_of_nodes: Union[str, int] = 1,
+def stop_n_nodes(genesis_file: str,
+    wallet_name: str = DEFAULT_CHAOS_WALLET_NAME,
+    wallet_key: str = DEFAULT_CHAOS_WALLET_KEY,
+    pool: str = DEFAULT_CHAOS_POOL,
+    timeout: Union[str,int] = DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT,
+    number_of_nodes: Union[str, int] = 1,
     selection_strategy: int = SelectionStrategy.FORWARD.value,
     stop_strategy: int = StopStrategy.SERVICE.value,
     include_primary: str = 'Yes',
@@ -2296,6 +2426,22 @@ def stop_n_nodes(genesis_file: str, number_of_nodes: Union[str, int] = 1,
     :param genesis_file: The relative or absolute path to a genesis file.
         Required.
     :type genesis_file: str
+    :param wallet_name: The name of the wallet to use when getting validator
+        info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_NAME)
+    :type wallet_name: str
+    :param wallet_key: The key to use when opening the wallet designated by
+        wallet_name.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_WALLET_KEY)
+    :type wallet_key: str
+    :param pool: The pool to connect to when getting validator info.
+        Optional. (Default: chaosindy.common.DEFAULT_CHAOS_POOL)
+    :type pool: str
+    :param timeout: How long indy-cli can take to perform the operation before
+        timing out.
+        Optional.
+        (Default: chaosindy.common.DEFAULT_CHAOS_LEDGER_TRANSACTION_TIMEOUT)
+    :type timeout: Union[str,int]
     :param number_of_nodes: How many nodes to stop.
         Optional. (Default: 1)
     :type number_of_nodes: Union[str,int]
@@ -2404,7 +2550,12 @@ def stop_n_nodes(genesis_file: str, number_of_nodes: Union[str, int] = 1,
         include_other_nodes = False
 
     # Get replica information from the primary's validator info
-    primary = get_primary(genesis_file, compile_stats=True,
+    primary = get_primary(genesis_file,
+                          wallet_name=wallet_name,
+                          wallet_key=wallet_key,
+                          pool=pool,
+                          timeout=timeout,
+                          compile_stats=True,
                           ssh_config_file=ssh_config_file)
     # See true_list in chaosindy.common
     if include_primary.lower() in true_list:
@@ -2467,7 +2618,6 @@ def stop_n_nodes(genesis_file: str, number_of_nodes: Union[str, int] = 1,
     if number_of_nodes > len(node_selection):
         number_of_nodes = len(node_selection)
 
-    #import pdb; pdb.set_trace()
     # Determine the nodes to stop based on the SelectionStrategy
     if selection_strategy == SelectionStrategy.RANDOM.value:
         node_selection_random = []
@@ -2504,6 +2654,10 @@ def stop_n_nodes(genesis_file: str, number_of_nodes: Union[str, int] = 1,
                   " view change."
         logger.debug(message, primary)
         tries = wait_for_view_change(genesis_file=genesis_file,
+            wallet_name=wallet_name,
+            wallet_key=wallet_key,
+            pool=pool,
+            timeout=timeout,
             previous_primary=primary,
             max_checks_for_primary=max_checks_for_primary,
             sleep_between_checks=sleep_between_checks,
@@ -2668,7 +2822,12 @@ def decrease_f_to(genesis_file: str, f_value: Union[str,int] = 1,
         logger.error(message.format(selection_strategy))
         return False
 
-    primary = get_primary(genesis_file, ssh_config_file=ssh_config_file,
+    primary = get_primary(genesis_file,
+                          wallet_name=wallet_name,
+                          wallet_key=wallet_key,
+                          pool=pool,
+                          timeout=timeout,
+                          ssh_config_file=ssh_config_file,
                           compile_stats=True)
 
     current_f_value = None

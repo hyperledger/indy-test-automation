@@ -4,7 +4,7 @@
 # Default parameters are as follows:
 export CHAOS_SEED=000000000000000000000000Trustee1
 export CHAOS_GENESIS_FILE=/home/${USER}/pool1/pool_transactions_genesis
-export CHAOS_SSH_CONFIG_FILE=/home/${USER}/.ssh/config
+export CHAOS_SSH_CONFIG_FILE=/home/${USER}/pool1/ssh_config
 export CHAOS_WRITE_NYM_TIMEOUT=60
 export CHAOS_KILL_COUNT=4
 export CHAOS_UP_COUNT=10
@@ -166,6 +166,18 @@ echo CHAOS_KILL_COUNT=${CHAOS_KILL_COUNT}
 echo CHAOS_UP_COUNT=${CHAOS_UP_COUNT}
 echo PYTHONPATH=${PYTHONPATH}
 echo number_of_executions=${number_of_executions}
+
+# Validation should be done here, because the defaults may be invalid
+if [ ! -f "${CHAOS_SSH_CONFIG_FILE}" ]
+then
+    echo "SSH configuration file ${CHAOS_SSH_CONFIG_FILE} does not exist."
+    usage
+fi
+if [ ! -f "${CHAOS_GENESIS_FILE}" ]
+then
+    echo "Pool genesis transaction file ${CHAOS_GENESIS_FILE} does not exist."
+    usage
+fi
 
 # Run the experiment
 for i in $(seq 1 ${number_of_executions})

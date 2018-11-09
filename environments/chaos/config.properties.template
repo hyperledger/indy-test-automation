@@ -1,0 +1,81 @@
+# Repos
+# -------------------------
+# Each repo included should define the following properties:
+#
+# IMPORTANT: Replace all dashes ('-') with dots in <REPO>. For example,
+#            'indy-test-automation', becomes 'indy.test.automation' in this
+#            properties file.
+#
+# Example superset of properties:
+#
+
+# Path
+# ~~~~
+# The full path to the cloned repo on your workstation. Leave this blank or
+# undefined and define a development.repos.<REPO>.url to have the Vagrantfile
+# clone the repo for you.
+#repos.<REPO>.path=<PATH TO CLONED REPO DIRECTORY>
+
+# Username
+# ~~~~
+# The username to use when interacting with the repo defined in the URL property
+#repos.<REPO>.username=<USERNAME>
+
+# URL
+# ~~~~
+# Where to clone a copy of the repository. You will be prompted for a username
+# if the URL contains "<USERNAME>".
+#repos.<REPO>.url=<forked repo url with '<USERNAME>' in it>
+
+# Branch
+# ~~~~~~
+# The branch to checkout before running CI/CD targets
+#repos.<REPO>.branch=<BRANCH>
+
+# Shared/Synced Folder Type
+# ~~~~~~
+# The method Vagrant will use to sync repo changes. Set this option only if you
+# clearly understand the behavior as outlined in Vagrant's 'Synced Folders'
+# documentation. When left unset, Vagrant will deside the best method based on
+# your system's capabilities.
+#repos.<REPO>.sharedfolder.type=<TYPE>
+
+# Indy Node
+repos.indy.node.path=
+repos.indy.node.username=
+repos.indy.node.url=git@github.com:<USERNAME>/indy-node.git
+repos.indy.node.branch=
+repos.indy.node.sharedfolder.type=
+
+# Indy Test Automation
+repos.indy.test.automation.path=
+repos.indy.test.automation.username=
+repos.indy.test.automation.url=git@github.com:<USERNAME>/indy-test-automation.git
+repos.indy.test.automation.branch=
+repos.indy.test.automation.sharedfolder.type=
+
+# Add additional repos here using the following template; replacing <REPO>:
+# IMPORTANT! - All dashes ('-') in <REPO> names must be changed to dots ('.').
+#              indy-node and indy-test-automation repos above are examples.
+# <REPO> Test Automation
+#repos.<REPO>.path=
+#repos.<REPO>.username=
+#repos.<REPO>.url=git@github.com:<USERNAME>/sovrin-test-automation.git
+#repos.<REPO>.branch=master
+#repos.<REPO>.sharedfolder.type=
+
+# Number of clients
+client.count=<CLIENTCOUNT>
+
+# Number of nodes
+validator.count=<VALIDATORCOUNT>
+
+# Client VM Config
+client.box=bento/ubuntu-16.04
+client.cpus=1
+client.memory=1024
+
+# Validator VM Config
+validator.box=bento/ubuntu-16.04
+validator.cpus=1
+validator.memory=1024
