@@ -60,7 +60,7 @@ repos.indy.test.automation.sharedfolder.type=
 # <REPO> Test Automation
 #repos.<REPO>.path=
 #repos.<REPO>.username=
-#repos.<REPO>.url=git@github.com:<USERNAME>/sovrin-test-automation.git
+#repos.<REPO>.url=git@github.com:<USERNAME>/<REPO.git>
 #repos.<REPO>.branch=master
 #repos.<REPO>.sharedfolder.type=
 
