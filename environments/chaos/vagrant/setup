@@ -73,7 +73,7 @@ function set_property()
   echo "re=${re}"
   echo "replacement: ${pname}=${pvalue}"
   echo "Replacing property $pname with $pvalue in ${properties_file}"
-  sed -i '' "s|^${re}=.*$|${pname}=${pvalue}|g" ${properties_file}
+  sed -i -e "s|^${re}=.*$|${pname}=${pvalue}|g" ${properties_file}
 }
 
 function prompt_and_set_property()

@@ -51,10 +51,10 @@ def write_etc_hosts(vagrant_dirname, clientlist, validatorlist)
     host_file.write("ff02::1 ip6-allnodes\n")
     host_file.write("ff02::2 ip6-allrouters\n")
     clientlist.each_with_index do |value, index|
-      host_file.write("#{value}    cli#{index + 1}.sovrin.lab cli#{index + 1}\n")
+      host_file.write("#{value}    cli#{index + 1}.indy.lab cli#{index + 1}\n")
     end
     validatorlist.each_with_index do |value, index|
-      host_file.write("#{value}    validator#{index + 1}.sovrin.lab validator#{index + 1} Node#{index + 1}.sovrin.lab Node#{index + 1}\n")
+      host_file.write("#{value}    validator#{index + 1}.indy.lab validator#{index + 1} Node#{index + 1}.indy.lab Node#{index + 1}\n")
     end
   end
 end
@@ -145,14 +145,7 @@ clientiplist = Array.new
 # A comma separated list of validator ips in the range 10.20.30.201-256
 nodeiplist = Array.new
 
-# TODO: change the 'repo' default back to master
-# Cannot use master due to version pinning in master version of sovtoken package
-# Both sovtoken and indy-node dep on indy-plenum, libindy, etc. and indy-node
-# also pins to a specific version, but a version that only exists in master.
-# We can't have two versions of indy-plenum, libindy, etc. Use stable until
-# sovtoken changes it's '=' designation to '>='.
-#repo = "master"
-repo = "stable"
+repo = "master"
 
 # modify this for your timezone
 timezone = '/usr/share/zoneinfo/America/Denver'

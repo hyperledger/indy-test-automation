@@ -86,7 +86,7 @@ apt-get update
 # Indy node is needed to provide the "generate_indy_pool_transactions"
 # executable used below.
 # The following deps are for Chaos: python3 python3-venv libffi-dev
-DEBIAN_FRONTEND=noninteractive apt-get install -y unzip make screen indy-node indy-cli libsovtoken tmux vim wget python3 python3-venv libffi-dev
+DEBIAN_FRONTEND=noninteractive apt-get install -y unzip make screen indy-node indy-cli tmux vim wget python3 python3-venv libffi-dev
 
 # Required by generate_indy_pool_transactions script
 awk '{if (index($1, "NETWORK_NAME") != 0) {print("NETWORK_NAME = \"sandbox\"")} else print($0)}' /etc/indy/indy_config.py> /tmp/indy_config.py
@@ -168,17 +168,6 @@ do
   #             indy-test-automation clone is shared from the vagrant host
   cd /src/indy-test-automation/chaos && /home/${username}/.venvs/chaostk/bin/python3 setup.py develop
 
-  # Force all requirements to be pip3 installed.
-  echo "Preinstalling all chaossovtoken dependecies defined in requirements.txt and requirements-dev.txt..."
-  su - ${username} -c "/home/${username}/.venvs/chaostk/bin/pip3 install $(cat /src/sovrin-test-automation/chaos/requirements.txt | xargs)"
-  su - ${username} -c "/home/${username}/.venvs/chaostk/bin/pip3 install $(cat /src/sovrin-test-automation/chaos/requirements-dev.txt | xargs)"
-  # Install chaossovtoken in the virtualenv
-  echo "Installing chaossovtoken within chaostk virtualenv..."
-  # Important - Running the python3 setup.py develop as as the given user
-  #             results in a permission denied, because the
-  #             sovrin-test-automation clone is shared from the vagrant host
-  cd /src/sovrin-test-automation/chaos && /home/${username}/.venvs/chaostk/bin/python3 setup.py develop
-
   # Enhance the .profile 
   profilefile="/home/${username}/.profile"
 
@@ -195,7 +184,6 @@ do
   # Aliases convenient for changing directory to chaos directory under each source repo
   repos=(
     "indy"
-    "sovrin"
   )
 
   run_all_paths=

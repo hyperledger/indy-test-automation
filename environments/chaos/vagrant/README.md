@@ -53,19 +53,14 @@ projects:
 [**indy-test-automation**](https://github.com/hyperledger/indy-test-automation)
 
 Additional repos can be added to the config.properties file before or after
-running the `setup` script mentioned below. For example, Chaos experiments that
-test Indy Node/Plenum plugin functionality can be added for
-[**sovrin-test-automation**](https://github.com/sovrin-foundation/sovrin-test-automation)
-by copying config.properties.template to config.properties (if and only if it
-does not already exist) and adding the following lines to config.properties:
+running the `setup` script mentioned below. 
 
 ```
-# Sovrin Test Automation
-repos.sovrin.test.automation.path=
-repos.sovrin.test.automation.username=
-repos.sovrin.test.automation.url=git@github.com:<USERNAME>/sovrin-test-automation.git
-repos.sovrin.test.automation.git.private.key=~/.ssh/id_rsa
-repos.sovrin.test.automation.branch=master
+repos.<REPO.ALIAS>.path=
+repos.<REPO.ALIAS>.username=
+repos.<REPO.ALIAS>.url=git@github.com:<USERNAME>/<REPO.git>
+repos.<REPO.ALIAS>.git.private.key=~/.ssh/id_rsa
+repos.<REPO.ALIAS>.branch=master
 ```
 
 The `setup` script in the following section will clone the branch configured in
@@ -135,7 +130,7 @@ Run the setup script. The setup script will do the following:
       indy-node/indy-plenum functionality. See
       '/src/indy-test-automation/run.py --help' for details.
 
-      A run\<REPO\> (i.e. replace \<REPO\> with indy or sovrin) alias is placed
+      A run\<REPO\> (i.e. replace \<REPO\> with indy) alias is placed
       in /home/[vagrant|ubuntu]/.profile for convenience in running _**all**_ of
       the experiments in the given repo. Login to a client (i.e. cli1) and run
       the 'alias' command to list all available aliases and get familiar with
