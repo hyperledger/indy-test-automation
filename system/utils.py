@@ -27,10 +27,14 @@ def random_seed_and_json():
         json.dumps({'seed': base58.b58encode(random_string(23)).decode()})
 
 
-async def pool_helper(pool_name=None, path_to_genesis='./docker_genesis'):
+async def pool_helper(pool_name=None, path_to_genesis='./docker_genesis', node_list=None):
     if not pool_name:
         pool_name = random_string(5)
-    pool_config = json.dumps({"genesis_txn": path_to_genesis})
+    if node_list:
+        pool_config = json.dumps({"genesis_txn": path_to_genesis, "preordered_nodes": node_list})
+    else:
+        pool_config = json.dumps({"genesis_txn": path_to_genesis})
+    # print(pool_config)
     await pool.create_pool_ledger_config(pool_name, pool_config)
     pool_handle = await pool.open_pool_ledger(pool_name, pool_config)
 
