@@ -27,7 +27,8 @@ async def test_pool_upgrade_positive():
              'koKn32jREPYR642DQsFftPoCkTf3XCPcfvc3x9RhRK7'
              ]
     init_time = -150
-    version = '1.6.706'
+    version = '1.6.710'
+    status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
     _sha256 = hashlib.sha256().hexdigest()
@@ -42,31 +43,53 @@ async def test_pool_upgrade_positive():
             datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
          for dest, i in zip(dests, range(len(dests)))}
     ))
-    reinstall = False
+    reinstall = True
     force = True
     # package = 'indy-node'
-    pool_handle, _ = await pool_helper(path_to_genesis='./aws_genesis')
+    pool_handle, _ = await pool_helper(path_to_genesis='./docker_genesis')
     wallet_handle, _, _ = await wallet_helper()
+    random_did = random_did_and_json()[0]
+    another_random_did = random_did_and_json()[0]
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
-
+    # add NYM before the upgrade
+    add_before = json.loads(await nym_helper(pool_handle, wallet_handle, trustee_did, random_did))
     req = await ledger.build_pool_upgrade_request(trustee_did, name, version, action, _sha256, _timeout,
-                                                  aws_25_schedule, None, reinstall, force, None)
+                                                  docker_4_schedule, None, reinstall, force, None)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     print(res)
 
     time.sleep(120)
 
     docker_4_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 5)]
-    aws_25_hosts = [testinfra.get_host('ssh://auto_node'+str(i),
-                                       ssh_config='/home/indy/indy-node/pool_automation/auto/.ssh/ssh_config')
-                    for i in range(1, 26)]
-    print(aws_25_hosts)
-    os.chdir('/home/indy/indy-node/pool_automation/auto/.ssh/')
-    outputs = [host.run('dpkg -l | grep indy-node') for host in aws_25_hosts]
-    print(outputs)
+    # aws_25_hosts = [testinfra.get_host('ssh://auto_node'+str(i),
+    #                                    ssh_config='/home/indy/indy-node/pool_automation/auto/.ssh/ssh_config')
+    #                 for i in range(1, 26)]
+    print(docker_4_hosts)
+    # os.chdir('/home/indy/indy-node/pool_automation/auto/.ssh/')
+    version_outputs = [host.run('dpkg -l | grep indy-node') for host in docker_4_hosts]
+    print(version_outputs)
+    status_outputs = [host.run('systemctl status indy-node') for host in docker_4_hosts]
+    print(status_outputs)
     os.chdir('/home/indy/PycharmProjects/tests')
-    checks = [output.stdout.find(version) for output in outputs]
-    print(checks)
-    for check in checks:
+    version_checks = [output.stdout.find(version) for output in version_outputs]
+    print(version_checks)
+    status_checks = [output.stdout.find(status) for output in status_outputs]
+    print(status_checks)
+    # read NYM that was added before the upgrade
+    get_after_old = json.loads(await get_nym_helper(pool_handle, wallet_handle, trustee_did, random_did))
+    # add NYM after the upgrade
+    add_after = json.loads(await nym_helper(pool_handle, wallet_handle, trustee_did, another_random_did))
+    # read NYM that was added after the upgrade
+    get_after_new = json.loads(await get_nym_helper(pool_handle, wallet_handle, trustee_did, another_random_did))
+
+    assert add_before['op'] == 'REPLY'
+    assert add_after['op'] == 'REPLY'
+    assert get_after_old['result']['seqNo'] is not None
+    assert get_after_new['result']['seqNo'] is not None
+
+    for check in version_checks:
+        assert check is not -1
+
+    for check in status_checks:
         assert check is not -1
