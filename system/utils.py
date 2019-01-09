@@ -27,10 +27,14 @@ def random_seed_and_json():
         json.dumps({'seed': base58.b58encode(random_string(23)).decode()})
 
 
-async def pool_helper(pool_name=None, path_to_genesis='./docker_genesis'):
+async def pool_helper(pool_name=None, path_to_genesis='./docker_genesis', node_list=None):
     if not pool_name:
         pool_name = random_string(5)
-    pool_config = json.dumps({"genesis_txn": path_to_genesis})
+    if node_list:
+        pool_config = json.dumps({"genesis_txn": path_to_genesis, "preordered_nodes": node_list})
+    else:
+        pool_config = json.dumps({"genesis_txn": path_to_genesis})
+    # print(pool_config)
     await pool.create_pool_ledger_config(pool_name, pool_config)
     pool_handle = await pool.open_pool_ledger(pool_name, pool_config)
 
@@ -67,14 +71,14 @@ async def payment_initializer(library_name, initializer_name):
 async def nym_helper(pool_handle, wallet_handle, submitter_did, target_did,
                      target_vk=None, target_alias=None, target_role=None):
     req = await ledger.build_nym_request(submitter_did, target_did, target_vk, target_alias, target_role)
-    res = await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
 async def attrib_helper(pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None):
     req = await ledger.build_attrib_request(submitter_did, target_did, xhash, raw, enc)
-    res = await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
@@ -83,7 +87,7 @@ async def schema_helper(pool_handle, wallet_handle, submitter_did, schema_name, 
     schema_id, schema_json = await anoncreds.issuer_create_schema(submitter_did, schema_name, schema_version,
                                                                   schema_attrs)
     req = await ledger.build_schema_request(submitter_did, schema_json)
-    res = await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return schema_id, res
 
@@ -93,7 +97,7 @@ async def cred_def_helper(pool_handle, wallet_handle, submitter_did, schema_json
         await anoncreds.issuer_create_and_store_credential_def(wallet_handle, submitter_did, schema_json, tag,
                                                                signature_type, config_json)
     req = await ledger.build_cred_def_request(submitter_did, cred_def_json)
-    res = await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return cred_def_id, cred_def_json, res
 
@@ -127,28 +131,28 @@ async def revoc_reg_entry_helper(pool_handle, wallet_handle, submitter_did, revo
 
 async def get_nym_helper(pool_handle, wallet_handle, submitter_did, target_did):
     req = await ledger.build_get_nym_request(submitter_did, target_did)
-    res = await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
 async def get_attrib_helper(pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None):
     req = await ledger.build_get_attrib_request(submitter_did, target_did, raw, xhash, enc)
-    res = await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
 async def get_schema_helper(pool_handle, wallet_handle, submitter_did, id_):
     req = await ledger.build_get_schema_request(submitter_did, id_)
-    res = await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
 async def get_cred_def_helper(pool_handle, wallet_handle, submitter_did, id_):
     req = await ledger.build_get_cred_def_request(submitter_did, id_)
-    res = await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
