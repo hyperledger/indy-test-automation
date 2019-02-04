@@ -2,13 +2,13 @@ import json
 import string
 import random
 import base58
-from indy import pool, wallet, ledger, anoncreds, blob_storage
+from indy import pool, wallet, did, ledger, anoncreds, blob_storage
 from ctypes import CDLL
+import functools
+import asyncio
 
 
 def run_async_method(method, *args, **kwargs):
-
-    import asyncio
     loop = asyncio.get_event_loop()
     loop.run_until_complete(method(*args, **kwargs))
 
@@ -29,7 +29,7 @@ def random_seed_and_json():
 
 async def pool_helper(pool_name=None, path_to_genesis='./docker_genesis', node_list=None):
     if not pool_name:
-        pool_name = random_string(5)
+        pool_name = random_string(25)
     if node_list:
         pool_config = json.dumps({"genesis_txn": path_to_genesis, "preordered_nodes": node_list})
     else:
@@ -43,7 +43,7 @@ async def pool_helper(pool_name=None, path_to_genesis='./docker_genesis', node_l
 
 async def wallet_helper(wallet_id=None, wallet_key='', wallet_key_derivation_method='ARGON2I_INT'):
     if not wallet_id:
-        wallet_id = random_string(5)
+        wallet_id = random_string(25)
     wallet_config = json.dumps({"id": wallet_id})
     wallet_credentials = json.dumps({"key": wallet_key, "key_derivation_method": wallet_key_derivation_method})
     await wallet.create_wallet(wallet_config, wallet_credentials)
@@ -60,6 +60,12 @@ async def pool_destructor(pool_handle, pool_name):
 async def wallet_destructor(wallet_handle, wallet_config, wallet_credentials):
     await wallet.close_wallet(wallet_handle)
     await wallet.delete_wallet(wallet_config, wallet_credentials)
+
+
+async def default_trustee(wallet_handle):
+    trustee_did, trustee_vk = await did.create_and_store_my_did(
+        wallet_handle, json.dumps({'seed': '000000000000000000000000Trustee1'}))
+    return trustee_did, trustee_vk
 
 
 async def payment_initializer(library_name, initializer_name):
@@ -176,3 +182,13 @@ async def get_revoc_reg_delta_helper(pool_handle, wallet_handle, submitter_did, 
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
+
+
+def run_in_event_loop(async_func):
+    @functools.wraps(async_func)
+    def wrapped(operations, queue_size, add_size, get_size, event_loop):
+        event_loop.run_until_complete(asyncio.ensure_future(
+            async_func(operations, queue_size, add_size, get_size, event_loop),
+            loop=event_loop,
+        ))
+    return wrapped
