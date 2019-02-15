@@ -1,11 +1,10 @@
 import pytest
-import testinfra
 from utils import *
 from indy import *
 from async_generator import yield_, async_generator
-import time
-from random import sample, shuffle
-from json import JSONDecodeError
+import os
+import subprocess
+from subprocess import CalledProcessError
 
 
 @pytest.fixture()
@@ -32,138 +31,32 @@ async def get_default_trustee(wallet_handler):
 
 @pytest.fixture()
 @async_generator
-async def send_and_get_nyms_before_and_after(get_default_trustee, pool_handler, wallet_handler, check_ledger_sync):
-    trustee_did, _ = get_default_trustee
-    random_did = random_did_and_json()[0]
-    another_random_did = random_did_and_json()[0]
-
-    add_before = await nym_helper(pool_handler, wallet_handler, trustee_did, random_did)
-    assert add_before['op'] == 'REPLY'
-    get_before = await get_nym_helper(pool_handler, wallet_handler, trustee_did, random_did)
-    assert get_before['result']['seqNo'] is not None
-    print('\nSEND AND GET NYM SETUP IS DONE!')
-
-    await yield_()
-
-    add_after = await nym_helper(pool_handler, wallet_handler, trustee_did, another_random_did)
-    assert add_after['op'] == 'REPLY'
-    get_after = await get_nym_helper(pool_handler, wallet_handler, trustee_did, another_random_did)
-    time.sleep(5)
-    get_after_backup = await get_nym_helper(pool_handler, wallet_handler, trustee_did, another_random_did)
-    assert (get_after['result']['seqNo'] | get_after_backup['result']['seqNo']) is not None
-    print('\nSEND AND GET NYM TEARDOWN IS DONE!')
-
-
-@pytest.fixture()
-@async_generator
-async def stop_and_start_primary(get_default_trustee, pool_handler, wallet_handler):
-    trustee_did, _ = get_default_trustee
-
-    req = await ledger.build_get_validator_info_request(trustee_did)
-    results = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    try:
-        result = json.loads(sample(results.items(), 1)[0][1])
-    except JSONDecodeError:
-        try:
-            shuffle(list(results.keys()))
-            result = json.loads(sample(results.items(), 1)[0][1])
-        except JSONDecodeError:
-            shuffle(list(results.keys()))
-            result = json.loads(sample(results.items(), 1)[0][1])
-    name_before = result['result']['data']['Node_info']['Name']
-    primary_before =\
-        result['result']['data']['Node_info']['Replicas_status'][name_before+':0']['Primary'][len('Node'):-len(':0')]
-    host = testinfra.get_host('docker://node'+primary_before)
-    host.run('systemctl stop indy-node')
-    print('\nPRIMARY NODE {} HAS BEEN STOPPED!'.format(primary_before))
+async def docker_setup_and_teardown():
+    os.chdir('/home/indy/indy-node/environment/docker/pool')
+    containers = subprocess.check_output(['docker', 'ps', '-a', '-q']).decode().strip().split()
+    outputs = [subprocess.check_call(['docker', 'rm', container, '-f']) for container in containers]
+    assert outputs is not None
+    # Uncomment to destroy all images too
+    # images = subprocess.check_output(['docker', 'images', '-q']).decode().strip().split()
+    # try:
+    #     outputs = [subprocess.check_call(['docker', 'rmi', image, '-f']) for image in images]
+    #     assert outputs is not None
+    # except CalledProcessError:
+    #     pass
+    pool_start_result = subprocess.check_output(['./pool_start.sh', '7']).decode().strip()
+    assert pool_start_result.find('Pool started') is not -1
+    time.sleep(15)
 
     await yield_()
 
-    host.run('systemctl start indy-node')
-    req = await ledger.build_get_validator_info_request(trustee_did)
-    results = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    try:
-        result = json.loads(sample(results.items(), 1)[0][1])
-    except JSONDecodeError:
-        try:
-            shuffle(list(results.keys()))
-            result = json.loads(sample(results.items(), 1)[0][1])
-        except JSONDecodeError:
-            shuffle(list(results.keys()))
-            result = json.loads(sample(results.items(), 1)[0][1])
-    name_after = result['result']['data']['Node_info']['Name']
-    primary_after =\
-        result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
-    print('\nEX-PRIMARY NODE HAS BEEN STARTED!')
-    print('\nNEW PRIMARY IS {}'.format(primary_after))
-
-    assert primary_before != primary_after
-
-
-@pytest.fixture()
-@async_generator
-async def demote_and_promote_primary(get_default_trustee, pool_handler, wallet_handler):
-    trustee_did, _ = get_default_trustee
-
-    req_vi = await ledger.build_get_validator_info_request(trustee_did)
-    results = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req_vi))
-    try:
-        result = json.loads(sample(results.items(), 1)[0][1])
-    except JSONDecodeError:
-        try:
-            shuffle(list(results.keys()))
-            result = json.loads(sample(results.items(), 1)[0][1])
-        except JSONDecodeError:
-            shuffle(list(results.keys()))
-            result = json.loads(sample(results.items(), 1)[0][1])
-    name_before = result['result']['data']['Node_info']['Name']
-    primary_before =\
-        result['result']['data']['Node_info']['Replicas_status'][name_before+':0']['Primary'][len('Node'):-len(':0')]
-    res = json.loads(results['Node'+primary_before])
-    target_did = res['result']['data']['Node_info']['did']
-    alias = res['result']['data']['Node_info']['Name']
-    demote_data = json.dumps({'alias': alias, 'services': []})
-    demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
-    demote_res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, demote_req))
-    assert demote_res['op'] == 'REPLY'
-    print('\nPRIMARY NODE {} HAS BEEN DEMOTED!'.format(primary_before))
-
-    await yield_()
-
-    promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
-    promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
-    promote_res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, promote_req))
-    host = testinfra.get_host('docker://node'+primary_before)
-    host.run('systemctl restart indy-node')
-    assert promote_res['op'] == 'REPLY'
-    print('\nEX-PRIMARY NODE HAS BEEN PROMOTED AND RESTARTED!')
-
-    results = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req_vi))
-    try:
-        result = json.loads(sample(results.items(), 1)[0][1])
-    except JSONDecodeError:
-        try:
-            shuffle(list(results.keys()))
-            result = json.loads(sample(results.items(), 1)[0][1])
-        except JSONDecodeError:
-            shuffle(list(results.keys()))
-            result = json.loads(sample(results.items(), 1)[0][1])
-    name_after = result['result']['data']['Node_info']['Name']
-    primary_after =\
-        result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
-    print('\nNEW PRIMARY IS {}'.format(primary_after))
-
-    assert primary_before != primary_after
-
-
-@pytest.fixture()
-@async_generator
-async def check_ledger_sync(get_default_trustee, pool_handler, wallet_handler):
-
-    await yield_()
-
-    time.sleep(10)
-    hosts = [testinfra.get_host('docker://node{}'.format(i)) for i in range(1, 5)]
-    results = [host.run('read_ledger --type=domain --count') for host in hosts]
-    assert all([results[i].stdout == results[i+1].stdout for i in range(-1, len(results)-1)])
-    print('\nLEDGER SYNC TEARDOWN: {}'.format([result.stdout for result in results]))
+    containers = subprocess.check_output(['docker', 'ps', '-a', '-q']).decode().strip().split()
+    outputs = [subprocess.check_call(['docker', 'rm', container, '-f']) for container in containers]
+    assert outputs is not None
+    # Uncomment to destroy all images too
+    # images = subprocess.check_output(['docker', 'images', '-q']).decode().strip().split()
+    # try:
+    #     outputs = [subprocess.check_call(['docker', 'rmi', image, '-f']) for image in images]
+    #     assert outputs is not None
+    # except CalledProcessError:
+    #     pass
+    os.chdir('/home/indy')

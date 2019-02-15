@@ -6,6 +6,10 @@ from indy import pool, wallet, did, ledger, anoncreds, blob_storage
 from ctypes import CDLL
 import functools
 import asyncio
+import testinfra
+from random import sample, shuffle
+from json import JSONDecodeError
+import time
 
 
 def run_async_method(method, *args, **kwargs):
@@ -27,7 +31,7 @@ def random_seed_and_json():
         json.dumps({'seed': base58.b58encode(random_string(23)).decode()})
 
 
-async def pool_helper(pool_name=None, path_to_genesis='./docker_genesis', node_list=None):
+async def pool_helper(pool_name=None, path_to_genesis='/home/indy/docker_genesis', node_list=None):
     if not pool_name:
         pool_name = random_string(25)
     if node_list:
@@ -192,3 +196,306 @@ def run_in_event_loop(async_func):
             loop=event_loop,
         ))
     return wrapped
+
+
+async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
+    add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    assert add['op'] == 'REPLY'
+    time.sleep(1)
+    get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    if not get['result']['seqNo']:
+        get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    assert get['result']['seqNo'] is not None
+
+
+def check_ledger_sync():
+    hosts = [testinfra.get_host('docker://node{}'.format(i)) for i in range(1, 5)]
+    results = [host.run('read_ledger --type=domain --count') for host in hosts]
+    print('\nLEDGER SYNC: {}'.format([result.stdout for result in results]))
+    assert all([results[i].stdout == results[i + 1].stdout for i in range(-1, len(results) - 1)])
+
+
+async def stop_primary(pool_handle, wallet_handle, trustee_did):
+    try:
+        req = await ledger.build_get_validator_info_request(trustee_did)
+        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        try:
+            result = json.loads(sample(results.items(), 1)[0][1])
+        except JSONDecodeError:
+            try:
+                shuffle(list(results.keys()))
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                shuffle(list(results.keys()))
+                result = json.loads(sample(results.items(), 1)[0][1])
+        name_before = result['result']['data']['Node_info']['Name']
+        primary_before =\
+            result['result']['data']['Node_info']['Replicas_status'][name_before+':0']['Primary'][len('Node'):
+                                                                                                  -len(':0')]
+    except TypeError:
+        try:
+            time.sleep(120)
+            req = await ledger.build_get_validator_info_request(trustee_did)
+            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            try:
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                try:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+                except JSONDecodeError:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+            name_before = result['result']['data']['Node_info']['Name']
+            primary_before = \
+                result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
+                                                                                                        -len(':0')]
+        except TypeError:
+            time.sleep(240)
+            req = await ledger.build_get_validator_info_request(trustee_did)
+            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            try:
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                try:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+                except JSONDecodeError:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+            name_before = result['result']['data']['Node_info']['Name']
+            primary_before = \
+                result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
+                                                                                                        -len(':0')]
+    host = testinfra.get_host('docker://node'+primary_before)
+    host.run('systemctl stop indy-node')
+    print('\nPRIMARY NODE {} HAS BEEN STOPPED!'.format(primary_before))
+
+    return primary_before
+
+
+async def start_primary(pool_handle, wallet_handle, trustee_did, primary_before):
+    host = testinfra.get_host('docker://node'+primary_before)
+    host.run('systemctl start indy-node')
+    try:
+        req = await ledger.build_get_validator_info_request(trustee_did)
+        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        try:
+            result = json.loads(sample(results.items(), 1)[0][1])
+        except JSONDecodeError:
+            try:
+                shuffle(list(results.keys()))
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                shuffle(list(results.keys()))
+                result = json.loads(sample(results.items(), 1)[0][1])
+        name_after = result['result']['data']['Node_info']['Name']
+        primary_after =\
+            result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
+    except TypeError:
+        try:
+            time.sleep(120)
+            req = await ledger.build_get_validator_info_request(trustee_did)
+            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            try:
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                try:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+                except JSONDecodeError:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+            name_after = result['result']['data']['Node_info']['Name']
+            primary_after = \
+                result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][len('Node'):
+                                                                                                       -len(':0')]
+        except TypeError:
+            time.sleep(240)
+            req = await ledger.build_get_validator_info_request(trustee_did)
+            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            try:
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                try:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+                except JSONDecodeError:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+            name_after = result['result']['data']['Node_info']['Name']
+            primary_after = \
+                result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][len('Node'):
+                                                                                                       -len(':0')]
+    print('\nEX-PRIMARY NODE HAS BEEN STARTED!')
+    print('\nNEW PRIMARY IS {}'.format(primary_after))
+
+    return primary_after
+
+
+async def demote_primary(pool_handle, wallet_handle, trustee_did):
+    try:
+        req = await ledger.build_get_validator_info_request(trustee_did)
+        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        try:
+            result = json.loads(sample(results.items(), 1)[0][1])
+        except JSONDecodeError:
+            try:
+                shuffle(list(results.keys()))
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                shuffle(list(results.keys()))
+                result = json.loads(sample(results.items(), 1)[0][1])
+        name_before = result['result']['data']['Node_info']['Name']
+        primary_before =\
+            result['result']['data']['Node_info']['Replicas_status'][name_before+':0']['Primary'][len('Node'):
+                                                                                                  -len(':0')]
+    except TypeError:
+        try:
+            time.sleep(120)
+            req = await ledger.build_get_validator_info_request(trustee_did)
+            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            try:
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                try:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+                except JSONDecodeError:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+            name_before = result['result']['data']['Node_info']['Name']
+            primary_before = \
+                result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
+                                                                                                        -len(':0')]
+        except TypeError:
+            time.sleep(240)
+            req = await ledger.build_get_validator_info_request(trustee_did)
+            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            try:
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                try:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+                except JSONDecodeError:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+            name_before = result['result']['data']['Node_info']['Name']
+            primary_before = \
+                result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
+                                                                                                        -len(':0')]
+    res = json.loads(results['Node'+primary_before])
+    target_did = res['result']['data']['Node_info']['did']
+    alias = res['result']['data']['Node_info']['Name']
+    demote_data = json.dumps({'alias': alias, 'services': []})
+    demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
+    demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
+    assert demote_res['op'] == 'REPLY'
+    print('\nPRIMARY NODE {} HAS BEEN DEMOTED!'.format(primary_before))
+
+    return primary_before, target_did, alias
+
+
+async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_before, alias, target_did):
+    promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
+    promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
+    promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
+    if promote_res['op'] != 'REPLY':
+        time.sleep(60)
+        promote_res = json.loads(
+            await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
+    print(promote_res)
+    host = testinfra.get_host('docker://node'+primary_before)
+    host.run('systemctl restart indy-node')
+    assert promote_res['op'] == 'REPLY'
+    print('\nEX-PRIMARY NODE HAS BEEN PROMOTED AND RESTARTED!')
+
+    try:
+        req = await ledger.build_get_validator_info_request(trustee_did)
+        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        try:
+            result = json.loads(sample(results.items(), 1)[0][1])
+        except JSONDecodeError:
+            try:
+                shuffle(list(results.keys()))
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                shuffle(list(results.keys()))
+                result = json.loads(sample(results.items(), 1)[0][1])
+        name_after = result['result']['data']['Node_info']['Name']
+        primary_after =\
+            result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
+    except TypeError:
+        try:
+            time.sleep(120)
+            req = await ledger.build_get_validator_info_request(trustee_did)
+            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            try:
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                try:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+                except JSONDecodeError:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+            name_after = result['result']['data']['Node_info']['Name']
+            primary_after = \
+                result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][len('Node'):
+                                                                                                       -len(':0')]
+        except TypeError:
+            time.sleep(240)
+            req = await ledger.build_get_validator_info_request(trustee_did)
+            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            try:
+                result = json.loads(sample(results.items(), 1)[0][1])
+            except JSONDecodeError:
+                try:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+                except JSONDecodeError:
+                    shuffle(list(results.keys()))
+                    result = json.loads(sample(results.items(), 1)[0][1])
+            name_after = result['result']['data']['Node_info']['Name']
+            primary_after = \
+                result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][len('Node'):
+                                                                                                       -len(':0')]
+    print('\nNEW PRIMARY IS {}'.format(primary_after))
+
+    return primary_after
+
+
+async def get_primary():
+    pass
+
+
+async def demote_node(pool_handle, wallet_handle, trustee_did):
+    req = await ledger.build_get_validator_info_request(trustee_did)
+    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+    try:
+        result = json.loads(sample(results.items(), 1)[0][1])
+    except JSONDecodeError:
+        try:
+            shuffle(list(results.keys()))
+            result = json.loads(sample(results.items(), 1)[0][1])
+        except JSONDecodeError:
+            shuffle(list(results.keys()))
+            result = json.loads(sample(results.items(), 1)[0][1])
+    alias = result['result']['data']['Node_info']['Name']
+    target_did = result['result']['data']['Node_info']['did']
+    demote_data = json.dumps({'alias': alias, 'services': []})
+    demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
+    demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
+    assert demote_res['op'] == 'REPLY'
+
+    return alias, target_did
+
+
+async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_did):
+    promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
+    promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
+    promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
+    host = testinfra.get_host('docker://node'+alias[4:])
+    host.run('systemctl restart indy-node')
+    assert promote_res['op'] == 'REPLY'
