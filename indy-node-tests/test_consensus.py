@@ -10,7 +10,7 @@ from indy import IndyError
 
 
 @pytest.mark.asyncio
-async def test_consensus_restore_after_f_plus_one(docker_setup_and_teardown, pool_handler, wallet_handler,
+async def test_consensus_restore_after_f_plus_one(pool_handler, wallet_handler,
                                                   get_default_trustee):
     trustee_did, _ = get_default_trustee
     did1 = random_did_and_json()[0]
@@ -49,7 +49,7 @@ async def test_consensus_restore_after_f_plus_one(docker_setup_and_teardown, poo
 
 
 @pytest.mark.asyncio
-async def test_consensus_state_proof_reading(docker_setup_and_teardown, pool_handler, wallet_handler,
+async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
                                              get_default_trustee):
     trustee_did, _ = get_default_trustee
     did1 = random_did_and_json()[0]
@@ -74,7 +74,7 @@ async def test_consensus_state_proof_reading(docker_setup_and_teardown, pool_han
 
 
 @pytest.mark.asyncio
-async def test_consensus_n_and_f_changing(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee):
+async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
     did1 = random_did_and_json()[0]
     did2 = random_did_and_json()[0]

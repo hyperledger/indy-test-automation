@@ -105,7 +105,7 @@ async def test_pool_upgrade_positive():
                                        ssh_config='/home/indy/.ssh/config')
                     for i in range(1, 26)]
     # print(aws_25_hosts)
-    # os.chdir('/home/indy/indy-node/pool_automation/auto/.ssh/')
+    # os.chdir('/home/indy/indy-node-tests/pool_automation/auto/.ssh/')
     version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in docker_4_hosts]
     print(version_outputs)
     status_outputs = [host.run('systemctl status indy-node') for host in docker_4_hosts]
