@@ -1,4 +1,4 @@
-from utils import pool_helper, wallet_helper, nym_helper, get_nym_helper, attrib_helper, get_attrib_helper,\
+from system.utils import pool_helper, wallet_helper, nym_helper, get_nym_helper, attrib_helper, get_attrib_helper,\
     schema_helper, get_schema_helper, cred_def_helper, get_cred_def_helper, revoc_reg_def_helper,\
     get_revoc_reg_def_helper, revoc_reg_entry_helper, get_revoc_reg_helper, get_revoc_reg_delta_helper,\
     random_did_and_json, random_seed_and_json
@@ -89,15 +89,18 @@ async def test_send_and_get_attrib_positive(xhash, raw, enc, raw_key):
     print(res2)
 
 
-@pytest.mark.parametrize('xhash, raw, enc, error', [
-    (None, None, None, IndyError),
-    (hashlib.sha256().hexdigest(), json.dumps({'key': 'value'}), None, None),
-    (None, json.dumps({'key': 'value'}), 'ENCRYPTED_STRING', None),
-    (hashlib.sha256().hexdigest(), None, 'ENCRYPTED_STRING', None),
-    (hashlib.sha256().hexdigest(), json.dumps({'key': 'value'}), 'ENCRYPTED_STRING', None)
+@pytest.mark.parametrize('xhash, raw, enc, error, readonly', [
+    (None, None, None, IndyError, False),
+    (hashlib.sha256().hexdigest(), json.dumps({'key': 'value'}), None, None, False),
+    (None, json.dumps({'key': 'value'}), 'ENCRYPTED_STRING', None, False),
+    (hashlib.sha256().hexdigest(), None, 'ENCRYPTED_STRING', None, False),
+    (hashlib.sha256().hexdigest(), json.dumps({'key': 'value'}), 'ENCRYPTED_STRING', None, False),
+    (hashlib.sha256().hexdigest(), None, None, None, True),
+    (None, json.dumps({'key': 'value'}), None, None, True),
+    (None, None, 'ENCRYPTED_STRING', None, True)
 ])
 @pytest.mark.asyncio
-async def test_send_and_get_attrib_negative(xhash, raw, enc, error):
+async def test_send_and_get_attrib_negative(xhash, raw, enc, error, readonly):
     await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
@@ -110,13 +113,15 @@ async def test_send_and_get_attrib_negative(xhash, raw, enc, error):
             await attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
         with pytest.raises(error):
             await get_attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
+    elif readonly:
+        res = await get_attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
+        assert res['result']['seqNo'] is None
+        print(res)
     else:
         res1 = await attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
         res2 = await get_attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
-
         assert res1['op'] == 'REQNACK'
         assert res2['op'] == 'REQNACK'
-
         print(res1)
         print(res2)
 
@@ -150,13 +155,14 @@ async def test_send_and_get_schema_positive(writer_role, reader_role):
     print(res2)
 
 
-@pytest.mark.parametrize('schema_name, schema_version, schema_attrs, schema_id, errors', [
-    (None, None, None, None, (AttributeError, AttributeError)),
-    ('', '', '', '', (IndyError, IndyError)),
-    (1, 2, 3, 4, (AttributeError, AttributeError))
+@pytest.mark.parametrize('schema_name, schema_version, schema_attrs, schema_id, errors, readonly', [
+    (None, None, None, None, (AttributeError, AttributeError), False),
+    ('', '', '', '', (IndyError, IndyError), False),
+    (1, 2, 3, 4, (AttributeError, AttributeError), False),
+    (None, None, None, 'P2rRdR8q9aXiteCMJGvVkZ:2:schema:1.0', None, True)
 ])
 @pytest.mark.asyncio
-async def test_send_and_get_schema_negative(schema_name, schema_version, schema_attrs, schema_id, errors):
+async def test_send_and_get_schema_negative(schema_name, schema_version, schema_attrs, schema_id, errors, readonly):
     await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
@@ -167,6 +173,10 @@ async def test_send_and_get_schema_negative(schema_name, schema_version, schema_
             await schema_helper(pool_handle, wallet_handle, trustee_did, schema_name, schema_version, schema_attrs)
         with pytest.raises(errors[1]):
             await get_schema_helper(pool_handle, wallet_handle, trustee_did, schema_id)
+    elif readonly:
+        res = await get_schema_helper(pool_handle, wallet_handle, trustee_did, schema_id)
+        assert res['result']['seqNo'] is None
+        print(res)
     # TODO: get reqnacks from pool
     else:
         res1 = await schema_helper(pool_handle, wallet_handle, trustee_did, schema_name, schema_version, schema_attrs)
@@ -212,12 +222,14 @@ async def test_send_and_get_cred_def_positive(writer_role, reader_role):
     print(cred_def_id)
 
 
-@pytest.mark.parametrize('schema_json, tag, signature_type, config_json, cred_def_id, errors', [
-    (None, None, None, None, None, (AttributeError, AttributeError)),
-    ('', '', '', '', '', (IndyError, IndyError))
+@pytest.mark.parametrize('schema_json, tag, signature_type, config_json, cred_def_id, errors, readonly', [
+    (None, None, None, None, None, (AttributeError, AttributeError), False),
+    ('', '', '', '', '', (IndyError, IndyError), False),
+    (None, None, None, None, 'WL6zBSjE1RsttXSqLh8GtG:3:CL:999:tag', None, True)
 ])
 @pytest.mark.asyncio
-async def test_send_and_get_cred_def_negative(schema_json, tag, signature_type, config_json, cred_def_id, errors):
+async def test_send_and_get_cred_def_negative(schema_json, tag, signature_type, config_json, cred_def_id, errors,
+                                              readonly):
     await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
@@ -229,6 +241,10 @@ async def test_send_and_get_cred_def_negative(schema_json, tag, signature_type, 
                 pool_handle, wallet_handle, trustee_did, schema_json, tag, signature_type, config_json)
         with pytest.raises(errors[1]):
             await get_cred_def_helper(pool_handle, wallet_handle, trustee_did, cred_def_id)
+    elif readonly:
+        res = await get_cred_def_helper(pool_handle, wallet_handle, trustee_did, cred_def_id)
+        assert res['result']['seqNo'] is None
+        print(res)
     # TODO: get reqnacks from pool
     else:
         res1 = await cred_def_helper(pool_handle, wallet_handle, trustee_did, schema_json, tag, signature_type,
@@ -318,7 +334,7 @@ async def test_send_and_get_revoc_reg_entry_positive(writer_role, reader_role):
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
-    assert res2['result']['seqNo'] is not None
+    assert res3['result']['seqNo'] is not None
 
     print(res1)
     print(res2)
