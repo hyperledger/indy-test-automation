@@ -1,9 +1,9 @@
 import pytest
-from utils import *
+from system.utils import *
 
 
 @pytest.mark.asyncio
-async def test_vc_by_restart(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee):
+async def test_vc_by_restart(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
     did1 = random_did_and_json()[0]
     did2 = random_did_and_json()[0]
@@ -22,7 +22,7 @@ async def test_vc_by_restart(docker_setup_and_teardown, pool_handler, wallet_han
 
 
 @pytest.mark.asyncio
-async def test_vc_by_demotion(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee):
+async def test_vc_by_demotion(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
     did1 = random_did_and_json()[0]
     did2 = random_did_and_json()[0]

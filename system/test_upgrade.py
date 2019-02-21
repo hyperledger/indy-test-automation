@@ -1,4 +1,4 @@
-from utils import *
+from system.utils import *
 from indy import did
 import pytest
 import hashlib
@@ -40,16 +40,16 @@ async def test_pool_upgrade_positive():
                         '6CRQcKzeRMCstErDT2Pso4he3rWWu1m16CRyp1fjYCFx', '53skV1LWLCbcxxdvoxY3pKDx2MAvszA27hA6cBZxLbnf',
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
-    init_time = -20
-    version = '1.1.32'
+    init_time = 1
+    version = '1.1.35'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
     _sha256 = hashlib.sha256().hexdigest()
-    _timeout = 10
+    _timeout = 5
     docker_4_schedule = json.dumps(dict(
         {dest:
-            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time), '%Y-%m-%dT%H:%M:%S%z')
+            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+0*5), '%Y-%m-%dT%H:%M:%S%z')
          for dest, i in zip(dests[:4], range(len(dests[:4])))}
     ))
     aws_25_schedule = json.dumps(dict(
@@ -60,7 +60,7 @@ async def test_pool_upgrade_positive():
     reinstall = False
     force = True
     package = 'sovrin'
-    pool_handle, _ = await pool_helper(path_to_genesis='./docker_genesis')
+    pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     random_did = random_did_and_json()[0]
     another_random_did = random_did_and_json()[0]
@@ -98,14 +98,14 @@ async def test_pool_upgrade_positive():
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     print(res)
 
-    time.sleep(90)
+    time.sleep(120)
 
     docker_4_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 5)]
     aws_25_hosts = [testinfra.get_host('ssh://persistent_node'+str(i),
                                        ssh_config='/home/indy/.ssh/config')
                     for i in range(1, 26)]
-    print(docker_4_hosts)
-    # os.chdir('/home/indy/indy-node/pool_automation/auto/.ssh/')
+    # print(aws_25_hosts)
+    # os.chdir('/home/indy/indy-node-tests/pool_automation/auto/.ssh/')
     version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in docker_4_hosts]
     print(version_outputs)
     status_outputs = [host.run('systemctl status indy-node') for host in docker_4_hosts]
@@ -132,6 +132,7 @@ async def test_pool_upgrade_positive():
 
     # write and read NYM after the upgrade
     nym = await nym_helper(pool_handle, wallet_handle, trustee_did, another_random_did)
+    time.sleep(1)
     get_nym = await get_nym_helper(pool_handle, wallet_handle, trustee_did, another_random_did)
 
     add_before_results = [nym_before_res, attrib_before_res, schema_before_res, cred_def_before_res,

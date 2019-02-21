@@ -1,5 +1,5 @@
 import pytest
-from utils import *
+from system.utils import *
 from indy import *
 from async_generator import yield_, async_generator
 import os
@@ -32,7 +32,7 @@ async def get_default_trustee(wallet_handler):
 @pytest.fixture()
 @async_generator
 async def docker_setup_and_teardown():
-    os.chdir('/home/indy/indy-node/environment/docker/pool')
+    os.chdir('/home/indy/indy-node-tests/environment/docker/pool')
     containers = subprocess.check_output(['docker', 'ps', '-a', '-q']).decode().strip().split()
     outputs = [subprocess.check_call(['docker', 'rm', container, '-f']) for container in containers]
     assert outputs is not None
