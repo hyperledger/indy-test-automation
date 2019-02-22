@@ -1,6 +1,6 @@
 import pytest
 import json
-from utils import wallet_helper
+from system.utils import wallet_helper
 from indy import pool, did, crypto
 
 
