@@ -1,6 +1,6 @@
 import time
 import pytest
-from utils import *
+from system.utils import *
 from indy import wallet, IndyError
 import os
 

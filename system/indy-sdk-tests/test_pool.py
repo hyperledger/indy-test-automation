@@ -1,11 +1,11 @@
 import pytest
-from utils import *
+from system.utils import *
 from indy import IndyError
 
 
 @pytest.mark.parametrize('pool_name, pool_config', [
-    (random_string(1), json.dumps({'genesis_txn': './stn_genesis'})),
-    (random_string(100), json.dumps({'genesis_txn': './docker_genesis'}))
+    (random_string(1), json.dumps({'genesis_txn': '../stn_genesis'})),
+    (random_string(100), json.dumps({'genesis_txn': '../docker_genesis'}))
 ])
 @pytest.mark.asyncio
 async def test_pool_create_open_refresh_positive(pool_name, pool_config):
@@ -33,7 +33,7 @@ async def test_pool_close_delete_positive():
 
 
 @pytest.mark.parametrize('pool_name, pool_config, pool_handle, exceptions', [
-    (None, json.dumps({'genesis_txn': './stn_genesis'}), 99, (AttributeError, AttributeError, IndyError)),
+    (None, json.dumps({'genesis_txn': '../stn_genesis'}), 99, (AttributeError, AttributeError, IndyError)),
     (random_string(10), None, -99, (IndyError, IndyError, IndyError))
 ])
 @pytest.mark.asyncio
