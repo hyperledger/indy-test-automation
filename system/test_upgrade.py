@@ -41,7 +41,7 @@ async def test_pool_upgrade_positive():
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
     init_time = 1
-    version = '1.1.35'
+    version = '1.6.83'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -49,7 +49,7 @@ async def test_pool_upgrade_positive():
     _timeout = 5
     docker_4_schedule = json.dumps(dict(
         {dest:
-            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+0*5), '%Y-%m-%dT%H:%M:%S%z')
+            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
          for dest, i in zip(dests[:4], range(len(dests[:4])))}
     ))
     aws_25_schedule = json.dumps(dict(
@@ -58,8 +58,8 @@ async def test_pool_upgrade_positive():
          for dest, i in zip(persistent_dests, range(len(persistent_dests)))}
     ))
     reinstall = False
-    force = True
-    package = 'sovrin'
+    force = False
+    package = 'indy-node'
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     random_did = random_did_and_json()[0]
@@ -98,7 +98,7 @@ async def test_pool_upgrade_positive():
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     print(res)
 
-    time.sleep(120)
+    time.sleep(1200)
 
     docker_4_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 5)]
     aws_25_hosts = [testinfra.get_host('ssh://persistent_node'+str(i),

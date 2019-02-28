@@ -11,7 +11,7 @@ async def test_vc_by_restart(pool_handler, wallet_handler, get_default_trustee):
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
     primary_before = await stop_primary(pool_handler, wallet_handler, trustee_did)
 
-    time.sleep(120)
+    time.sleep(180)
 
     primary_after = await start_primary(pool_handler, wallet_handler, trustee_did, primary_before)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
@@ -30,7 +30,7 @@ async def test_vc_by_demotion(pool_handler, wallet_handler, get_default_trustee)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
     primary_before, target_did, alias = await demote_primary(pool_handler, wallet_handler, trustee_did)
 
-    time.sleep(120)
+    time.sleep(180)
 
     primary_after = await promote_primary(pool_handler, wallet_handler, trustee_did, primary_before, alias, target_did)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)

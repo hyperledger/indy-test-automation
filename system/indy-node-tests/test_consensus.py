@@ -27,6 +27,7 @@ async def test_consensus_restore_after_f_plus_one(pool_handler, wallet_handler,
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
     # 4/7 online - can r only
     hosts[4].run('systemctl stop indy-node')
+    time.sleep(15)
     with pytest.raises(IndyError, match='Consensus is impossible'):
         await nym_helper(pool_handler, wallet_handler, trustee_did, did3, None, None, None)
     res1 = await get_nym_helper(pool_handler, wallet_handler, trustee_did, did1)
@@ -40,7 +41,7 @@ async def test_consensus_restore_after_f_plus_one(pool_handler, wallet_handler,
     # 5/7 online - can w+r
     outputs = [host.run('systemctl start indy-node') for host in hosts[3:5]]
     assert outputs
-    time.sleep(30)
+    time.sleep(45)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did3)
     # 7/7 online - can w+r
     outputs = [host.run('systemctl start indy-node') for host in hosts[-2:]]
@@ -57,11 +58,11 @@ async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
     hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
 
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
-    time.sleep(5)
+    time.sleep(15)
     # Stop all except 1
     outputs = [host.run('systemctl stop indy-node') for host in hosts[1:]]
     assert outputs
-    time.sleep(5)
+    time.sleep(15)
     res = await get_nym_helper(pool_handler, wallet_handler, trustee_did, did1)
     assert res['result']['seqNo'] is not None
     # Stop the last one
@@ -69,7 +70,7 @@ async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
     # Start all
     outputs = [host.run('systemctl start indy-node') for host in hosts]
     assert outputs
-    time.sleep(30)
+    time.sleep(45)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
 
 
@@ -81,7 +82,7 @@ async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_defa
     did3 = random_did_and_json()[0]
     hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
 
-    alias, target_did = await demote_node(pool_handler, wallet_handler, trustee_did)
+    alias, target_did = await demote_random_node(pool_handler, wallet_handler, trustee_did)
     temp_hosts = hosts.copy()
     temp_hosts.pop(int(alias[4:])-1)
     outputs = [host.run('systemctl stop indy-node') for host in temp_hosts[-2:]]
@@ -90,9 +91,9 @@ async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_defa
         await nym_helper(pool_handler, wallet_handler, trustee_did, did1, None, None, None)
     outputs = [host.run('systemctl start indy-node') for host in temp_hosts[-2:]]
     assert outputs
-    time.sleep(30)
+    time.sleep(45)
     await promote_node(pool_handler, wallet_handler, trustee_did, alias, target_did)
-    time.sleep(5)
+    time.sleep(15)
     outputs = [host.run('systemctl stop indy-node') for host in hosts[-2:]]
     assert outputs
     res2 = await nym_helper(pool_handler, wallet_handler, trustee_did, did2, None, None, None)

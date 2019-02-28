@@ -470,7 +470,7 @@ async def get_primary():
     pass
 
 
-async def demote_node(pool_handle, wallet_handle, trustee_did):
+async def demote_random_node(pool_handle, wallet_handle, trustee_did):
     req = await ledger.build_get_validator_info_request(trustee_did)
     results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     try:
