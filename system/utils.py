@@ -10,6 +10,7 @@ import testinfra
 from random import sample, shuffle
 from json import JSONDecodeError
 import time
+from collections import Counter
 
 
 def run_async_method(method, *args, **kwargs):
@@ -466,11 +467,38 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
     return primary_after
 
 
-async def get_primary():
-    pass
+async def get_primary(pool_handle, wallet_handle, trustee_did):
+    req = await ledger.build_get_validator_info_request(trustee_did)
+    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+    # remove all timeout entries
+    try:
+        for i in range(len(results)):
+            results.pop(list(results.keys())[list(results.values()).index('timeout')])
+    except ValueError:
+        pass
+    # remove all not REPLY and empty (not selected) primaries entries
+    results = {key: json.loads(results[key]) for key in results if
+               (json.loads(results[key])['op'] == 'REPLY')
+               & (json.loads(results[key])['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
+                  is not None)}
+    # get primaries numbers from all nodes
+    primaries = [results[key]['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
+                 [len('Node'):-len(':0')] for key in results]
+    # count the same entries
+    primaries = Counter(primaries)
+    # find actual primary
+    primary = max(primaries, key=primaries.get)
+    alias = 'Node{}'.format(primary)
+    host = testinfra.get_host('docker://node{}'.format(primary))
+    pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
+    pool_info = [json.loads(item) for item in pool_info]
+    pool_info = {item['txn']['data']['data']['alias']: item['txn']['data']['dest'] for item in pool_info}
+    target_did = pool_info[alias]
+
+    return primary, alias, target_did
 
 
-async def demote_node(pool_handle, wallet_handle, trustee_did):
+async def demote_random_node(pool_handle, wallet_handle, trustee_did):
     req = await ledger.build_get_validator_info_request(trustee_did)
     results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     try:
@@ -490,6 +518,13 @@ async def demote_node(pool_handle, wallet_handle, trustee_did):
     assert demote_res['op'] == 'REPLY'
 
     return alias, target_did
+
+
+async def demote_node(pool_handle, wallet_handle, trustee_did, alias, target_did):
+    demote_data = json.dumps({'alias': alias, 'services': []})
+    demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
+    demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
+    assert demote_res['op'] == 'REPLY'
 
 
 async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_did):
