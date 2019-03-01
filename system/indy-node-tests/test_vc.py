@@ -7,18 +7,22 @@ async def test_vc_by_restart(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
     did1 = random_did_and_json()[0]
     did2 = random_did_and_json()[0]
-
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
-    primary_before = await stop_primary(pool_handler, wallet_handler, trustee_did)
-
-    time.sleep(180)
-
-    primary_after = await start_primary(pool_handler, wallet_handler, trustee_did, primary_before)
-    await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
-    time.sleep(20)
-    check_ledger_sync()
-
+    primary_before, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+    print('\nPrimary before: {}'.format(primary_before))
+    host = testinfra.get_host('docker://node'+primary_before)
+    host.run('systemctl stop indy-node')
+    primary_after = primary_before
+    while primary_before == primary_after:
+        primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        time.sleep(60)
+    print('\nPrimary after: {}'.format(primary_after))
     assert primary_before != primary_after
+    await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
+    host = testinfra.get_host('docker://node'+primary_before)
+    host.run('systemctl start indy-node')
+    time.sleep(30)
+    check_ledger_sync()
 
 
 @pytest.mark.asyncio
@@ -26,15 +30,17 @@ async def test_vc_by_demotion(pool_handler, wallet_handler, get_default_trustee)
     trustee_did, _ = get_default_trustee
     did1 = random_did_and_json()[0]
     did2 = random_did_and_json()[0]
-
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
-    primary_before, target_did, alias = await demote_primary(pool_handler, wallet_handler, trustee_did)
-
-    time.sleep(180)
-
-    primary_after = await promote_primary(pool_handler, wallet_handler, trustee_did, primary_before, alias, target_did)
-    await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
-    time.sleep(20)
-    check_ledger_sync()
-
+    primary_before, primary_alias, primary_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+    print('\nPrimary before: {}'.format(primary_before))
+    await demote_node(pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
+    primary_after = primary_before
+    while primary_before == primary_after:
+        primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        time.sleep(60)
+    print('\nPrimary after: {}'.format(primary_after))
     assert primary_before != primary_after
+    await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
+    await promote_node(pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
+    time.sleep(30)
+    check_ledger_sync()

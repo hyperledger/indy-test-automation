@@ -27,7 +27,7 @@ async def test_consensus_restore_after_f_plus_one(pool_handler, wallet_handler,
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
     # 4/7 online - can r only
     hosts[4].run('systemctl stop indy-node')
-    time.sleep(15)
+    time.sleep(60)
     with pytest.raises(IndyError, match='Consensus is impossible'):
         await nym_helper(pool_handler, wallet_handler, trustee_did, did3, None, None, None)
     res1 = await get_nym_helper(pool_handler, wallet_handler, trustee_did, did1)
@@ -41,7 +41,7 @@ async def test_consensus_restore_after_f_plus_one(pool_handler, wallet_handler,
     # 5/7 online - can w+r
     outputs = [host.run('systemctl start indy-node') for host in hosts[3:5]]
     assert outputs
-    time.sleep(45)
+    time.sleep(60)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did3)
     # 7/7 online - can w+r
     outputs = [host.run('systemctl start indy-node') for host in hosts[-2:]]
@@ -87,17 +87,19 @@ async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_defa
     temp_hosts.pop(int(alias[4:])-1)
     outputs = [host.run('systemctl stop indy-node') for host in temp_hosts[-2:]]
     assert outputs
+    time.sleep(60)
     with pytest.raises(IndyError, match='Consensus is impossible'):
         await nym_helper(pool_handler, wallet_handler, trustee_did, did1, None, None, None)
     outputs = [host.run('systemctl start indy-node') for host in temp_hosts[-2:]]
     assert outputs
-    time.sleep(45)
+    time.sleep(60)
     await promote_node(pool_handler, wallet_handler, trustee_did, alias, target_did)
-    time.sleep(15)
+    time.sleep(60)
     outputs = [host.run('systemctl stop indy-node') for host in hosts[-2:]]
     assert outputs
     res2 = await nym_helper(pool_handler, wallet_handler, trustee_did, did2, None, None, None)
     assert res2['op'] == 'REPLY'
     hosts[0].run('systemctl stop indy-node')
+    time.sleep(60)
     with pytest.raises(IndyError, match='Consensus is impossible'):
         await nym_helper(pool_handler, wallet_handler, trustee_did, did3, None, None, None)
