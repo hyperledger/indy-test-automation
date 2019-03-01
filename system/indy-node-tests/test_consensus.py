@@ -23,7 +23,7 @@ async def test_consensus_restore_after_f_plus_one(pool_handler, wallet_handler,
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
     # 5/7 online - can w+r
     outputs = [host.run('systemctl stop indy-node') for host in hosts[-2:]]
-    assert outputs
+    print(outputs)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
     # 4/7 online - can r only
     hosts[4].run('systemctl stop indy-node')
@@ -40,12 +40,12 @@ async def test_consensus_restore_after_f_plus_one(pool_handler, wallet_handler,
     assert res2['result']['seqNo'] is not None
     # 5/7 online - can w+r
     outputs = [host.run('systemctl start indy-node') for host in hosts[3:5]]
-    assert outputs
+    print(outputs)
     time.sleep(60)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did3)
     # 7/7 online - can w+r
     outputs = [host.run('systemctl start indy-node') for host in hosts[-2:]]
-    assert outputs
+    print(outputs)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did4)
 
 
@@ -61,7 +61,7 @@ async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
     time.sleep(15)
     # Stop all except 1
     outputs = [host.run('systemctl stop indy-node') for host in hosts[1:]]
-    assert outputs
+    print(outputs)
     time.sleep(15)
     res = await get_nym_helper(pool_handler, wallet_handler, trustee_did, did1)
     assert res['result']['seqNo'] is not None
@@ -69,7 +69,7 @@ async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
     hosts[0].run('systemctl stop indy-node')
     # Start all
     outputs = [host.run('systemctl start indy-node') for host in hosts]
-    assert outputs
+    print(outputs)
     time.sleep(45)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
 
@@ -86,20 +86,23 @@ async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_defa
     temp_hosts = hosts.copy()
     temp_hosts.pop(int(alias[4:])-1)
     outputs = [host.run('systemctl stop indy-node') for host in temp_hosts[-2:]]
-    assert outputs
+    print(outputs)
     time.sleep(60)
     with pytest.raises(IndyError, match='Consensus is impossible'):
         await nym_helper(pool_handler, wallet_handler, trustee_did, did1, None, None, None)
     outputs = [host.run('systemctl start indy-node') for host in temp_hosts[-2:]]
-    assert outputs
+    print(outputs)
     time.sleep(60)
     await promote_node(pool_handler, wallet_handler, trustee_did, alias, target_did)
     time.sleep(60)
     outputs = [host.run('systemctl stop indy-node') for host in hosts[-2:]]
-    assert outputs
+    print(outputs)
     res2 = await nym_helper(pool_handler, wallet_handler, trustee_did, did2, None, None, None)
     assert res2['op'] == 'REPLY'
     hosts[0].run('systemctl stop indy-node')
     time.sleep(60)
     with pytest.raises(IndyError, match='Consensus is impossible'):
         await nym_helper(pool_handler, wallet_handler, trustee_did, did3, None, None, None)
+    # Start all
+    outputs = [host.run('systemctl start indy-node') for host in hosts]
+    print(outputs)
