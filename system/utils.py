@@ -489,7 +489,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
     # find actual primary
     primary = max(primaries, key=primaries.get)
     alias = 'Node{}'.format(primary)
-    host = testinfra.get_host('docker://node{}'.format(primary))
+    host = testinfra.get_host('ssh://node{}'.format(primary))
     pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
     pool_info = [json.loads(item) for item in pool_info]
     pool_info = {item['txn']['data']['data']['alias']: item['txn']['data']['dest'] for item in pool_info}
@@ -531,6 +531,6 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
     promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
     promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
-    host = testinfra.get_host('docker://node'+alias[4:])
+    host = testinfra.get_host('ssh://node'+alias[4:])
     host.run('systemctl restart indy-node')
     assert promote_res['op'] == 'REPLY'
