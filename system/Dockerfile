@@ -1,0 +1,28 @@
+FROM solita/ubuntu-systemd:16.04
+
+ARG uid=1000
+
+# Install environment
+RUN apt-get update -y && apt-get install -y \
+	git \
+	wget \
+	python3.5 \
+	python3-pip \
+	python-setuptools \
+	python3-nacl \
+	apt-transport-https \
+	ca-certificates \
+	vim \
+	mc
+RUN pip3 install -U \
+	'pip<10.0.0' \
+	setuptools
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88
+RUN echo "deb https://repo.sovrin.org/deb xenial master" >> /etc/apt/sources.list
+RUN useradd -ms /bin/bash -l -u $uid indy
+RUN apt-get update -y && apt-get install -y indy-node
+RUN echo " " >> /etc/indy/indy_config.py
+RUN echo "NETWORK_NAME = 'sandbox'" >> /etc/indy/indy_config.py
+RUN echo " " >> /etc/indy/indy_config.py
+USER indy
+WORKDIR /home/indy
