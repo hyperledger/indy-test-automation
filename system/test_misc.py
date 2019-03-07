@@ -408,7 +408,7 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
                                                             'node_ip':
                                                                 '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
                                                             'node_port': rr(1, 32767),
-                                                            'services': ['VALIDATOR']
+                                                            'services': []
                                                         }))
         await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req1)
         req2 = await ledger.build_pool_config_request(trustee_did, True, False)
@@ -428,7 +428,7 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
                                                             'node_ip':
                                                                 '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
                                                             'node_port': rr(1, 32767),
-                                                            'services': ['VALIDATOR']
+                                                            'services': []
                                                         }))
         await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req1)
         req2 = await ledger.build_pool_config_request(trustee_did, True, False)
