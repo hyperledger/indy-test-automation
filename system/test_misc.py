@@ -396,19 +396,41 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
     #           '{\"cfg_writes\":{\"count\": 1}}]\" '
     #           '-c 1 -b 1 -l 1 >> /dev/null &')
     for i in range(100):
-        await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        req1 = await ledger.build_node_request(trustee_did, random_did_and_json()[0],
-                                              json.dumps({'alias': random_string(5), 'services': []}))
-        await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
+        steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        await nym_helper(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+        req1 = await ledger.build_node_request(steward_did, random_did_and_json()[0],
+                                               json.dumps(
+                                                        {
+                                                            'alias': random_string(5),
+                                                            'client_ip':
+                                                                '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
+                                                            'client_port': rr(1, 32767),
+                                                            'node_ip':
+                                                                '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
+                                                            'node_port': rr(1, 32767),
+                                                            'services': ['VALIDATOR']
+                                                        }))
+        await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req1)
         req2 = await ledger.build_pool_config_request(trustee_did, True, False)
         await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2)
     output = host.check_output('systemctl stop indy-node')
     print(output)
     for i in range(100):
-        await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        req1 = await ledger.build_node_request(trustee_did, random_did_and_json()[0],
-                                               json.dumps({'alias': random_string(5), 'services': []}))
-        await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
+        steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        await nym_helper(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+        req1 = await ledger.build_node_request(steward_did, random_did_and_json()[0],
+                                               json.dumps(
+                                                        {
+                                                            'alias': random_string(5),
+                                                            'client_ip':
+                                                                '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
+                                                            'client_port': rr(1, 32767),
+                                                            'node_ip':
+                                                                '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
+                                                            'node_port': rr(1, 32767),
+                                                            'services': ['VALIDATOR']
+                                                        }))
+        await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req1)
         req2 = await ledger.build_pool_config_request(trustee_did, True, False)
         await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2)
     # os.system('pkill -9 perf_processes')
