@@ -210,10 +210,20 @@ async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
 
 
 def check_ledger_sync():
-    hosts = [testinfra.get_host('docker://node{}'.format(i)) for i in range(1, 5)]
-    results = [host.run('read_ledger --type=domain --count') for host in hosts]
-    print('\nLEDGER SYNC: {}'.format([result.stdout for result in results]))
-    assert all([results[i].stdout == results[i + 1].stdout for i in range(-1, len(results) - 1)])
+    hosts = [testinfra.get_host('docker://node{}'.format(i)) for i in range(1, 8)]
+    pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
+    print('\nPOOL LEDGER SYNC: {}'.format([result.stdout for result in pool_results]))
+    config_results = [host.run('read_ledger --type=config --count') for host in hosts]
+    print('\nCONFIG LEDGER SYNC: {}'.format([result.stdout for result in config_results]))
+    domain_results = [host.run('read_ledger --type=domain --count') for host in hosts]
+    print('\nDOMAIN LEDGER SYNC: {}'.format([result.stdout for result in domain_results]))
+    audit_results = [host.run('read_ledger --type=audit --count') for host in hosts]
+    print('\nAUDIT LEDGER SYNC: {}'.format([result.stdout for result in audit_results]))
+
+    assert all([pool_results[i].stdout == pool_results[i + 1].stdout for i in range(-1, len(pool_results) - 1)])
+    assert all([config_results[i].stdout == config_results[i + 1].stdout for i in range(-1, len(config_results) - 1)])
+    assert all([domain_results[i].stdout == domain_results[i + 1].stdout for i in range(-1, len(domain_results) - 1)])
+    assert all([audit_results[i].stdout == audit_results[i + 1].stdout for i in range(-1, len(audit_results) - 1)])
 
 
 async def stop_primary(pool_handle, wallet_handle, trustee_did):
@@ -489,7 +499,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
     # find actual primary
     primary = max(primaries, key=primaries.get)
     alias = 'Node{}'.format(primary)
-    host = testinfra.get_host('docker://node{}'.format(primary))
+    host = testinfra.get_host('ssh://node{}'.format(primary))
     pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
     pool_info = [json.loads(item) for item in pool_info]
     pool_info = {item['txn']['data']['data']['alias']: item['txn']['data']['dest'] for item in pool_info}
@@ -531,6 +541,6 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
     promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
     promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
-    host = testinfra.get_host('docker://node'+alias[4:])
+    host = testinfra.get_host('ssh://node'+alias[4:])
     host.run('systemctl restart indy-node')
     assert promote_res['op'] == 'REPLY'

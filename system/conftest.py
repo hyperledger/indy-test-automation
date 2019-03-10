@@ -59,4 +59,4 @@ async def docker_setup_and_teardown():
     #     assert outputs is not None
     # except CalledProcessError:
     #     pass
-    os.chdir('/home/indy')
+    os.chdir('~')
