@@ -17,12 +17,15 @@ def network_builder(network_subnet, network_name):
 
 
 def pool_builder(dockerfile_path, node_name_base, network_name, nodes_num):
+    # build image from Dockerfile
     image, _ = client.images.build(path=dockerfile_path)
+    # enable systemd
     client.containers.run(image,
                           'setup',
                           remove=True,
                           privileged=True,
                           volumes={'/': {'bind': '/host', 'mode': 'rw'}})
+    # run pool containers
     return [client.containers.run(image,
                                   name=node_name_base+str(i),
                                   detach=True,
