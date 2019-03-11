@@ -398,7 +398,7 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
     for i in range(25):
         steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         await nym_helper(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
-        req1 = await ledger.build_node_request(steward_did, steward_did,
+        req1 = await ledger.build_node_request(steward_did, steward_vk,
                                                json.dumps(
                                                         {
                                                             'alias': random_string(5),
@@ -410,10 +410,10 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
                                                             'node_port': rr(1, 32767),
                                                             'services': ['VALIDATOR']
                                                         }))
-        await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req1)
+        res1 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req1)
         req2 = json.loads(req1)
         req2['operation']['data']['services'] = []
-        await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, json.dumps(req2))
+        res2 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, json.dumps(req2))
         req3 = await ledger.build_pool_config_request(trustee_did, True, False)
         await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req3)
     output = host.check_output('systemctl stop indy-node')
@@ -421,7 +421,7 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
     for i in range(25):
         steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         await nym_helper(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
-        req1 = await ledger.build_node_request(steward_did, steward_did,
+        req1 = await ledger.build_node_request(steward_did, steward_vk,
                                                json.dumps(
                                                         {
                                                             'alias': random_string(5),
@@ -442,5 +442,5 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
     # os.system('pkill -9 perf_processes')
     output = host.check_output('systemctl start indy-node')
     print(output)
-    time.sleep(60)
+    time.sleep(120)
     check_ledger_sync()
