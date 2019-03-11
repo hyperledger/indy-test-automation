@@ -13,10 +13,10 @@ from indy import IndyError
 async def test_consensus_restore_after_f_plus_one(pool_handler, wallet_handler,
                                                   get_default_trustee):
     trustee_did, _ = get_default_trustee
-    did1 = random_did_and_json()[0]
-    did2 = random_did_and_json()[0]
-    did3 = random_did_and_json()[0]
-    did4 = random_did_and_json()[0]
+    did1, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    did2, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    did3, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    did4, _ = await did.create_and_store_my_did(wallet_handler, '{}')
     hosts = [testinfra.get_host('ssh://node' + str(i)) for i in range(1, 8)]
 
     # 7/7 online - can w+r
@@ -57,8 +57,8 @@ async def test_consensus_restore_after_f_plus_one(pool_handler, wallet_handler,
 async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
                                              get_default_trustee):
     trustee_did, _ = get_default_trustee
-    did1 = random_did_and_json()[0]
-    did2 = random_did_and_json()[0]
+    did1, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    did2, _ = await did.create_and_store_my_did(wallet_handler, '{}')
     hosts = [testinfra.get_host('ssh://node' + str(i)) for i in range(1, 8)]
 
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
@@ -81,9 +81,9 @@ async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
 @pytest.mark.asyncio
 async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
-    did1 = random_did_and_json()[0]
-    did2 = random_did_and_json()[0]
-    did3 = random_did_and_json()[0]
+    did1, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    did2, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    did3, _ = await did.create_and_store_my_did(wallet_handler, '{}')
     hosts = [testinfra.get_host('ssh://node' + str(i)) for i in range(1, 8)]
 
     alias, target_did = await demote_random_node(pool_handler, wallet_handler, trustee_did)
