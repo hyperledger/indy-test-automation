@@ -18,14 +18,20 @@ def network_builder(network_subnet, network_name):
 
 def pool_builder(dockerfile_path, node_name_base, network_name, nodes_num):
     image, _ = client.images.build(path=dockerfile_path)
+    client.containers.run(image,
+                          'setup',
+                          remove=True,
+                          privileged=True,
+                          volumes={'/': {'bind': '/host', 'mode': 'rw'}})
     return [client.containers.run(image,
                                   name=node_name_base+str(i),
                                   detach=True,
                                   tty=True,
                                   network=network_name,
-                                  privileged=True,
-                                  v={},
-                                  command='setup')
+                                  volumes={'/sys/fs/cgroup': {'bind': '/sys/fs/cgroup', 'mode': 'ro'}},
+                                  security_opt=['seccomp=unconfined'],
+                                  tmpfs={'/run': '',
+                                         '/run/lock': ''})
             for i in range(1, nodes_num+1)]
 
 
