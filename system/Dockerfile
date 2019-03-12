@@ -12,11 +12,14 @@ RUN apt-get update -y && apt-get install -y \
 	python3-nacl \
 	apt-transport-https \
 	ca-certificates \
+	ssh \
 	vim \
 	mc
 RUN pip3 install -U \
 	'pip<10.0.0' \
 	setuptools
+COPY test_key.pub /root/.ssh/authorized_keys
+RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88
 RUN echo "deb https://repo.sovrin.org/deb xenial master" >> /etc/apt/sources.list
 RUN useradd -ms /bin/bash -l -u $uid indy

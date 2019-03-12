@@ -10,6 +10,7 @@ NODES_NUM = 7
 
 
 def network_builder(network_subnet, network_name):
+    client.networks.prune()
     ipam_pool = docker.types.IPAMPool(subnet=network_subnet)
     ipam_config = docker.types.IPAMConfig(pool_configs=[ipam_pool])
     return client.networks.create(name=network_name,

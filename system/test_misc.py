@@ -410,10 +410,10 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
                                                             'node_port': rr(1, 32767),
                                                             'services': ['VALIDATOR']
                                                         }))
-        res1 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req1)
+        await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req1)
         req2 = json.loads(req1)
         req2['operation']['data']['services'] = []
-        res2 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, json.dumps(req2))
+        await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, json.dumps(req2))
         req3 = await ledger.build_pool_config_request(trustee_did, True, False)
         await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req3)
     output = host.check_output('systemctl stop indy-node')
