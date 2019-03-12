@@ -5,8 +5,8 @@ from system.utils import *
 @pytest.mark.asyncio
 async def test_vc_by_restart(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
-    did1 = random_did_and_json()[0]
-    did2 = random_did_and_json()[0]
+    did1, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    did2, _ = await did.create_and_store_my_did(wallet_handler, '{}')
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
     primary_before, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
     print('\nPrimary before: {}'.format(primary_before))
@@ -30,8 +30,8 @@ async def test_vc_by_restart(pool_handler, wallet_handler, get_default_trustee):
 @pytest.mark.asyncio
 async def test_vc_by_demotion(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
-    did1 = random_did_and_json()[0]
-    did2 = random_did_and_json()[0]
+    did1, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    did2, _ = await did.create_and_store_my_did(wallet_handler, '{}')
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
     primary_before, primary_alias, primary_did = await get_primary(pool_handler, wallet_handler, trustee_did)
     print('\nPrimary before: {}'.format(primary_before))
