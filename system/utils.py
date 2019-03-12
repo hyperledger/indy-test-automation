@@ -210,7 +210,7 @@ async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
 
 
 def check_ledger_sync():
-    hosts = [testinfra.get_host('docker://node{}'.format(i)) for i in range(1, 8)]
+    hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in range(1, 8)]
     pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
     print('\nPOOL LEDGER SYNC: {}'.format([result.stdout for result in pool_results]))
     config_results = [host.run('read_ledger --type=config --count') for host in hosts]
