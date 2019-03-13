@@ -45,7 +45,7 @@ async def test_consensus_restore_after_f_plus_one(pool_handler, wallet_handler,
     # 5/7 online - can w+r
     outputs = [host.check_output('systemctl start indy-node') for host in hosts[3:5]]
     print(outputs)
-    time.sleep(60)
+    time.sleep(90)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did3)
     # 7/7 online - can w+r
     outputs = [host.check_output('systemctl start indy-node') for host in hosts[-2:]]
@@ -74,7 +74,7 @@ async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
     # Start all
     outputs = [host.check_output('systemctl start indy-node') for host in hosts]
     print(outputs)
-    time.sleep(45)
+    time.sleep(90)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
 
 
