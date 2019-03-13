@@ -379,8 +379,8 @@ async def test_misc_is_1158(pool_handler, wallet_handler, get_default_trustee):
 
 
 @pytest.mark.asyncio
-async def test_misc_is_1200(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee):
-    pass
+async def test_misc_is_1200():
+    print(random_seed_and_json())
 
 
 @pytest.mark.asyncio
