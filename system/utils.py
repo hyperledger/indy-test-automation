@@ -28,8 +28,7 @@ def random_did_and_json():
 
 
 def random_seed_and_json():
-    return base58.b58encode(random_string(23)).decode(),\
-        json.dumps({'seed': base58.b58encode(random_string(23)).decode()})
+    return random_string(32), json.dumps({'seed': random_string(32)})
 
 
 async def pool_helper(pool_name=None, path_to_genesis='../docker_genesis', node_list=None):
