@@ -56,6 +56,8 @@ def pool_initializer(node_containers):
                               user='indy')
                 for i, node in enumerate(node_containers)]
     start_res = [node.exec_run(['systemctl', 'start', 'indy-node'], user='root') for node in node_containers]
+    assert all([res.exit_code == 0 for res in init_res])
+    assert all([res.exit_code == 0 for res in start_res])
     return init_res, start_res
 
 
