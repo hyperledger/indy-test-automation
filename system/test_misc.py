@@ -390,7 +390,7 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
     #           '{\"demoted_node\":{\"count\": 1}}, '
     #           '{\"cfg_writes\":{\"count\": 1}}]\" '
     #           '-c 1 -b 1 -l 1 >> /dev/null &')
-    for i in range(10):
+    for i in range(25):
         steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         await nym_helper(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
         req1 = await ledger.build_node_request(steward_did, steward_vk,
@@ -413,7 +413,7 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
         await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req3)
     output = host.check_output('systemctl stop indy-node')
     print(output)
-    for i in range(10):
+    for i in range(25):
         steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         await nym_helper(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
         req1 = await ledger.build_node_request(steward_did, steward_vk,
@@ -442,10 +442,22 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
 
 
 @pytest.mark.asyncio
-async def test_misc(pool_handler, wallet_handler):
-    steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, json.dumps(
-        {'seed': '000000000000000000000000Steward1'}))
-    for i in range(10):
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-        res = await nym_helper(pool_handler, wallet_handler, steward_did, target_did, target_vk, None, 'TRUST_ANCHOR')
-        print(res)
+async def test_misc_is_1201(pool_handler, wallet_handler, get_default_trustee):
+    trustee_did, _ = get_default_trustee
+    req = await ledger.build_auth_rule_request(trustee_did, 'NYM', 'ADD', 'role', None, '101',
+                                               '{"sig_count":1,'
+                                               '"role":"0",'
+                                               '"constraint_id":"ROLE",'
+                                               '"need_to_be_owner":false}')
+    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res1)
+    assert res1['op'] == 'REPLY'
+
+    req = await ledger.build_auth_rule_request(trustee_did, 'NYM', 'EDIT', 'role', '101', '0',
+                                               '{"sig_count":1,'
+                                               '"role":"0",'
+                                               '"constraint_id":"ROLE",'
+                                               '"need_to_be_owner":false}')
+    res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res2)
+    assert res2['op'] == 'REPLY'
