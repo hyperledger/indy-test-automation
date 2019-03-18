@@ -441,23 +441,53 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
     check_ledger_sync()
 
 
+# @pytest.mark.parametrize('txn_type, action, field, old, new, constraint', [
+#     (),
+#     (),
+#     ()
+# ])
 @pytest.mark.asyncio
-async def test_misc_is_1201(pool_handler, wallet_handler, get_default_trustee):
+async def test_misc_is_1201(pool_handler, wallet_handler, get_default_trustee,
+                            txn_type, action, field, old, new, constraint):
     trustee_did, _ = get_default_trustee
-    req = await ledger.build_auth_rule_request(trustee_did, 'NYM', 'ADD', 'role', None, '101',
-                                               '{"sig_count":1,'
-                                               '"role":"0",'
-                                               '"constraint_id":"ROLE",'
-                                               '"need_to_be_owner":false}')
-    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    req = await ledger.build_auth_rule_request(trustee_did, txn_type, action, field, old, new, constraint)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res)
+    assert res['op'] == 'REPLY'
+
+
+@pytest.mark.asyncio
+async def test_misc(pool_handler, wallet_handler, get_default_trustee):
+    trustee_did, _ = get_default_trustee
+    steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    await nym_helper(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+    req1 = await ledger.build_node_request(steward_did, steward_vk,
+                                           json.dumps(
+                                                  {
+                                                      'alias': random_string(5),
+                                                      'client_ip':
+                                                          '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
+                                                      'client_port': rr(1, 32767),
+                                                      'node_ip':
+                                                          '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
+                                                      'node_port': rr(1, 32767),
+                                                      'services': ['VALIDATOR']
+                                                  }))
+    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req1))
     print(res1)
     assert res1['op'] == 'REPLY'
-
-    req = await ledger.build_auth_rule_request(trustee_did, 'NYM', 'EDIT', 'role', '101', '0',
-                                               '{"sig_count":1,'
-                                               '"role":"0",'
-                                               '"constraint_id":"ROLE",'
-                                               '"need_to_be_owner":false}')
-    res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    req2 = await ledger.build_node_request(steward_did, steward_vk,
+                                           json.dumps(
+                                                  {
+                                                      'alias': random_string(5),
+                                                      'client_ip':
+                                                          '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
+                                                      'client_port': rr(1, 32767),
+                                                      'node_ip':
+                                                          '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
+                                                      'node_port': rr(1, 32767),
+                                                      'services': ['VALIDATOR']
+                                                  }))
+    res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req2))
     print(res2)
-    assert res2['op'] == 'REPLY'
+    assert res2['op'] == 'REJECT'
