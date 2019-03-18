@@ -27,9 +27,11 @@ async def test_send_and_get_nym_positive(writer_role, reader_role):
     await nym_helper(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     # Writer sends NYM
     res1 = await nym_helper(pool_handle, wallet_handle, writer_did, target_did)
-    time.sleep(1)
     # Reader gets NYM
     res2 = await get_nym_helper(pool_handle, wallet_handle, target_did, target_did)
+    while res2['result']['seqNo'] is None:
+        res2 = await get_nym_helper(pool_handle, wallet_handle, target_did, target_did)
+        time.sleep(1)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -79,8 +81,10 @@ async def test_send_and_get_attrib_positive(xhash, raw, enc, raw_key):
         {'seed': '000000000000000000000000Trustee1'}))
     await nym_helper(pool_handle, wallet_handle, submitter_did, target_did, target_vk)
     res1 = await attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
-    time.sleep(1)
     res2 = await get_attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw_key, enc)
+    while res2['result']['seqNo'] is None:
+        res2 = await get_attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw_key, enc)
+        time.sleep(1)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -144,9 +148,11 @@ async def test_send_and_get_schema_positive(writer_role, reader_role):
     # Writer sends SCHEMA
     schema_id, res1 = await schema_helper(pool_handle, wallet_handle, writer_did,
                                           'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
-    time.sleep(1)
     # Reader gets SCHEMA
     res2 = await get_schema_helper(pool_handle, wallet_handle, reader_did, schema_id)
+    while res2['result']['seqNo'] is None:
+        res2 = await get_schema_helper(pool_handle, wallet_handle, reader_did, schema_id)
+        time.sleep(1)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -211,8 +217,10 @@ async def test_send_and_get_cred_def_positive(writer_role, reader_role):
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res1 = await cred_def_helper(pool_handle, wallet_handle, writer_did, schema_json, 'TAG',
                                                  None, json.dumps({'support_revocation': False}))
-    time.sleep(1)
     res2 = await get_cred_def_helper(pool_handle, wallet_handle, reader_did, cred_def_id)
+    while res2['result']['seqNo'] is None:
+        res2 = await get_cred_def_helper(pool_handle, wallet_handle, reader_did, cred_def_id)
+        time.sleep(1)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -284,8 +292,10 @@ async def test_send_and_get_revoc_reg_def_positive(writer_role, reader_role):
                                                               'revoc_def_tag', cred_def_id,
                                                               json.dumps({'max_cred_num': 1,
                                                                           'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
-    time.sleep(1)
     res2 = await get_revoc_reg_def_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id)
+    while res2['result']['seqNo'] is None:
+        res2 = await get_revoc_reg_def_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id)
+        time.sleep(1)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -327,10 +337,16 @@ async def test_send_and_get_revoc_reg_entry_positive(writer_role, reader_role):
                                                                 json.dumps({'max_cred_num': 1,
                                                                             'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
     timestamp1 = int(time.time())
-    time.sleep(1)
     res2 = await get_revoc_reg_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id, timestamp1)
+    while res2['result']['seqNo'] is None:
+        res2 = await get_revoc_reg_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id, timestamp1)
+        time.sleep(1)
     res3 = await get_revoc_reg_delta_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id,
                                             timestamp0, timestamp1)
+    while res3['result']['seqNo'] is None:
+        res3 = await get_revoc_reg_delta_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id,
+                                                timestamp0, timestamp1)
+        time.sleep(1)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
