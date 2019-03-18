@@ -23,8 +23,14 @@ async def test_vc_by_restart(pool_handler, wallet_handler, get_default_trustee):
     host = testinfra.get_host('ssh://node'+primary_before)
     output = host.check_output('systemctl start indy-node')
     print(output)
-    time.sleep(30)
-    check_ledger_sync()
+    while True:
+        try:
+            time.sleep(10)
+            check_ledger_sync()
+            print('NO ERRORS HERE SO BREAK THE LOOP')
+            break
+        except AssertionError:
+            pass
 
 
 @pytest.mark.asyncio
@@ -44,5 +50,11 @@ async def test_vc_by_demotion(pool_handler, wallet_handler, get_default_trustee)
     assert primary_before != primary_after
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
     await promote_node(pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
-    time.sleep(30)
-    check_ledger_sync()
+    while True:
+        try:
+            time.sleep(10)
+            check_ledger_sync()
+            print('NO ERRORS HERE SO BREAK THE LOOP')
+            break
+        except AssertionError:
+            pass

@@ -202,7 +202,7 @@ async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
     add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
     while add['op'] != 'REPLY':
         add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-        time.sleep(1)
+        time.sleep(10)
     assert add['op'] == 'REPLY'
 
     get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
@@ -528,6 +528,9 @@ async def demote_random_node(pool_handle, wallet_handle, trustee_did):
     demote_data = json.dumps({'alias': alias, 'services': []})
     demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
     demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
+    while demote_res['op'] != 'REPLY':
+        demote_res = json.loads(
+            await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
     assert demote_res['op'] == 'REPLY'
 
     return alias, target_did
@@ -537,6 +540,9 @@ async def demote_node(pool_handle, wallet_handle, trustee_did, alias, target_did
     demote_data = json.dumps({'alias': alias, 'services': []})
     demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
     demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
+    while demote_res['op'] != 'REPLY':
+        demote_res = json.loads(
+            await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
     assert demote_res['op'] == 'REPLY'
 
 
@@ -544,6 +550,9 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
     promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
     promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
+    while promote_res['op'] != 'REPLY':
+        promote_res = json.loads(
+            await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
     host = testinfra.get_host('ssh://node'+alias[4:])
     host.run('systemctl restart indy-node')
     assert promote_res['op'] == 'REPLY'
