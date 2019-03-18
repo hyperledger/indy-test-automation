@@ -16,7 +16,7 @@ async def test_vc_by_restart(pool_handler, wallet_handler, get_default_trustee):
     primary_after = primary_before
     while primary_before == primary_after:
         primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
-        time.sleep(60)
+        time.sleep(30)
     print('\nPrimary after: {}'.format(primary_after))
     assert primary_before != primary_after
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
@@ -39,7 +39,7 @@ async def test_vc_by_demotion(pool_handler, wallet_handler, get_default_trustee)
     primary_after = primary_before
     while primary_before == primary_after:
         primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
-        time.sleep(60)
+        time.sleep(30)
     print('\nPrimary after: {}'.format(primary_after))
     assert primary_before != primary_after
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
