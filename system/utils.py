@@ -200,7 +200,11 @@ def run_in_event_loop(async_func):
 
 async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
     add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    while add['op'] != 'REPLY':
+        add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+        time.sleep(1)
     assert add['op'] == 'REPLY'
+
     get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
     while get['result']['seqNo'] is None:
         get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
