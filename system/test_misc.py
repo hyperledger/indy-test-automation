@@ -12,6 +12,7 @@ from random import randrange as rr
 from random import sample
 from datetime import datetime, timedelta, timezone
 import hashlib
+from hypothesis import errors, settings, Verbosity, given, strategies as st
 
 
 # logger = logging.getLogger(__name__)
@@ -616,3 +617,20 @@ async def test_misc_indy_2022(pool_handler, wallet_handler, get_default_trustee)
     assert all([res['op'] == 'REPLY' for res in results2])
     time.sleep(15)
     check_ledger_sync()
+
+
+@settings(verbosity=Verbosity.debug)
+@given(test_string=st.characters(whitelist_categories=('N', 'L')))
+@pytest.mark.asyncio
+async def test_misc_hypothesis(event_loop, test_string):
+    pool_handle, _ = await pool_helper()
+    wallet_handle, _, _ = await wallet_helper()
+    trustee_did, _ = await default_trustee(wallet_handle)
+    res = await schema_helper(pool_handle, wallet_handle, trustee_did, test_string, '1.0',
+                              json.dumps(["age", "sex", "height", "name"]))
+    print(res)
+
+
+@pytest.mark.asyncio
+async def test_misc():
+    pass
