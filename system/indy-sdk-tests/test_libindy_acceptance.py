@@ -8,8 +8,8 @@ def test_libindy():
     indy_anoncreds_ver = '1.0.11'
     indy_node_ver = '1.6.83'
     indy_sdk_deb_path = 'https://repo.sovrin.org/sdk/lib/apt/xenial/rc/'
-    indy_sdk_deb_ver = 'libindy_1.8.1~61_amd64.deb'
-    indy_sdk_ver = '1.8.1-rc-61'
+    indy_sdk_deb_ver = 'libindy_1.8.2~66_amd64.deb'
+    indy_sdk_ver = '1.8.2-rc-66'
     os.chdir('/home/indy/indy-sdk')
     subprocess.check_call(['git', 'stash'])
     subprocess.check_call(['git', 'fetch'])

@@ -70,12 +70,11 @@ async def test_misc_wallet():
     await did.create_and_store_my_did(wallet_handle, json.dumps({'seed': '000000000000000000000000Trustee1'}))
 
 
-@pytest.mark.skip
 @pytest.mark.asyncio
 async def test_misc_get_txn_by_seqno():
     await pool.set_protocol_version(2)
-    pool_handle, _ = await pool_helper(path_to_genesis='/home/indy/stn_genesis')
-    req = await ledger.build_get_txn_request(None, None, 9738)
+    pool_handle, _ = await pool_helper()
+    req = await ledger.build_get_txn_request(None, None, 1)
     res = await ledger.submit_request(pool_handle, req)
     print(res)
 
@@ -98,7 +97,7 @@ async def test_misc_state_proof():
                                               None, json.dumps({'support_revocation': True}))
     hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 5)]
     print(hosts)
-    outputs0 = [host.run('systemctl stop indy-node-tests') for host in hosts[:-1]]
+    outputs0 = [host.run('systemctl stop indy-node') for host in hosts[:-1]]
     print(outputs0)
 
     time.sleep(1)
@@ -112,7 +111,7 @@ async def test_misc_state_proof():
         req3 = await ledger.build_get_cred_def_request(None, cred_def_id)
         res3 = json.loads(await ledger.submit_request(pool_handle, req3))
     finally:
-        outputs1 = [host.run('systemctl start indy-node-tests') for host in hosts[:-1]]
+        outputs1 = [host.run('systemctl start indy-node') for host in hosts[:-1]]
         print(outputs1)
 
     assert res1['result']['seqNo'] is not None
@@ -457,7 +456,7 @@ async def test_misc_is_1201(pool_handler, wallet_handler, get_default_trustee,
 
 
 @pytest.mark.asyncio
-async def test_misc(pool_handler, wallet_handler, get_default_trustee):
+async def test_misc_nodes_adding(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
     steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     await nym_helper(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
@@ -491,3 +490,129 @@ async def test_misc(pool_handler, wallet_handler, get_default_trustee):
     res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req2))
     print(res2)
     assert res2['op'] == 'REJECT'
+
+
+@pytest.mark.asyncio
+async def test_misc_indy_1554_can_write_true(pool_handler, wallet_handler, get_default_trustee):
+    trustee_did, _ = get_default_trustee
+    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    await nym_helper(pool_handler, wallet_handler, trustee_did, new_did, new_vk, None, None)
+
+    schema_id, _ = await schema_helper(pool_handler, wallet_handler, new_did,
+                                       'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
+    time.sleep(1)
+    res = await get_schema_helper(pool_handler, wallet_handler, new_did, schema_id)
+    schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
+    cred_def_id, _, res = await cred_def_helper(pool_handler, wallet_handler, new_did, schema_json, 'cred_def_tag',
+                                                'CL', json.dumps({'support_revocation': True}))
+    revoc_reg_def_id, _, _, res1 = await revoc_reg_entry_helper(pool_handler, wallet_handler, new_did, 'CL_ACCUM',
+                                                                'revoc_def_tag', cred_def_id,
+                                                                json.dumps({'max_cred_num': 1,
+                                                                            'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+    print(res1)
+    revoc_reg_def_id, _, _, res9 = await revoc_reg_entry_helper(pool_handler, wallet_handler, trustee_did, 'CL_ACCUM',
+                                                                'another_revoc_def_tag', cred_def_id,
+                                                                json.dumps({'max_cred_num': 1,
+                                                                            'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+    print(res9)
+
+    assert res1['op'] == 'REPLY'
+    assert res9['op'] == 'REPLY'
+
+
+@pytest.mark.asyncio
+async def test_misc_indy_1554_can_write_false(pool_handler, wallet_handler, get_default_trustee):
+    trustee_did, _ = get_default_trustee
+    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    t_did, t_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    await nym_helper(pool_handler, wallet_handler, trustee_did, new_did, new_vk, None, None)
+    await nym_helper(pool_handler, wallet_handler, trustee_did, t_did, t_vk, None, 'TRUSTEE')
+
+    schema_id, _ = await schema_helper(pool_handler, wallet_handler, trustee_did,
+                                       'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
+    time.sleep(1)
+    res = await get_schema_helper(pool_handler, wallet_handler, trustee_did, schema_id)
+    schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
+    cred_def_id, _, res = await cred_def_helper(pool_handler, wallet_handler, trustee_did, schema_json, 'cred_def_tag',
+                                                'CL', json.dumps({'support_revocation': True}))
+    # Creation by None role- FAIL
+    revoc_reg_def_id1, revoc_reg_def_json1, revoc_reg_entry_json1, res1 = \
+        await revoc_reg_entry_helper(pool_handler, wallet_handler, new_did, 'CL_ACCUM', 'revoc_def_tag', cred_def_id,
+                                     json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+
+    print(res1)
+    # Creation by Trustee role - PASS
+    revoc_reg_def_id2, revoc_reg_def_json2, revoc_reg_entry_json2, res2 = \
+        await revoc_reg_entry_helper(pool_handler, wallet_handler, trustee_did, 'CL_ACCUM', 'another_revoc_def_tag',
+                                     cred_def_id, json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+    print(res2)
+
+    # Editing by None role and not owner both entities
+    req = await ledger.build_revoc_reg_def_request(new_did, revoc_reg_def_json2)
+    res3 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, new_did, req)
+    print(res3)
+    req = await ledger.build_revoc_reg_entry_request(new_did, revoc_reg_def_id2, 'CL_ACCUM', revoc_reg_entry_json2)
+    res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, new_did, req))
+    print(res4)
+
+    # Editing by Trustee role and not owner both entities
+    req = await ledger.build_revoc_reg_def_request(t_did, revoc_reg_def_json2)
+    res5 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, t_did, req)
+    print(res5)
+    req = await ledger.build_revoc_reg_entry_request(t_did, revoc_reg_def_id2, 'CL_ACCUM', revoc_reg_entry_json2)
+    res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, t_did, req))
+    print(res6)
+
+    # Editing by Trustee role and owner both entities
+    req = await ledger.build_revoc_reg_def_request(trustee_did, revoc_reg_def_json2)
+    res7 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res7)
+    req = await ledger.build_revoc_reg_entry_request(trustee_did, revoc_reg_def_id2, 'CL_ACCUM', revoc_reg_entry_json2)
+    res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res8)
+
+    assert res1['op'] == 'REJECT'  # UnauthorizedClientRequest Rule for this action is...
+    assert res2['op'] == 'REPLY'
+
+
+@pytest.mark.parametrize('submitter_did, txn_type, action, field, old_value, new_value', [
+    (None, None, None, None, None, None),
+    (None, 'NYM', 'ADD', 'role', None, '101'),
+    (None, 'NYM', 'EDIT', 'role', '0', '101')
+])
+@pytest.mark.asyncio
+async def test_misc_is_1202(pool_handler, wallet_handler, get_default_trustee,
+                            submitter_did, txn_type, action, field, old_value, new_value):
+    trustee_did, _ = get_default_trustee
+    req = await ledger.build_get_auth_rule_request(submitter_did, txn_type, action, field, old_value, new_value)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print('\n', res)
+    assert res['op'] == 'REPLY'
+
+
+@pytest.mark.asyncio
+async def test_misc_is_1085(pool_handler, wallet_handler, get_default_trustee):
+    trustee_did, _ = get_default_trustee
+    res = await get_nym_helper(pool_handler, wallet_handler, trustee_did, trustee_did)
+    print(res)
+
+
+@pytest.mark.asyncio
+async def test_misc_indy_2022(pool_handler, wallet_handler, get_default_trustee):
+    trustee_did, _ = get_default_trustee
+    results1 = []
+    for i in range(5):
+        res = await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
+        results1.append(res)
+    assert all([res['op'] == 'REPLY' for res in results1])
+    time.sleep(720)
+    primary, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+    output = testinfra.get_host('ssh://node{}'.format(primary)).check_output('systemctl restart indy-node')
+    print(output)
+    results2 = []
+    for i in range(10):
+        res = await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
+        results2.append(res)
+    assert all([res['op'] == 'REPLY' for res in results2])
+    time.sleep(15)
+    check_ledger_sync()

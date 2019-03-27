@@ -40,17 +40,17 @@ async def test_pool_upgrade_positive():
                         '6CRQcKzeRMCstErDT2Pso4he3rWWu1m16CRyp1fjYCFx', '53skV1LWLCbcxxdvoxY3pKDx2MAvszA27hA6cBZxLbnf',
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
-    init_time = 1
-    version = '1.6.83'
+    init_time = 3
+    version = '1.6.874'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
     _sha256 = hashlib.sha256().hexdigest()
     _timeout = 5
-    docker_4_schedule = json.dumps(dict(
+    docker_7_schedule = json.dumps(dict(
         {dest:
-            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
-         for dest, i in zip(dests[:4], range(len(dests[:4])))}
+            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*0), '%Y-%m-%dT%H:%M:%S%z')
+         for dest, i in zip(dests[:7], range(len(dests[:7])))}
     ))
     aws_25_schedule = json.dumps(dict(
         {dest:
@@ -58,7 +58,7 @@ async def test_pool_upgrade_positive():
          for dest, i in zip(persistent_dests, range(len(persistent_dests)))}
     ))
     reinstall = False
-    force = False
+    force = True
     package = 'indy-node'
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
@@ -94,21 +94,21 @@ async def test_pool_upgrade_positive():
 
     # schedule pool upgrade
     req = await ledger.build_pool_upgrade_request(trustee_did, name, version, action, _sha256, _timeout,
-                                                  docker_4_schedule, None, reinstall, force, package)
+                                                  docker_7_schedule, None, reinstall, force, package)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     print(res)
 
-    time.sleep(1200)
+    time.sleep(360)
 
-    docker_4_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 5)]
+    docker_7_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
     aws_25_hosts = [testinfra.get_host('ssh://persistent_node'+str(i),
                                        ssh_config='/home/indy/.ssh/config')
                     for i in range(1, 26)]
     # print(aws_25_hosts)
     # os.chdir('/home/indy/indy-node/pool_automation/auto/.ssh/')
-    version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in docker_4_hosts]
+    version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in docker_7_hosts]
     print(version_outputs)
-    status_outputs = [host.run('systemctl status indy-node') for host in docker_4_hosts]
+    status_outputs = [host.run('systemctl status indy-node') for host in docker_7_hosts]
     print(status_outputs)
     # os.chdir('/home/indy/PycharmProjects/tests')
     version_checks = [output.stdout.find(version) for output in version_outputs]

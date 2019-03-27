@@ -7,6 +7,11 @@ import json
 from indy import pool, did, ledger, IndyError
 import hashlib
 import time
+import logging
+
+
+# logger = logging.getLogger(__name__)
+# logging.basicConfig(level=0, format='%(asctime)s %(message)s')
 
 
 @pytest.mark.parametrize('writer_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
