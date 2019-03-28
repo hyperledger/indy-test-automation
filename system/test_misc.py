@@ -644,7 +644,7 @@ async def test_misc_indy_2033(pool_handler, wallet_handler, get_default_trustee,
     res1 = await nym_helper(pool_handler, wallet_handler, trustee_did, new_did, new_vk, None, role_under_test)
     print('\n{}'.format(res1))
     assert res1['op'] == 'REPLY'
-    res2 = await nym_helper(pool_handler, wallet_handler, trustee_did, new_did, None, None, None)
+    res2 = await nym_helper(pool_handler, wallet_handler, trustee_did, new_did, None, None, '')
     print('\n{}'.format(res2))
     assert res2['op'] == 'REPLY'
     res3 = await nym_helper(pool_handler, wallet_handler, trustee_did, new_did, None, None, role_under_test)
