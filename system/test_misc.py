@@ -631,6 +631,22 @@ async def test_misc_hypothesis(event_loop, test_string):
     print(res)
 
 
+@pytest.mark.parametrize('role_under_test', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR', 'NETWORK_MONITOR'])
 @pytest.mark.asyncio
-async def test_misc():
-    pass
+async def test_misc_indy_2033(pool_handler, wallet_handler, get_default_trustee, role_under_test):
+    trustee_did, _ = get_default_trustee
+    # another_trustee_did, another_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    # res0 = await nym_helper(pool_handler, wallet_handler, trustee_did, another_trustee_did, another_trustee_vk, None,
+    #                         'TRUSTEE')
+    # print('\n{}'.format(res0))
+    # assert res0['op'] == 'REPLY'
+    res1 = await nym_helper(pool_handler, wallet_handler, trustee_did, new_did, new_vk, None, role_under_test)
+    print('\n{}'.format(res1))
+    assert res1['op'] == 'REPLY'
+    res2 = await nym_helper(pool_handler, wallet_handler, trustee_did, new_did, None, None, None)
+    print('\n{}'.format(res2))
+    assert res2['op'] == 'REPLY'
+    res3 = await nym_helper(pool_handler, wallet_handler, trustee_did, new_did, None, None, role_under_test)
+    print('\n{}'.format(res3))
+    assert res3['op'] == 'REPLY'
