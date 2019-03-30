@@ -5,6 +5,7 @@ from async_generator import yield_, async_generator
 import os
 import subprocess
 from subprocess import CalledProcessError
+import system.docker_setup
 
 
 @pytest.fixture(scope='session')
@@ -36,10 +37,9 @@ async def get_default_trustee(wallet_handler):
     await yield_((trustee_did, trustee_vk))
 
 
-@pytest.fixture()
+@pytest.fixture(scope='class')
 @async_generator
 async def docker_setup_and_teardown():
-    os.chdir('/home/indy/indy-node/environment/docker/pool')
     containers = subprocess.check_output(['docker', 'ps', '-a', '-q']).decode().strip().split()
     outputs = [subprocess.check_call(['docker', 'rm', container, '-f']) for container in containers]
     assert outputs is not None
@@ -50,9 +50,9 @@ async def docker_setup_and_teardown():
     #     assert outputs is not None
     # except CalledProcessError:
     #     pass
-    pool_start_result = subprocess.check_output(['./pool_start.sh', '7']).decode().strip()
-    assert pool_start_result.find('Pool started') is not -1
+    system.docker_setup.main()
     time.sleep(15)
+    print('\nDOCKER SETUP HAS BEEN FINISHED!\n')
 
     await yield_()
 
@@ -66,4 +66,4 @@ async def docker_setup_and_teardown():
     #     assert outputs is not None
     # except CalledProcessError:
     #     pass
-    os.chdir('~')
+    print('\nDOCKER TEARDOWN HAS BEEN FINISHED!\n')

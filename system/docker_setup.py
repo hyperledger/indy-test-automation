@@ -70,3 +70,14 @@ if __name__ == '__main__':
                 network_builder(NETWORK_SUBNET,
                                 NETWORK_NAME),
                 NODES_NUM))))
+
+
+def main():
+    print(pool_initializer(
+            pool_starter(
+                pool_builder(
+                    DOCKERFILE_PATH,
+                    NODE_NAME_BASE,
+                    network_builder(NETWORK_SUBNET,
+                                    NETWORK_NAME),
+                    NODES_NUM))))
