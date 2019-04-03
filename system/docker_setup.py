@@ -61,17 +61,6 @@ def pool_initializer(node_containers):
     return init_res, start_res
 
 
-if __name__ == '__main__':
-    print(pool_initializer(
-        pool_starter(
-            pool_builder(
-                DOCKERFILE_PATH,
-                NODE_NAME_BASE,
-                network_builder(NETWORK_SUBNET,
-                                NETWORK_NAME),
-                NODES_NUM))))
-
-
 def main():
     print(pool_initializer(
             pool_starter(
@@ -81,3 +70,7 @@ def main():
                     network_builder(NETWORK_SUBNET,
                                     NETWORK_NAME),
                     NODES_NUM))))
+
+
+if __name__ == '__main__':
+    main()

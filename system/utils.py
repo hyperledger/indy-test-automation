@@ -556,3 +556,11 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     host = testinfra.get_host('ssh://node'+alias[4:])
     host.run('systemctl restart indy-node')
     assert promote_res['op'] == 'REPLY'
+
+
+async def eventually_positive():
+    pass
+
+
+async def eventually_negative():
+    pass
