@@ -37,7 +37,7 @@ async def get_default_trustee(wallet_handler):
     await yield_((trustee_did, trustee_vk))
 
 
-@pytest.fixture(scope='class')
+@pytest.fixture(scope='function')
 @async_generator
 async def docker_setup_and_teardown():
     containers = subprocess.check_output(['docker', 'ps', '-a', '-q']).decode().strip().split()
@@ -51,7 +51,7 @@ async def docker_setup_and_teardown():
     # except CalledProcessError:
     #     pass
     system.docker_setup.main()
-    time.sleep(15)
+    time.sleep(30)
     print('\nDOCKER SETUP HAS BEEN FINISHED!\n')
 
     await yield_()

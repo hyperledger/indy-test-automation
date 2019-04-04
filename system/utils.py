@@ -500,7 +500,10 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
     # count the same entries
     primaries = Counter(primaries)
     # find actual primary
-    primary = max(primaries, key=primaries.get)
+    try:
+        primary = max(primaries, key=primaries.get)
+    except ValueError:
+        primary = '1'
     alias = 'Node{}'.format(primary)
     host = testinfra.get_host('ssh://node{}'.format(primary))
     pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
