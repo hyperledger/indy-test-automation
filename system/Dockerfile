@@ -27,8 +27,8 @@ RUN apt-get update -y && apt-get install -y indy-node sovtoken sovtokenfees
 RUN echo " " >> /etc/indy/indy_config.py
 RUN echo "NETWORK_NAME = 'sandbox'" >> /etc/indy/indy_config.py
 RUN echo " " >> /etc/indy/indy_config.py
-RUN echo "ForceViewChangeFreq = 1800" >> /etc/indy/indy_config.py
-RUN echo " " >> /etc/indy/indy_config.py
+#RUN echo "ForceViewChangeFreq = 1800" >> /etc/indy/indy_config.py
+#RUN echo " " >> /etc/indy/indy_config.py
 #RUN echo "ANYONE_CAN_WRITE=True" >> /etc/indy/indy_config.py
 #RUN echo " " >> /etc/indy/indy_config.py
 #USER indy

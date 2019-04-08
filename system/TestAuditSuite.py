@@ -45,6 +45,7 @@ class TestAuditSuite:
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         time.sleep(30)
         check_ledger_sync()
+        await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
     async def test_case_2(self, pool_handler, wallet_handler, get_default_trustee):
@@ -64,6 +65,7 @@ class TestAuditSuite:
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         time.sleep(30)
         check_ledger_sync()
+        await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
     async def test_case_3(self, pool_handler, wallet_handler, get_default_trustee):
@@ -84,3 +86,69 @@ class TestAuditSuite:
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         time.sleep(30)
         check_ledger_sync()
+        await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
+
+    @pytest.mark.asyncio
+    async def test_case_4(self, pool_handler, wallet_handler, get_default_trustee):
+        trustee_did, _ = get_default_trustee
+        hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in range(1, 8)]
+        primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+        output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl stop indy-node')
+        print(output)
+        time.sleep(60)
+        for i in range(15):
+            await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
+        output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl start indy-node')
+        print(output)
+        outputs = [host.check_output('systemctl restart indy-node') for host in hosts[5:]]
+        print(outputs)
+        time.sleep(30)
+        for i in range(30):
+            await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
+        time.sleep(30)
+        check_ledger_sync()
+        await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
+
+    @pytest.mark.asyncio
+    async def test_case_5(self, pool_handler, wallet_handler, get_default_trustee):
+        trustee_did, _ = get_default_trustee
+        hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in range(1, 8)]
+        primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+        output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl stop indy-node')
+        print(output)
+        time.sleep(60)
+        for i in range(15):
+            await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
+        output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl start indy-node')
+        print(output)
+        outputs = [host.check_output('systemctl restart indy-node') for host in hosts[3:]]
+        print(outputs)
+        time.sleep(30)
+        for i in range(30):
+            await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
+        time.sleep(30)
+        check_ledger_sync()
+        await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
+
+    @pytest.mark.asyncio
+    async def test_case_6(self, pool_handler, wallet_handler, get_default_trustee):
+        trustee_did, _ = get_default_trustee
+        hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in range(1, 8)]
+        primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+        output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl stop indy-node')
+        print(output)
+        time.sleep(60)
+        for i in range(15):
+            await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
+        output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl start indy-node')
+        print(output)
+        for host in hosts:
+            output = host.check_output('systemctl restart indy-node')
+            print(output)
+            time.sleep(10)
+        time.sleep(30)
+        for i in range(30):
+            await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
+        time.sleep(30)
+        check_ledger_sync()
+        await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
