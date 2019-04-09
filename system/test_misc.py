@@ -655,5 +655,22 @@ async def test_misc_indy_2033(pool_handler, wallet_handler, get_default_trustee,
 @pytest.mark.asyncio
 async def test_misc_indy_1720(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
-    primary, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
-    # TO DO
+    primary1, alias1, target_did1 = await get_primary(pool_handler, wallet_handler, trustee_did)
+    await demote_node(pool_handler, wallet_handler, trustee_did, alias1, target_did1)
+    primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
+    assert primary2 != primary1
+    for i in range(100):
+        await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
+    await promote_node(pool_handler, wallet_handler, trustee_did, alias1, target_did1)
+    primary3 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
+    assert primary3 != primary2
+    output = testinfra.get_host('ssh://node{}'.format(primary3)).check_output('systemctl stop indy-node')
+    print(output)
+    primary4 = await wait_until_vc_is_done(primary3, pool_handler, wallet_handler, trustee_did)
+    assert primary4 != primary3
+    for i in range(100):
+        await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
+    output = testinfra.get_host('ssh://node{}'.format(primary3)).check_output('systemctl start indy-node')
+    print(output)
+    check_ledger_sync()
+    await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])

@@ -2,7 +2,7 @@ import json
 import string
 import random
 import base58
-from indy import pool, wallet, did, ledger, anoncreds, blob_storage
+from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError
 from ctypes import CDLL
 import functools
 import asyncio
@@ -213,6 +213,8 @@ async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
 
 
 def check_ledger_sync():
+    # let all nodes and ledgers catch up to remove this timeout from all tests
+    time.sleep(30)
     hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in range(1, 8)]
     pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
     print('\nPOOL LEDGER SYNC: {}'.format([result.stdout for result in pool_results]))
@@ -514,6 +516,14 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
     return primary, alias, target_did
 
 
+def get_pool_info(primary: str) -> dict:
+    host = testinfra.get_host('ssh://node{}'.format(primary))
+    pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
+    pool_info = [json.loads(item) for item in pool_info]
+    pool_info = {item['txn']['data']['data']['alias']: item['txn']['data']['dest'] for item in pool_info}
+    return pool_info
+
+
 async def demote_random_node(pool_handle, wallet_handle, trustee_did):
     req = await ledger.build_get_validator_info_request(trustee_did)
     results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
@@ -561,9 +571,78 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     assert promote_res['op'] == 'REPLY'
 
 
-async def eventually_positive():
-    pass
+async def eventually_positive(func, *args, is_reading: bool, is_self_asserted: bool, cycles_limit=20):
+    cycles = 0
+    res = None
+
+    if is_self_asserted:  # this is for check_ledger_sync() and other self-asserted functions
+        while True:
+            try:
+                time.sleep(15)
+                cycles += 1
+                func(*args)
+                print('NO ERRORS HERE SO BREAK THE LOOP!')
+                break
+            except AssertionError:
+                if cycles >= cycles_limit:
+                    print('CYCLES LIMIT IS EXCEEDED BUT LEDGERS ARE NOT IN SYNC!')
+                    raise AssertionError
+                else:
+                    pass
+    else:
+        if is_reading:  # this is for reading requests
+            res = await func(*args)
+            while res['result']['seqNo'] is None:
+                cycles += 1
+                if cycles >= cycles_limit:
+                    print('CYCLES LIMIT IS EXCEEDED!')
+                    break
+                res = await func(*args)
+                time.sleep(5)
+
+        else:  # this is for writing requests
+            res = await func(*args)
+            while res['op'] != 'REPLY':
+                cycles += 1
+                if cycles >= cycles_limit:
+                    print('CYCLES LIMIT IS EXCEEDED!')
+                    break
+                res = await func(*args)
+                time.sleep(10)
+
+    return res
 
 
-async def eventually_negative():
-    pass
+async def eventually_negative(func, *args, cycles_limit=20):
+    cycles = 0
+    is_exception_raised = False
+
+    while True:
+        try:
+            time.sleep(10)
+            await func(*args)
+            cycles += 1
+            if cycles >= cycles_limit:
+                print('CYCLES LIMIT IS EXCEEDED BUT EXCEPTION HAS NOT BEEN RAISED!')
+                break
+        except IndyError:
+            print('EXPECTED INDY ERROR HAS BEEN RAISED!')
+            is_exception_raised = True
+            break
+
+    return is_exception_raised
+
+
+async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=10):
+    cycles = 0
+    primary_after = primary_before
+
+    while primary_before == primary_after:
+        cycles += 1
+        if cycles >= cycles_limit:
+            print('CYCLES LIMIT IS EXCEEDED BUT PRIMARY HAS NOT BEEN CHANGED!')
+            break
+        primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        time.sleep(30)
+
+    return primary_after
