@@ -199,20 +199,22 @@ def run_in_event_loop(async_func):
 
 
 async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
-    add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-    while add['op'] != 'REPLY':
-        add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-        time.sleep(10)
+    # add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    # while add['op'] != 'REPLY':
+    #     add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    #     time.sleep(10)
+    add = await eventually_positive(nym_helper, pool_handle, wallet_handle, trustee_did, some_did, is_reading=False)
     assert add['op'] == 'REPLY'
 
-    get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-    while get['result']['seqNo'] is None:
-        get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-        time.sleep(1)
+    # get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    # while get['result']['seqNo'] is None:
+    #     get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    #     time.sleep(1)
+    get = await eventually_positive(get_nym_helper, pool_handle, wallet_handle, trustee_did, some_did, is_reading=True)
     assert get['result']['seqNo'] is not None
 
 
-def check_ledger_sync():
+async def check_ledger_sync():
     hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in range(1, 8)]
     pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
     print('\nPOOL LEDGER SYNC: {}'.format([result.stdout for result in pool_results]))
@@ -573,15 +575,15 @@ async def eventually_positive(func, *args, is_reading=False, is_self_asserted=Fa
     cycles = 0
     res = None
 
-    if is_self_asserted:  # this is for check_ledger_sync() and other self-asserted functions
+    if is_self_asserted:  # this is for check_ledger_sync(), promote_node() and other self-asserted functions
         while True:
             try:
                 time.sleep(30)
                 cycles += 1
-                func(*args)
+                await func(*args)
                 print('NO ERRORS HERE SO BREAK THE LOOP!')
                 break
-            except AssertionError:
+            except AssertionError or IndyError:
                 if cycles >= cycles_limit:
                     print('CYCLES LIMIT IS EXCEEDED BUT LEDGERS ARE NOT IN SYNC!')
                     raise AssertionError
@@ -599,14 +601,19 @@ async def eventually_positive(func, *args, is_reading=False, is_self_asserted=Fa
                 time.sleep(5)
 
         else:  # this is for writing requests
-            res = await func(*args)
+            res = dict()
+            res['op'] = ''
             while res['op'] != 'REPLY':
-                cycles += 1
-                if cycles >= cycles_limit:
-                    print('CYCLES LIMIT IS EXCEEDED!')
-                    break
-                res = await func(*args)
-                time.sleep(10)
+                try:
+                    cycles += 1
+                    if cycles >= cycles_limit:
+                        print('CYCLES LIMIT IS EXCEEDED!')
+                        break
+                    res = await func(*args)
+                    time.sleep(10)
+                except IndyError:
+                    time.sleep(10)
+                    pass
 
     return res
 
@@ -617,7 +624,7 @@ async def eventually_negative(func, *args, cycles_limit=20):
 
     while True:
         try:
-            time.sleep(10)
+            time.sleep(15)
             await func(*args)
             cycles += 1
             if cycles >= cycles_limit:
