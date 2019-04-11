@@ -15,12 +15,12 @@ class TestAuditSuite:
         print(output)
         for i in range(30):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        time.sleep(30)
-        check_ledger_sync()
+        await eventually_positive(check_ledger_sync, is_self_asserted=True)
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl stop indy-node')
         print(output)
-        time.sleep(60)
+        primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
+        assert primary2 != primary1
         for i in range(15):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         output = hosts[5].check_output('systemctl restart indy-node')
@@ -29,10 +29,10 @@ class TestAuditSuite:
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl start indy-node')
         print(output)
-        primary2, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         output = testinfra.get_host('ssh://node{}'.format(primary2)).check_output('systemctl stop indy-node')
         print(output)
-        time.sleep(60)
+        primary3 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
+        assert primary3 != primary2
         output = hosts[5].check_output('systemctl stop indy-node')
         print(output)
         output = testinfra.get_host('ssh://node{}'.format(primary2)).check_output('systemctl start indy-node')
@@ -43,8 +43,7 @@ class TestAuditSuite:
         print(output)
         for i in range(30):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        time.sleep(60)
-        check_ledger_sync()
+        await eventually_positive(check_ledger_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
@@ -55,20 +54,18 @@ class TestAuditSuite:
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl stop indy-node')
         print(output)
-        time.sleep(60)
+        primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
+        assert primary2 != primary1
         for i in range(15):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl start indy-node')
         print(output)
-        primary2, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         output = testinfra.get_host('ssh://node{}'.format(int(primary2)+node_num_shift))\
             .check_output('systemctl restart indy-node')
         print(output)
-        time.sleep(60)
         for i in range(30):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        time.sleep(30)
-        check_ledger_sync()
+        await eventually_positive(check_ledger_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
@@ -78,18 +75,19 @@ class TestAuditSuite:
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl stop indy-node')
         print(output)
-        time.sleep(60)
+        primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
+        assert primary2 != primary1
         for i in range(15):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl start indy-node')
         print(output)
         outputs = [host.check_output('systemctl restart indy-node') for host in hosts]
         print(outputs)
-        time.sleep(30)
+        primary3 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
+        assert primary3 != primary2
         for i in range(30):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        time.sleep(30)
-        check_ledger_sync()
+        await eventually_positive(check_ledger_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
@@ -99,7 +97,8 @@ class TestAuditSuite:
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl stop indy-node')
         print(output)
-        time.sleep(60)
+        primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
+        assert primary2 != primary1
         for i in range(15):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl start indy-node')
@@ -109,8 +108,7 @@ class TestAuditSuite:
         time.sleep(30)
         for i in range(30):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        time.sleep(30)
-        check_ledger_sync()
+        await eventually_positive(check_ledger_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
@@ -120,7 +118,8 @@ class TestAuditSuite:
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl stop indy-node')
         print(output)
-        time.sleep(60)
+        primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
+        assert primary2 != primary1
         for i in range(15):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl start indy-node')
@@ -130,8 +129,7 @@ class TestAuditSuite:
         time.sleep(30)
         for i in range(30):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        time.sleep(30)
-        check_ledger_sync()
+        await eventually_positive(check_ledger_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
@@ -141,7 +139,8 @@ class TestAuditSuite:
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl stop indy-node')
         print(output)
-        time.sleep(60)
+        primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
+        assert primary2 != primary1
         for i in range(15):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl start indy-node')
@@ -153,8 +152,7 @@ class TestAuditSuite:
         time.sleep(30)
         for i in range(30):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        time.sleep(30)
-        check_ledger_sync()
+        await eventually_positive(check_ledger_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
@@ -165,22 +163,22 @@ class TestAuditSuite:
         primary1, alias1, target_did1 = await get_primary(pool_handler, wallet_handler, trustee_did)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl stop indy-node')
         print(output)
-        time.sleep(60)
+        primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
+        assert primary2 != primary1
         for i in range(15):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl start indy-node')
         print(output)
-        primary2, alias2, target_did2 = await get_primary(pool_handler, wallet_handler, trustee_did)
         # demote master primary / backup primary / non primary here
         alias_for_demotion = 'Node{}'.format(int(primary2)+node_num_shift)
         print(alias_for_demotion)
         target_did_for_demotion = get_pool_info(primary2)[alias_for_demotion]
         print(target_did_for_demotion)
         await demote_node(pool_handler, wallet_handler, trustee_did, alias_for_demotion, target_did_for_demotion)
-        time.sleep(60)
+        primary3 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
+        assert primary3 != primary2
         for i in range(30):
             await nym_helper(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         await promote_node(pool_handler, wallet_handler, trustee_did, alias_for_demotion, target_did_for_demotion)
-        time.sleep(60)
-        check_ledger_sync()
+        await eventually_positive(check_ledger_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])

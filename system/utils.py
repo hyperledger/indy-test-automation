@@ -213,8 +213,6 @@ async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
 
 
 def check_ledger_sync():
-    # let all nodes and ledgers catch up to remove this timeout from all tests
-    time.sleep(30)
     hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in range(1, 8)]
     pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
     print('\nPOOL LEDGER SYNC: {}'.format([result.stdout for result in pool_results]))
@@ -571,14 +569,14 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     assert promote_res['op'] == 'REPLY'
 
 
-async def eventually_positive(func, *args, is_reading: bool, is_self_asserted: bool, cycles_limit=20):
+async def eventually_positive(func, *args, is_reading=False, is_self_asserted=False, cycles_limit=20):
     cycles = 0
     res = None
 
     if is_self_asserted:  # this is for check_ledger_sync() and other self-asserted functions
         while True:
             try:
-                time.sleep(15)
+                time.sleep(30)
                 cycles += 1
                 func(*args)
                 print('NO ERRORS HERE SO BREAK THE LOOP!')
