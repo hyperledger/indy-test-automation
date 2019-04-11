@@ -29,17 +29,17 @@ async def test_consensus_restore_after_f_plus_one(pool_handler, wallet_handler,
     output = hosts[4].check_output('systemctl stop indy-node')
     print(output)
     is_exception_raised1 = await eventually_negative\
-        (nym_helper, pool_handler, wallet_handler, trustee_did, did3, None, None, None)
+        (send_nym, pool_handler, wallet_handler, trustee_did, did3, None, None, None)
     assert is_exception_raised1 is True
-    res1 = await eventually_positive(get_nym_helper, pool_handler, wallet_handler, trustee_did, did1, is_reading=True)
+    res1 = await eventually_positive(get_nym, pool_handler, wallet_handler, trustee_did, did1, is_reading=True)
     assert res1['result']['seqNo'] is not None
     # 3/7 online - can r only
     output = hosts[3].check_output('systemctl stop indy-node')
     print(output)
     is_exception_raised2 = await eventually_negative\
-        (nym_helper, pool_handler, wallet_handler, trustee_did, did4, None, None, None)
+        (send_nym, pool_handler, wallet_handler, trustee_did, did4, None, None, None)
     assert is_exception_raised2 is True
-    res2 = await eventually_positive(get_nym_helper, pool_handler, wallet_handler, trustee_did, did2, is_reading=True)
+    res2 = await eventually_positive(get_nym, pool_handler, wallet_handler, trustee_did, did2, is_reading=True)
     assert res2['result']['seqNo'] is not None
     # 5/7 online - can w+r
     outputs = [host.check_output('systemctl start indy-node') for host in hosts[3:5]]
@@ -64,7 +64,7 @@ async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
     # Stop all except 1
     outputs = [host.check_output('systemctl stop indy-node') for host in hosts[1:]]
     print(outputs)
-    res = await eventually_positive(get_nym_helper, pool_handler, wallet_handler, trustee_did, did1, is_reading=True)
+    res = await eventually_positive(get_nym, pool_handler, wallet_handler, trustee_did, did1, is_reading=True)
     assert res['result']['seqNo'] is not None
     # Stop the last one
     hosts[0].check_output('systemctl stop indy-node')
@@ -91,7 +91,7 @@ async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_defa
     outputs = [host.check_output('systemctl stop indy-node') for host in temp_hosts[-2:]]
     print(outputs)
     is_exception_raised1 = await eventually_negative\
-        (nym_helper, pool_handler, wallet_handler, trustee_did, did1, None, None, None)
+        (send_nym, pool_handler, wallet_handler, trustee_did, did1, None, None, None)
     assert is_exception_raised1 is True
     outputs = [host.check_output('systemctl start indy-node') for host in temp_hosts[-2:]]
     print(outputs)
@@ -103,12 +103,12 @@ async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_defa
     print(outputs)
     primary4 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
     assert primary4 != primary2
-    res2 = await eventually_positive(nym_helper, pool_handler, wallet_handler, trustee_did, did2, None, None, None)
+    res2 = await eventually_positive(send_nym, pool_handler, wallet_handler, trustee_did, did2, None, None, None)
     assert res2['op'] == 'REPLY'
     output = hosts[0].check_output('systemctl stop indy-node')
     print(output)
     is_exception_raised2 = await eventually_negative\
-        (nym_helper, pool_handler, wallet_handler, trustee_did, did3, None, None, None)
+        (send_nym, pool_handler, wallet_handler, trustee_did, did3, None, None, None)
     assert is_exception_raised2 is True
     # Start all
     outputs = [host.check_output('systemctl start indy-node') for host in hosts]

@@ -28,9 +28,9 @@ async def test_misc_freshness():
     trustee_did4, trustee_vk4 = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {"seed": str('000000000000000000000000Trustee4')}))
 
-    await nym_helper(pool_handle, wallet_handle, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
-    await nym_helper(pool_handle, wallet_handle, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
-    await nym_helper(pool_handle, wallet_handle, trustee_did, trustee_did4, trustee_vk4, None, 'TRUSTEE')
+    await send_nym(pool_handle, wallet_handle, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
+    await send_nym(pool_handle, wallet_handle, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
+    await send_nym(pool_handle, wallet_handle, trustee_did, trustee_did4, trustee_vk4, None, 'TRUSTEE')
 
     mint_req, _ = await payment.build_mint_req(wallet_handle, trustee_did,
                                                json.dumps([{"recipient": address1, "amount": 100}]), None)
@@ -49,7 +49,7 @@ async def test_misc_freshness():
 
     new_steward_did, new_steward_vk = await did.create_and_store_my_did(wallet_handle, '{}')
     some_did = random_did_and_json()[0]
-    await nym_helper(pool_handle, wallet_handle, trustee_did, new_steward_did, new_steward_vk, 'steward', 'STEWARD')
+    await send_nym(pool_handle, wallet_handle, trustee_did, new_steward_did, new_steward_vk, 'steward', 'STEWARD')
 
     # # write config ledger txn
     # dests = ['Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv', '8ECVSk179mjsjKRLWiQtssMLgp6EPhWXtaYyStWPSGAb',
@@ -66,22 +66,22 @@ async def test_misc_freshness():
 
     # write domain ledger txns
     timestamp0 = int(time.time())
-    nym = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-    attrib = await attrib_helper(pool_handle, wallet_handle, trustee_did, some_did, None, json.dumps({'key': 'value'}),
-                                 None)
-    schema_id, schema = await schema_helper(pool_handle, wallet_handle, trustee_did, random_string(10), '1.0',
-                                            json.dumps(["age", "sex", "height", "name"]))
-    temp = await get_schema_helper(pool_handle, wallet_handle, trustee_did, schema_id)
+    nym = await send_nym(pool_handle, wallet_handle, trustee_did, some_did)
+    attrib = await send_attrib(pool_handle, wallet_handle, trustee_did, some_did, None, json.dumps({'key': 'value'}),
+                               None)
+    schema_id, schema = await send_schema(pool_handle, wallet_handle, trustee_did, random_string(10), '1.0',
+                                          json.dumps(["age", "sex", "height", "name"]))
+    temp = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(temp))
     cred_def_id, _, cred_def =\
-        await cred_def_helper(pool_handle, wallet_handle, trustee_did, schema_json, random_string(5), 'CL',
-                              json.dumps({'support_revocation': True}))
+        await send_cred_def(pool_handle, wallet_handle, trustee_did, schema_json, random_string(5), 'CL',
+                            json.dumps({'support_revocation': True}))
     revoc_reg_def_id1, _, _, revoc_reg_def =\
-        await revoc_reg_def_helper(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5), cred_def_id,
-                                   json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+        await send_revoc_reg_def(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5), cred_def_id,
+                                 json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
     revoc_reg_def_id2, _, _, revoc_reg_entry =\
-        await revoc_reg_entry_helper(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5), cred_def_id,
-                                     json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+        await send_revoc_reg_entry(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5), cred_def_id,
+                                   json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
     timestamp1 = int(time.time())
 
     add_results = [nym, attrib, schema, cred_def, revoc_reg_def, revoc_reg_entry]
@@ -129,14 +129,14 @@ async def test_misc_freshness():
     # assert (int(time.time()) - config_result['result']['state_proof']['multi_signature']['value']['timestamp']) <= 300
 
     # read domain ledger txns
-    get_nym = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-    get_attrib = await get_attrib_helper(pool_handle, wallet_handle, trustee_did, some_did, None, 'key', None)
-    get_schema = await get_schema_helper(pool_handle, wallet_handle, trustee_did, schema_id)
-    get_cred_def = await get_cred_def_helper(pool_handle, wallet_handle, trustee_did, cred_def_id)
-    get_revoc_reg_def = await get_revoc_reg_def_helper(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id1)
-    get_revoc_reg = await get_revoc_reg_helper(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp1)
-    get_revoc_reg_delta = await get_revoc_reg_delta_helper(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2,
-                                                           timestamp0, timestamp1)
+    get_nym = await get_nym(pool_handle, wallet_handle, trustee_did, some_did)
+    get_attrib = await get_attrib(pool_handle, wallet_handle, trustee_did, some_did, None, 'key', None)
+    get_schema = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
+    get_cred_def = await get_cred_def(pool_handle, wallet_handle, trustee_did, cred_def_id)
+    get_revoc_reg_def = await get_revoc_reg_def(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id1)
+    get_revoc_reg = await get_revoc_reg(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp1)
+    get_revoc_reg_delta = await get_revoc_reg_delta(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2,
+                                                    timestamp0, timestamp1)
 
     get_results = [get_nym, get_attrib, get_schema, get_cred_def, get_revoc_reg_def, get_revoc_reg, get_revoc_reg_delta]
     for res in get_results:

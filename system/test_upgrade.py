@@ -68,28 +68,28 @@ async def test_pool_upgrade_positive():
         {'seed': '000000000000000000000000Trustee1'}))
 
     # write all txns before the upgrade
-    nym_before_res = await nym_helper(pool_handle, wallet_handle, trustee_did, random_did)
-    attrib_before_res = await attrib_helper(pool_handle, wallet_handle, trustee_did, random_did, None,
-                                            json.dumps({'key': 'value'}), None)
-    schema_id, schema_before_res = await schema_helper(pool_handle, wallet_handle, trustee_did,
-                                                       random_string(10), '1.0',
-                                                       json.dumps(["age", "sex", "height", "name"]))
-    temp = await get_schema_helper(pool_handle, wallet_handle, trustee_did, schema_id)
+    nym_before_res = await send_nym(pool_handle, wallet_handle, trustee_did, random_did)
+    attrib_before_res = await send_attrib(pool_handle, wallet_handle, trustee_did, random_did, None,
+                                          json.dumps({'key': 'value'}), None)
+    schema_id, schema_before_res = await send_schema(pool_handle, wallet_handle, trustee_did,
+                                                     random_string(10), '1.0',
+                                                     json.dumps(["age", "sex", "height", "name"]))
+    temp = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(temp))
 
     cred_def_id, _, cred_def_before_res =\
-        await cred_def_helper(pool_handle, wallet_handle, trustee_did, schema_json, random_string(5), 'CL',
-                              json.dumps({'support_revocation': True}))
+        await send_cred_def(pool_handle, wallet_handle, trustee_did, schema_json, random_string(5), 'CL',
+                            json.dumps({'support_revocation': True}))
 
     revoc_reg_def_id1, _, _, revoc_reg_def_before_res =\
-        await revoc_reg_def_helper(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5),
-                                   cred_def_id,
-                                   json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+        await send_revoc_reg_def(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5),
+                                 cred_def_id,
+                                 json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
 
     revoc_reg_def_id2, _, _, revoc_reg_entry_before_res =\
-        await revoc_reg_entry_helper(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5),
-                                     cred_def_id,
-                                     json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+        await send_revoc_reg_entry(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5),
+                                   cred_def_id,
+                                   json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
     timestamp1 = int(time.time())
 
     # schedule pool upgrade
@@ -117,23 +117,23 @@ async def test_pool_upgrade_positive():
     print(status_checks)
 
     # read all txns that were added before the upgrade
-    get_nym_after_res = await get_nym_helper(pool_handle, wallet_handle, trustee_did, random_did)
-    get_attrib_after_res = await get_attrib_helper(pool_handle, wallet_handle, trustee_did, random_did,
-                                                   None, 'key', None)
-    get_schema_after_res = await get_schema_helper(pool_handle, wallet_handle, trustee_did, schema_id)
-    get_cred_def_after_res = await get_cred_def_helper(pool_handle, wallet_handle, trustee_did, cred_def_id)
+    get_nym_after_res = await get_nym(pool_handle, wallet_handle, trustee_did, random_did)
+    get_attrib_after_res = await get_attrib(pool_handle, wallet_handle, trustee_did, random_did,
+                                            None, 'key', None)
+    get_schema_after_res = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
+    get_cred_def_after_res = await get_cred_def(pool_handle, wallet_handle, trustee_did, cred_def_id)
     get_revoc_reg_def_after_res =\
-        await get_revoc_reg_def_helper(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id1)
+        await get_revoc_reg_def(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id1)
     get_revoc_reg_after_res =\
-        await get_revoc_reg_helper(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp1)
+        await get_revoc_reg(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp1)
     get_revoc_reg_delta_after_res =\
-        await get_revoc_reg_delta_helper(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2,
-                                         timestamp0, timestamp1)
+        await get_revoc_reg_delta(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2,
+                                  timestamp0, timestamp1)
 
     # write and read NYM after the upgrade
-    nym = await nym_helper(pool_handle, wallet_handle, trustee_did, another_random_did)
+    nym = await send_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
     time.sleep(1)
-    get_nym = await get_nym_helper(pool_handle, wallet_handle, trustee_did, another_random_did)
+    get_nym = await get_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
 
     add_before_results = [nym_before_res, attrib_before_res, schema_before_res, cred_def_before_res,
                           revoc_reg_def_before_res, revoc_reg_entry_before_res]
