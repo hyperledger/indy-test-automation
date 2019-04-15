@@ -8,39 +8,33 @@ class TestAuditSuite:
     @pytest.mark.asyncio
     async def test_case_restart_one_node(self, pool_handler, wallet_handler, get_default_trustee):
         trustee_did, _ = get_default_trustee
-        hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in range(1, 8)]
+        test_nodes = [TestNode(i) for i in range(1, 8)]
         for i in range(15):
             await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        output = hosts[5].check_output('systemctl restart indy-node')
-        print(output)
+        test_nodes[5].restart_service()
         for i in range(30):
             await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         await eventually_positive(check_ledger_sync, is_self_asserted=True)
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
-        output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl stop indy-node')
-        print(output)
+        p1 = TestNode(primary1)
+        p1.stop_service()
         primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
+        p2 = TestNode(primary2)
         assert primary2 != primary1
         for i in range(15):
             await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        output = hosts[5].check_output('systemctl restart indy-node')
-        print(output)
+        test_nodes[5].restart_service()
         for i in range(30):
             await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        output = testinfra.get_host('ssh://node{}'.format(primary1)).check_output('systemctl start indy-node')
-        print(output)
-        output = testinfra.get_host('ssh://node{}'.format(primary2)).check_output('systemctl stop indy-node')
-        print(output)
+        p1.start_service()
+        p2.stop_service()
         primary3 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
         assert primary3 != primary2
-        output = hosts[5].check_output('systemctl stop indy-node')
-        print(output)
-        output = testinfra.get_host('ssh://node{}'.format(primary2)).check_output('systemctl start indy-node')
-        print(output)
+        test_nodes[5].stop_service()
+        p2.start_service()
         for i in range(15):
             await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
-        output = hosts[5].check_output('systemctl start indy-node')
-        print(output)
+        test_nodes[5].start_service()
         for i in range(30):
             await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         await eventually_positive(check_ledger_sync, is_self_asserted=True)

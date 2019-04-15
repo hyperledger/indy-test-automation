@@ -651,3 +651,21 @@ async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, tr
         time.sleep(30)
 
     return primary_after
+
+
+class TestNode:
+    def __init__(self, node_id):
+        self._host = testinfra.get_host('ssh://node{}'.format(node_id))
+
+    def run(self, command: str):
+        output = self._host.check_output(command)
+        print(output)
+
+    def start_service(self):
+        self.run('systemctl start indy-node')
+
+    def stop_service(self):
+        self.run('systemctl stop indy-node')
+
+    def restart_service(self):
+        self.run('systemctl restart indy-node')
