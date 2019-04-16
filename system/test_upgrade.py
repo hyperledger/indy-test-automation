@@ -40,17 +40,17 @@ async def test_pool_upgrade_positive():
                         '6CRQcKzeRMCstErDT2Pso4he3rWWu1m16CRyp1fjYCFx', '53skV1LWLCbcxxdvoxY3pKDx2MAvszA27hA6cBZxLbnf',
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
-    init_time = 1
-    version = '1.6.83'
+    init_time = 3
+    version = '1.6.874'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
     _sha256 = hashlib.sha256().hexdigest()
     _timeout = 5
-    docker_4_schedule = json.dumps(dict(
+    docker_7_schedule = json.dumps(dict(
         {dest:
-            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
-         for dest, i in zip(dests[:4], range(len(dests[:4])))}
+            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*0), '%Y-%m-%dT%H:%M:%S%z')
+         for dest, i in zip(dests[:7], range(len(dests[:7])))}
     ))
     aws_25_schedule = json.dumps(dict(
         {dest:
@@ -58,7 +58,7 @@ async def test_pool_upgrade_positive():
          for dest, i in zip(persistent_dests, range(len(persistent_dests)))}
     ))
     reinstall = False
-    force = False
+    force = True
     package = 'indy-node'
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
@@ -68,47 +68,47 @@ async def test_pool_upgrade_positive():
         {'seed': '000000000000000000000000Trustee1'}))
 
     # write all txns before the upgrade
-    nym_before_res = await nym_helper(pool_handle, wallet_handle, trustee_did, random_did)
-    attrib_before_res = await attrib_helper(pool_handle, wallet_handle, trustee_did, random_did, None,
-                                            json.dumps({'key': 'value'}), None)
-    schema_id, schema_before_res = await schema_helper(pool_handle, wallet_handle, trustee_did,
-                                                       random_string(10), '1.0',
-                                                       json.dumps(["age", "sex", "height", "name"]))
-    temp = await get_schema_helper(pool_handle, wallet_handle, trustee_did, schema_id)
+    nym_before_res = await send_nym(pool_handle, wallet_handle, trustee_did, random_did)
+    attrib_before_res = await send_attrib(pool_handle, wallet_handle, trustee_did, random_did, None,
+                                          json.dumps({'key': 'value'}), None)
+    schema_id, schema_before_res = await send_schema(pool_handle, wallet_handle, trustee_did,
+                                                     random_string(10), '1.0',
+                                                     json.dumps(["age", "sex", "height", "name"]))
+    temp = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(temp))
 
     cred_def_id, _, cred_def_before_res =\
-        await cred_def_helper(pool_handle, wallet_handle, trustee_did, schema_json, random_string(5), 'CL',
-                              json.dumps({'support_revocation': True}))
+        await send_cred_def(pool_handle, wallet_handle, trustee_did, schema_json, random_string(5), 'CL',
+                            json.dumps({'support_revocation': True}))
 
     revoc_reg_def_id1, _, _, revoc_reg_def_before_res =\
-        await revoc_reg_def_helper(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5),
-                                   cred_def_id,
-                                   json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+        await send_revoc_reg_def(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5),
+                                 cred_def_id,
+                                 json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
 
     revoc_reg_def_id2, _, _, revoc_reg_entry_before_res =\
-        await revoc_reg_entry_helper(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5),
-                                     cred_def_id,
-                                     json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+        await send_revoc_reg_entry(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5),
+                                   cred_def_id,
+                                   json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
     timestamp1 = int(time.time())
 
     # schedule pool upgrade
     req = await ledger.build_pool_upgrade_request(trustee_did, name, version, action, _sha256, _timeout,
-                                                  docker_4_schedule, None, reinstall, force, package)
+                                                  docker_7_schedule, None, reinstall, force, package)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     print(res)
 
-    time.sleep(1200)
+    time.sleep(360)
 
-    docker_4_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 5)]
+    docker_7_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
     aws_25_hosts = [testinfra.get_host('ssh://persistent_node'+str(i),
                                        ssh_config='/home/indy/.ssh/config')
                     for i in range(1, 26)]
     # print(aws_25_hosts)
     # os.chdir('/home/indy/indy-node/pool_automation/auto/.ssh/')
-    version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in docker_4_hosts]
+    version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in docker_7_hosts]
     print(version_outputs)
-    status_outputs = [host.run('systemctl status indy-node') for host in docker_4_hosts]
+    status_outputs = [host.run('systemctl status indy-node') for host in docker_7_hosts]
     print(status_outputs)
     # os.chdir('/home/indy/PycharmProjects/tests')
     version_checks = [output.stdout.find(version) for output in version_outputs]
@@ -117,23 +117,23 @@ async def test_pool_upgrade_positive():
     print(status_checks)
 
     # read all txns that were added before the upgrade
-    get_nym_after_res = await get_nym_helper(pool_handle, wallet_handle, trustee_did, random_did)
-    get_attrib_after_res = await get_attrib_helper(pool_handle, wallet_handle, trustee_did, random_did,
-                                                   None, 'key', None)
-    get_schema_after_res = await get_schema_helper(pool_handle, wallet_handle, trustee_did, schema_id)
-    get_cred_def_after_res = await get_cred_def_helper(pool_handle, wallet_handle, trustee_did, cred_def_id)
+    get_nym_after_res = await get_nym(pool_handle, wallet_handle, trustee_did, random_did)
+    get_attrib_after_res = await get_attrib(pool_handle, wallet_handle, trustee_did, random_did,
+                                            None, 'key', None)
+    get_schema_after_res = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
+    get_cred_def_after_res = await get_cred_def(pool_handle, wallet_handle, trustee_did, cred_def_id)
     get_revoc_reg_def_after_res =\
-        await get_revoc_reg_def_helper(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id1)
+        await get_revoc_reg_def(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id1)
     get_revoc_reg_after_res =\
-        await get_revoc_reg_helper(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp1)
+        await get_revoc_reg(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp1)
     get_revoc_reg_delta_after_res =\
-        await get_revoc_reg_delta_helper(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2,
-                                         timestamp0, timestamp1)
+        await get_revoc_reg_delta(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2,
+                                  timestamp0, timestamp1)
 
     # write and read NYM after the upgrade
-    nym = await nym_helper(pool_handle, wallet_handle, trustee_did, another_random_did)
+    nym = await send_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
     time.sleep(1)
-    get_nym = await get_nym_helper(pool_handle, wallet_handle, trustee_did, another_random_did)
+    get_nym = await get_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
 
     add_before_results = [nym_before_res, attrib_before_res, schema_before_res, cred_def_before_res,
                           revoc_reg_def_before_res, revoc_reg_entry_before_res]

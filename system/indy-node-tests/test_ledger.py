@@ -1,12 +1,14 @@
-from system.utils import pool_helper, wallet_helper, nym_helper, get_nym_helper, attrib_helper, get_attrib_helper,\
-    schema_helper, get_schema_helper, cred_def_helper, get_cred_def_helper, revoc_reg_def_helper,\
-    get_revoc_reg_def_helper, revoc_reg_entry_helper, get_revoc_reg_helper, get_revoc_reg_delta_helper,\
-    random_did_and_json, random_seed_and_json
+from system.utils import *
 import pytest
 import json
 from indy import pool, did, ledger, IndyError
 import hashlib
 import time
+import logging
+
+
+# logger = logging.getLogger(__name__)
+# logging.basicConfig(level=0, format='%(asctime)s %(message)s')
 
 
 @pytest.mark.parametrize('writer_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
@@ -22,14 +24,13 @@ async def test_send_and_get_nym_positive(writer_role, reader_role):
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
     # Trustee adds NYM writer
-    await nym_helper(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
+    await send_nym(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
     # Trustee adds NYM reader
-    await nym_helper(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
+    await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     # Writer sends NYM
-    res1 = await nym_helper(pool_handle, wallet_handle, writer_did, target_did)
-    time.sleep(1)
+    res1 = await send_nym(pool_handle, wallet_handle, writer_did, target_did)
     # Reader gets NYM
-    res2 = await get_nym_helper(pool_handle, wallet_handle, target_did, target_did)
+    res2 = await read_eventually_positive(get_nym, pool_handle, wallet_handle, target_did, target_did)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -52,10 +53,10 @@ async def test_send_and_get_nym_negative(submitter_seed):
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
     # Trustee adds submitter
-    await nym_helper(pool_handle, wallet_handle, trustee_did, submitter_did, submitter_vk)
+    await send_nym(pool_handle, wallet_handle, trustee_did, submitter_did, submitter_vk)
     # None role submitter tries to send NYM (rejected) and gets no data about this NYM from ledger
-    res1 = await nym_helper(pool_handle, wallet_handle, submitter_did, target_did)
-    res2 = await get_nym_helper(pool_handle, wallet_handle, submitter_did, target_did)
+    res1 = await send_nym(pool_handle, wallet_handle, submitter_did, target_did)
+    res2 = await get_nym(pool_handle, wallet_handle, submitter_did, target_did)
 
     assert res1['op'] == 'REJECT'
     assert res2['result']['seqNo'] is None
@@ -77,10 +78,12 @@ async def test_send_and_get_attrib_positive(xhash, raw, enc, raw_key):
     target_did, target_vk = await did.create_and_store_my_did(wallet_handle, '{}')
     submitter_did, submitter_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
-    await nym_helper(pool_handle, wallet_handle, submitter_did, target_did, target_vk)
-    res1 = await attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
-    time.sleep(1)
-    res2 = await get_attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw_key, enc)
+    await send_nym(pool_handle, wallet_handle, submitter_did, target_did, target_vk)
+    # Writer sends ATTRIB
+    res1 = await send_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
+    # Reader gets ATTRIB
+    res2 = await read_eventually_positive\
+        (get_attrib, pool_handle, wallet_handle, target_did, target_did, xhash, raw_key, enc)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -107,19 +110,19 @@ async def test_send_and_get_attrib_negative(xhash, raw, enc, error, readonly):
     target_did, target_vk = await did.create_and_store_my_did(wallet_handle, '{}')
     submitter_did, submitter_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
-    await nym_helper(pool_handle, wallet_handle, submitter_did, target_did, target_vk)
+    await send_nym(pool_handle, wallet_handle, submitter_did, target_did, target_vk)
     if error:
         with pytest.raises(error):
-            await attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
+            await send_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
         with pytest.raises(error):
-            await get_attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
+            await get_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
     elif readonly:
-        res = await get_attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
+        res = await get_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
         assert res['result']['seqNo'] is None
         print(res)
     else:
-        res1 = await attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
-        res2 = await get_attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
+        res1 = await send_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
+        res2 = await get_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
         assert res1['op'] == 'REQNACK'
         assert res2['op'] == 'REQNACK'
         print(res1)
@@ -138,15 +141,14 @@ async def test_send_and_get_schema_positive(writer_role, reader_role):
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
     # Trustee adds SCHEMA writer
-    await nym_helper(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
+    await send_nym(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
     # Trustee adds SCHEMA reader
-    await nym_helper(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
+    await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     # Writer sends SCHEMA
-    schema_id, res1 = await schema_helper(pool_handle, wallet_handle, writer_did,
-                                          'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
-    time.sleep(1)
+    schema_id, res1 = await send_schema(pool_handle, wallet_handle, writer_did,
+                                        'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
     # Reader gets SCHEMA
-    res2 = await get_schema_helper(pool_handle, wallet_handle, reader_did, schema_id)
+    res2 = await read_eventually_positive(get_schema, pool_handle, wallet_handle, reader_did, schema_id)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -170,17 +172,17 @@ async def test_send_and_get_schema_negative(schema_name, schema_version, schema_
         {'seed': '000000000000000000000000Trustee1'}))
     if errors:
         with pytest.raises(errors[0]):
-            await schema_helper(pool_handle, wallet_handle, trustee_did, schema_name, schema_version, schema_attrs)
+            await send_schema(pool_handle, wallet_handle, trustee_did, schema_name, schema_version, schema_attrs)
         with pytest.raises(errors[1]):
-            await get_schema_helper(pool_handle, wallet_handle, trustee_did, schema_id)
+            await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     elif readonly:
-        res = await get_schema_helper(pool_handle, wallet_handle, trustee_did, schema_id)
+        res = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
         assert res['result']['seqNo'] is None
         print(res)
     # TODO: get reqnacks from pool
     else:
-        res1 = await schema_helper(pool_handle, wallet_handle, trustee_did, schema_name, schema_version, schema_attrs)
-        res2 = await get_schema_helper(pool_handle, wallet_handle, trustee_did, schema_id)
+        res1 = await send_schema(pool_handle, wallet_handle, trustee_did, schema_name, schema_version, schema_attrs)
+        res2 = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
 
         assert res1['op'] == 'REQNACK'
         assert res2['op'] == 'REQNACK'
@@ -201,18 +203,17 @@ async def test_send_and_get_cred_def_positive(writer_role, reader_role):
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
     # Trustee adds CRED_DEF writer
-    await nym_helper(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
+    await send_nym(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
     # Trustee adds CRED_DEF reader
-    await nym_helper(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
-    schema_id, _ = await schema_helper(pool_handle, wallet_handle, writer_did,
+    await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
+    schema_id, _ = await send_schema(pool_handle, wallet_handle, writer_did,
                                        'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
     time.sleep(1)
-    res = await get_schema_helper(pool_handle, wallet_handle, reader_did, schema_id)
+    res = await get_schema(pool_handle, wallet_handle, reader_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
-    cred_def_id, _, res1 = await cred_def_helper(pool_handle, wallet_handle, writer_did, schema_json, 'TAG',
-                                                 None, json.dumps({'support_revocation': False}))
-    time.sleep(1)
-    res2 = await get_cred_def_helper(pool_handle, wallet_handle, reader_did, cred_def_id)
+    cred_def_id, _, res1 = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'TAG',
+                                               None, json.dumps({'support_revocation': False}))
+    res2 = await read_eventually_positive(get_cred_def, pool_handle, wallet_handle, reader_did, cred_def_id)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -237,19 +238,19 @@ async def test_send_and_get_cred_def_negative(schema_json, tag, signature_type, 
         {'seed': '000000000000000000000000Trustee1'}))
     if errors:
         with pytest.raises(errors[0]):
-            await cred_def_helper(
+            await send_cred_def(
                 pool_handle, wallet_handle, trustee_did, schema_json, tag, signature_type, config_json)
         with pytest.raises(errors[1]):
-            await get_cred_def_helper(pool_handle, wallet_handle, trustee_did, cred_def_id)
+            await get_cred_def(pool_handle, wallet_handle, trustee_did, cred_def_id)
     elif readonly:
-        res = await get_cred_def_helper(pool_handle, wallet_handle, trustee_did, cred_def_id)
+        res = await get_cred_def(pool_handle, wallet_handle, trustee_did, cred_def_id)
         assert res['result']['seqNo'] is None
         print(res)
     # TODO: get reqnacks from pool
     else:
-        res1 = await cred_def_helper(pool_handle, wallet_handle, trustee_did, schema_json, tag, signature_type,
-                                     config_json)
-        res2 = await get_cred_def_helper(pool_handle, wallet_handle, trustee_did, cred_def_id)
+        res1 = await send_cred_def(pool_handle, wallet_handle, trustee_did, schema_json, tag, signature_type,
+                                   config_json)
+        res2 = await get_cred_def(pool_handle, wallet_handle, trustee_did, cred_def_id)
 
         assert res1['op'] == 'REQNACK'
         assert res2['op'] == 'REQNACK'
@@ -270,22 +271,21 @@ async def test_send_and_get_revoc_reg_def_positive(writer_role, reader_role):
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
     # Trustee adds REVOC_REG_DEF writer
-    await nym_helper(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
+    await send_nym(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
     # Trustee adds REVOC_REG_DEF reader
-    await nym_helper(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
-    schema_id, _ = await schema_helper(pool_handle, wallet_handle, writer_did,
-                                       'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
+    await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
+    schema_id, _ = await send_schema(pool_handle, wallet_handle, writer_did,
+                                     'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
     time.sleep(1)
-    res = await get_schema_helper(pool_handle, wallet_handle, reader_did, schema_id)
+    res = await get_schema(pool_handle, wallet_handle, reader_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
-    cred_def_id, _, res = await cred_def_helper(pool_handle, wallet_handle, writer_did, schema_json, 'cred_def_tag',
-                                                None, json.dumps({"support_revocation": True}))
-    revoc_reg_def_id, _, _, res1 = await revoc_reg_def_helper(pool_handle, wallet_handle, writer_did, None,
-                                                              'revoc_def_tag', cred_def_id,
-                                                              json.dumps({'max_cred_num': 1,
-                                                                          'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
-    time.sleep(1)
-    res2 = await get_revoc_reg_def_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id)
+    cred_def_id, _, res = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'cred_def_tag',
+                                              None, json.dumps({'support_revocation': True}))
+    revoc_reg_def_id, _, _, res1 = await send_revoc_reg_def(pool_handle, wallet_handle, writer_did, None,
+                                                            'revoc_def_tag', cred_def_id,
+                                                            json.dumps({'max_cred_num': 1,
+                                                                        'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+    res2 = await read_eventually_positive(get_revoc_reg_def, pool_handle, wallet_handle, reader_did, revoc_reg_def_id)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -312,25 +312,27 @@ async def test_send_and_get_revoc_reg_entry_positive(writer_role, reader_role):
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
     # Trustee adds REVOC_REG_ENTRY writer
-    await nym_helper(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
+    await send_nym(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
     # Trustee adds REVOC_REG_ENTRY reader
-    await nym_helper(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
-    schema_id, _ = await schema_helper(pool_handle, wallet_handle, writer_did,
-                                       'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
+    await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
+    schema_id, _ = await send_schema(pool_handle, wallet_handle, writer_did,
+                                     'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
     time.sleep(1)
-    res = await get_schema_helper(pool_handle, wallet_handle, reader_did, schema_id)
+    res = await get_schema(pool_handle, wallet_handle, reader_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
-    cred_def_id, _, res = await cred_def_helper(pool_handle, wallet_handle, writer_did, schema_json, 'cred_def_tag',
+    cred_def_id, _, res = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'cred_def_tag',
                                                 'CL', json.dumps({'support_revocation': True}))
-    revoc_reg_def_id, _, _, res1 = await revoc_reg_entry_helper(pool_handle, wallet_handle, writer_did, 'CL_ACCUM',
-                                                                'revoc_def_tag', cred_def_id,
-                                                                json.dumps({'max_cred_num': 1,
-                                                                            'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+    revoc_reg_def_id, _, _, res1 = await send_revoc_reg_entry(pool_handle, wallet_handle, writer_did, 'CL_ACCUM',
+                                                              'revoc_def_tag', cred_def_id,
+                                                              json.dumps({'max_cred_num': 1,
+                                                                          'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
     timestamp1 = int(time.time())
-    time.sleep(1)
-    res2 = await get_revoc_reg_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id, timestamp1)
-    res3 = await get_revoc_reg_delta_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id,
-                                            timestamp0, timestamp1)
+
+    res2 = await read_eventually_positive\
+        (get_revoc_reg, pool_handle, wallet_handle, reader_did, revoc_reg_def_id, timestamp1)
+
+    res3 = await read_eventually_positive\
+        (get_revoc_reg_delta, pool_handle, wallet_handle, reader_did, revoc_reg_def_id, timestamp0, timestamp1)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None

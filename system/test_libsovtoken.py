@@ -22,9 +22,9 @@ async def test_libsovtoken_acceptance():
     trustee_did4, trustee_vk4 = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {"seed": str('000000000000000000000000Trustee4')}))
 
-    await nym_helper(pool_handle, wallet_handle, trustee_did1, trustee_did2, trustee_vk2, None, 'TRUSTEE')
-    await nym_helper(pool_handle, wallet_handle, trustee_did1, trustee_did3, trustee_vk3, None, 'TRUSTEE')
-    await nym_helper(pool_handle, wallet_handle, trustee_did1, trustee_did4, trustee_vk4, None, 'TRUSTEE')
+    await send_nym(pool_handle, wallet_handle, trustee_did1, trustee_did2, trustee_vk2, None, 'TRUSTEE')
+    await send_nym(pool_handle, wallet_handle, trustee_did1, trustee_did3, trustee_vk3, None, 'TRUSTEE')
+    await send_nym(pool_handle, wallet_handle, trustee_did1, trustee_did4, trustee_vk4, None, 'TRUSTEE')
 
     fees = {'10001': 1, '102': 1, '101': 1, '1': 1, '100': 1, '113': 1, '114': 1}
     req = await payment.build_set_txn_fees_req(wallet_handle, trustee_did1, libsovtoken_payment_method,
@@ -101,8 +101,8 @@ async def test_libsovtoken_acceptance():
     l5 = [source5]
 
     # send schema, no tokens
-    _, res = await schema_helper(pool_handle, wallet_handle, trustee_did1, random_string(5), '1.0',
-                                 json.dumps(["name", "age"]))
+    _, res = await send_schema(pool_handle, wallet_handle, trustee_did1, random_string(5), '1.0',
+                               json.dumps(["name", "age"]))
     assert res['op'] == 'REJECT'
 
     # send schema, enough tokens
@@ -116,7 +116,7 @@ async def test_libsovtoken_acceptance():
 
     # get schema
     time.sleep(1)
-    res6 = await get_schema_helper(pool_handle, wallet_handle, trustee_did1, schema_id)
+    res6 = await get_schema(pool_handle, wallet_handle, trustee_did1, schema_id)
     assert res6['result']['seqNo'] is not None
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res6))
 
@@ -140,7 +140,7 @@ async def test_libsovtoken_acceptance():
     assert res8['op'] == 'REPLY'
 
     # get cred def
-    res9 = await get_cred_def_helper(pool_handle, wallet_handle, trustee_did1, cred_def_id)
+    res9 = await get_cred_def(pool_handle, wallet_handle, trustee_did1, cred_def_id)
     assert res9['result']['seqNo'] is not None
 
     # send nym with fees

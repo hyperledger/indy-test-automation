@@ -1,5 +1,10 @@
 import pytest
 from system.utils import *
+import logging
+
+
+# logger = logging.getLogger(__name__)
+# logging.basicConfig(level=0, format='%(asctime)s %(message)s')
 
 
 @pytest.mark.asyncio
@@ -10,21 +15,14 @@ async def test_vc_by_restart(pool_handler, wallet_handler, get_default_trustee):
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
     primary_before, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
     print('\nPrimary before: {}'.format(primary_before))
-    host = testinfra.get_host('ssh://node'+primary_before)
-    output = host.check_output('systemctl stop indy-node')
-    print(output)
-    primary_after = primary_before
-    while primary_before == primary_after:
-        primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
-        time.sleep(60)
+    p1 = NodeHost(primary_before)
+    p1.stop_service()
+    primary_after = await wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did)
     print('\nPrimary after: {}'.format(primary_after))
     assert primary_before != primary_after
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
-    host = testinfra.get_host('ssh://node'+primary_before)
-    output = host.check_output('systemctl start indy-node')
-    print(output)
-    time.sleep(30)
-    check_ledger_sync()
+    p1.start_service()
+    await eventually_positive(check_ledger_sync)
 
 
 @pytest.mark.asyncio
@@ -35,14 +33,10 @@ async def test_vc_by_demotion(pool_handler, wallet_handler, get_default_trustee)
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
     primary_before, primary_alias, primary_did = await get_primary(pool_handler, wallet_handler, trustee_did)
     print('\nPrimary before: {}'.format(primary_before))
-    await demote_node(pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
-    primary_after = primary_before
-    while primary_before == primary_after:
-        primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
-        time.sleep(60)
+    await eventually_positive(demote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
+    primary_after = await wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did)
     print('\nPrimary after: {}'.format(primary_after))
     assert primary_before != primary_after
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
-    await promote_node(pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
-    time.sleep(30)
-    check_ledger_sync()
+    await eventually_positive(promote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
+    await eventually_positive(check_ledger_sync)

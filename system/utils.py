@@ -2,7 +2,7 @@ import json
 import string
 import random
 import base58
-from indy import pool, wallet, did, ledger, anoncreds, blob_storage
+from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError
 from ctypes import CDLL
 import functools
 import asyncio
@@ -78,22 +78,22 @@ async def payment_initializer(library_name, initializer_name):
     init()
 
 
-async def nym_helper(pool_handle, wallet_handle, submitter_did, target_did,
-                     target_vk=None, target_alias=None, target_role=None):
+async def send_nym(pool_handle, wallet_handle, submitter_did, target_did,
+                   target_vk=None, target_alias=None, target_role=None):
     req = await ledger.build_nym_request(submitter_did, target_did, target_vk, target_alias, target_role)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
-async def attrib_helper(pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None):
+async def send_attrib(pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None):
     req = await ledger.build_attrib_request(submitter_did, target_did, xhash, raw, enc)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
-async def schema_helper(pool_handle, wallet_handle, submitter_did, schema_name, schema_version, schema_attrs):
+async def send_schema(pool_handle, wallet_handle, submitter_did, schema_name, schema_version, schema_attrs):
     schema_id, schema_json = await anoncreds.issuer_create_schema(submitter_did, schema_name, schema_version,
                                                                   schema_attrs)
     req = await ledger.build_schema_request(submitter_did, schema_json)
@@ -102,7 +102,7 @@ async def schema_helper(pool_handle, wallet_handle, submitter_did, schema_name, 
     return schema_id, res
 
 
-async def cred_def_helper(pool_handle, wallet_handle, submitter_did, schema_json, tag, signature_type, config_json):
+async def send_cred_def(pool_handle, wallet_handle, submitter_did, schema_json, tag, signature_type, config_json):
     cred_def_id, cred_def_json = \
         await anoncreds.issuer_create_and_store_credential_def(wallet_handle, submitter_did, schema_json, tag,
                                                                signature_type, config_json)
@@ -112,7 +112,7 @@ async def cred_def_helper(pool_handle, wallet_handle, submitter_did, schema_json
     return cred_def_id, cred_def_json, res
 
 
-async def revoc_reg_def_helper(pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json):
+async def send_revoc_reg_def(pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json):
     tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
     tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
     revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = \
@@ -124,7 +124,7 @@ async def revoc_reg_def_helper(pool_handle, wallet_handle, submitter_did, revoc_
     return revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, res
 
 
-async def revoc_reg_entry_helper(pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json):
+async def send_revoc_reg_entry(pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json):
     tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
     tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
     revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = \
@@ -139,49 +139,49 @@ async def revoc_reg_entry_helper(pool_handle, wallet_handle, submitter_did, revo
     return revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, res
 
 
-async def get_nym_helper(pool_handle, wallet_handle, submitter_did, target_did):
+async def get_nym(pool_handle, wallet_handle, submitter_did, target_did):
     req = await ledger.build_get_nym_request(submitter_did, target_did)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
-async def get_attrib_helper(pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None):
+async def get_attrib(pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None):
     req = await ledger.build_get_attrib_request(submitter_did, target_did, raw, xhash, enc)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
-async def get_schema_helper(pool_handle, wallet_handle, submitter_did, id_):
+async def get_schema(pool_handle, wallet_handle, submitter_did, id_):
     req = await ledger.build_get_schema_request(submitter_did, id_)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
-async def get_cred_def_helper(pool_handle, wallet_handle, submitter_did, id_):
+async def get_cred_def(pool_handle, wallet_handle, submitter_did, id_):
     req = await ledger.build_get_cred_def_request(submitter_did, id_)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
-async def get_revoc_reg_def_helper(pool_handle, wallet_handle, submitter_did, id_):
+async def get_revoc_reg_def(pool_handle, wallet_handle, submitter_did, id_):
     req = await ledger.build_get_revoc_reg_def_request(submitter_did, id_)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
-async def get_revoc_reg_helper(pool_handle, wallet_handle, submitter_did, id_, timestamp):
+async def get_revoc_reg(pool_handle, wallet_handle, submitter_did, id_, timestamp):
     req = await ledger.build_get_revoc_reg_request(submitter_did, id_, timestamp)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
-async def get_revoc_reg_delta_helper(pool_handle, wallet_handle, submitter_did, id_, from_, to_):
+async def get_revoc_reg_delta(pool_handle, wallet_handle, submitter_did, id_, from_, to_):
     req = await ledger.build_get_revoc_reg_delta_request(submitter_did, id_, from_, to_)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
@@ -199,16 +199,22 @@ def run_in_event_loop(async_func):
 
 
 async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
-    add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    # add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    # while add['op'] != 'REPLY':
+    #     add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    #     time.sleep(10)
+    add = await write_eventually_positive(send_nym, pool_handle, wallet_handle, trustee_did, some_did)
     assert add['op'] == 'REPLY'
-    time.sleep(5)
-    get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-    if not get['result']['seqNo']:
-        get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+
+    # get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    # while get['result']['seqNo'] is None:
+    #     get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
+    #     time.sleep(1)
+    get = await read_eventually_positive(get_nym, pool_handle, wallet_handle, trustee_did, some_did)
     assert get['result']['seqNo'] is not None
 
 
-def check_ledger_sync():
+async def check_ledger_sync():
     hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in range(1, 8)]
     pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
     print('\nPOOL LEDGER SYNC: {}'.format([result.stdout for result in pool_results]))
@@ -496,7 +502,10 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
     # count the same entries
     primaries = Counter(primaries)
     # find actual primary
-    primary = max(primaries, key=primaries.get)
+    try:
+        primary = max(primaries, key=primaries.get)
+    except ValueError:
+        primary = '1'
     alias = 'Node{}'.format(primary)
     host = testinfra.get_host('ssh://node{}'.format(primary))
     pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
@@ -505,6 +514,14 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
     target_did = pool_info[alias]
 
     return primary, alias, target_did
+
+
+def get_pool_info(primary: str) -> dict:
+    host = testinfra.get_host('ssh://node{}'.format(primary))
+    pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
+    pool_info = [json.loads(item) for item in pool_info]
+    pool_info = {item['txn']['data']['data']['alias']: item['txn']['data']['dest'] for item in pool_info}
+    return pool_info
 
 
 async def demote_random_node(pool_handle, wallet_handle, trustee_did):
@@ -524,6 +541,9 @@ async def demote_random_node(pool_handle, wallet_handle, trustee_did):
     demote_data = json.dumps({'alias': alias, 'services': []})
     demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
     demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
+    # while demote_res['op'] != 'REPLY':
+    #     demote_res = json.loads(
+    #         await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
     assert demote_res['op'] == 'REPLY'
 
     return alias, target_did
@@ -533,6 +553,9 @@ async def demote_node(pool_handle, wallet_handle, trustee_did, alias, target_did
     demote_data = json.dumps({'alias': alias, 'services': []})
     demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
     demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
+    # while demote_res['op'] != 'REPLY':
+    #     demote_res = json.loads(
+    #         await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
     assert demote_res['op'] == 'REPLY'
 
 
@@ -540,6 +563,117 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
     promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
     promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
+    # while promote_res['op'] != 'REPLY':
+    #     promote_res = json.loads(
+    #         await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
     host = testinfra.get_host('ssh://node'+alias[4:])
     host.run('systemctl restart indy-node')
     assert promote_res['op'] == 'REPLY'
+
+
+async def eventually_positive(func, *args, cycles_limit=10):
+    # this is for check_ledger_sync, promote_node, demote_node and other self-asserted functions
+    cycles = 0
+    while True:
+        try:
+            time.sleep(30)
+            cycles += 1
+            res = await func(*args)
+            print('NO ERRORS HERE SO BREAK THE LOOP!')
+            break
+        except AssertionError or IndyError:
+            if cycles >= cycles_limit:
+                print('CYCLES LIMIT IS EXCEEDED BUT LEDGERS ARE NOT IN SYNC!')
+                raise AssertionError
+            else:
+                pass
+    return res
+
+
+async def write_eventually_positive(func, *args, cycles_limit=20):
+    cycles = 0
+    res = dict()
+    res['op'] = ''
+    while res['op'] != 'REPLY':
+        try:
+            cycles += 1
+            if cycles >= cycles_limit:
+                print('CYCLES LIMIT IS EXCEEDED!')
+                break
+            res = await func(*args)
+            time.sleep(10)
+        except IndyError:
+            time.sleep(10)
+            pass
+    return res
+
+
+async def read_eventually_positive(func, *args, cycles_limit=20):
+    cycles = 0
+    res = await func(*args)
+    while res['result']['seqNo'] is None:
+        cycles += 1
+        if cycles >= cycles_limit:
+            print('CYCLES LIMIT IS EXCEEDED!')
+            break
+        res = await func(*args)
+        time.sleep(5)
+    return res
+
+
+async def eventually_negative(func, *args, cycles_limit=15):
+    cycles = 0
+    is_exception_raised = False
+
+    while True:
+        try:
+            time.sleep(15)
+            await func(*args)
+            cycles += 1
+            if cycles >= cycles_limit:
+                print('CYCLES LIMIT IS EXCEEDED BUT EXCEPTION HAS NOT BEEN RAISED!')
+                break
+        except IndyError:
+            print('EXPECTED INDY ERROR HAS BEEN RAISED!')
+            is_exception_raised = True
+            break
+
+    return is_exception_raised
+
+
+async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=10):
+    cycles = 0
+    primary_after = primary_before
+
+    while primary_before == primary_after:
+        cycles += 1
+        if cycles >= cycles_limit:
+            print('CYCLES LIMIT IS EXCEEDED BUT PRIMARY HAS NOT BEEN CHANGED!')
+            break
+        primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        time.sleep(30)
+
+    return primary_after
+
+
+class NodeHost:
+    def __init__(self, node_id):
+        self._host = testinfra.get_host('ssh://node{}'.format(node_id))
+
+    def run(self, command: str):
+        output = self._host.check_output(command)
+        print(output)
+
+    def start_service(self):
+        self.run('systemctl start indy-node')
+
+    def stop_service(self):
+        self.run('systemctl stop indy-node')
+
+    def restart_service(self):
+        self.run('systemctl restart indy-node')
+
+
+async def send_random_nyms(pool_handle, wallet_handle, submitter_did, count):
+    for i in range(count):
+        await send_nym(pool_handle, wallet_handle, submitter_did, random_did_and_json()[0], None, None, None)
