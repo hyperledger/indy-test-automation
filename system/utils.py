@@ -203,14 +203,14 @@ async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
     # while add['op'] != 'REPLY':
     #     add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
     #     time.sleep(10)
-    add = await eventually_positive(send_nym, pool_handle, wallet_handle, trustee_did, some_did, is_reading=False)
+    add = await write_eventually_positive(send_nym, pool_handle, wallet_handle, trustee_did, some_did)
     assert add['op'] == 'REPLY'
 
     # get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
     # while get['result']['seqNo'] is None:
     #     get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
     #     time.sleep(1)
-    get = await eventually_positive(get_nym, pool_handle, wallet_handle, trustee_did, some_did, is_reading=True)
+    get = await read_eventually_positive(get_nym, pool_handle, wallet_handle, trustee_did, some_did)
     assert get['result']['seqNo'] is not None
 
 
@@ -541,9 +541,9 @@ async def demote_random_node(pool_handle, wallet_handle, trustee_did):
     demote_data = json.dumps({'alias': alias, 'services': []})
     demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
     demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
-    while demote_res['op'] != 'REPLY':
-        demote_res = json.loads(
-            await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
+    # while demote_res['op'] != 'REPLY':
+    #     demote_res = json.loads(
+    #         await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
     assert demote_res['op'] == 'REPLY'
 
     return alias, target_did
@@ -553,9 +553,9 @@ async def demote_node(pool_handle, wallet_handle, trustee_did, alias, target_did
     demote_data = json.dumps({'alias': alias, 'services': []})
     demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
     demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
-    while demote_res['op'] != 'REPLY':
-        demote_res = json.loads(
-            await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
+    # while demote_res['op'] != 'REPLY':
+    #     demote_res = json.loads(
+    #         await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
     assert demote_res['op'] == 'REPLY'
 
 
@@ -563,70 +563,65 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
     promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
     promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
-    while promote_res['op'] != 'REPLY':
-        promote_res = json.loads(
-            await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
+    # while promote_res['op'] != 'REPLY':
+    #     promote_res = json.loads(
+    #         await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
     host = testinfra.get_host('ssh://node'+alias[4:])
     host.run('systemctl restart indy-node')
     assert promote_res['op'] == 'REPLY'
 
 
-async def eventually_positive(func, *args, is_reading=False, is_self_asserted=False, cycles_limit=20):
+async def eventually_positive(func, *args, cycles_limit=10):
+    # this is for check_ledger_sync, promote_node, demote_node and other self-asserted functions
     cycles = 0
-    res = None
-
-    if is_self_asserted:  # this is for check_ledger_sync(), promote_node() and other self-asserted functions
-        while True:
-            try:
-                time.sleep(30)
-                cycles += 1
-                await func(*args)
-                print('NO ERRORS HERE SO BREAK THE LOOP!')
-                break
-            except AssertionError or IndyError:
-                if cycles >= cycles_limit:
-                    print('CYCLES LIMIT IS EXCEEDED BUT LEDGERS ARE NOT IN SYNC!')
-                    raise AssertionError
-                else:
-                    pass
-    else:
-        if is_reading:  # this is for reading requests
+    while True:
+        try:
+            time.sleep(30)
+            cycles += 1
             res = await func(*args)
-            while res['result']['seqNo'] is None:
-                cycles += 1
-                if cycles >= cycles_limit:
-                    print('CYCLES LIMIT IS EXCEEDED!')
-                    break
-                res = await func(*args)
-                time.sleep(5)
-
-        else:  # this is for writing requests
-            res = dict()
-            res['op'] = ''
-            while res['op'] != 'REPLY':
-                try:
-                    cycles += 1
-                    if cycles >= cycles_limit:
-                        print('CYCLES LIMIT IS EXCEEDED!')
-                        break
-                    res = await func(*args)
-                    time.sleep(10)
-                except IndyError:
-                    time.sleep(10)
-                    pass
-
+            print('NO ERRORS HERE SO BREAK THE LOOP!')
+            break
+        except AssertionError or IndyError:
+            if cycles >= cycles_limit:
+                print('CYCLES LIMIT IS EXCEEDED BUT LEDGERS ARE NOT IN SYNC!')
+                raise AssertionError
+            else:
+                pass
     return res
 
 
-async def write_eventually_positive():
-    pass
+async def write_eventually_positive(func, *args, cycles_limit=20):
+    cycles = 0
+    res = dict()
+    res['op'] = ''
+    while res['op'] != 'REPLY':
+        try:
+            cycles += 1
+            if cycles >= cycles_limit:
+                print('CYCLES LIMIT IS EXCEEDED!')
+                break
+            res = await func(*args)
+            time.sleep(10)
+        except IndyError:
+            time.sleep(10)
+            pass
+    return res
 
 
-async def read_eventually_positive():
-    pass
+async def read_eventually_positive(func, *args, cycles_limit=20):
+    cycles = 0
+    res = await func(*args)
+    while res['result']['seqNo'] is None:
+        cycles += 1
+        if cycles >= cycles_limit:
+            print('CYCLES LIMIT IS EXCEEDED!')
+            break
+        res = await func(*args)
+        time.sleep(5)
+    return res
 
 
-async def eventually_negative(func, *args, cycles_limit=20):
+async def eventually_negative(func, *args, cycles_limit=15):
     cycles = 0
     is_exception_raised = False
 
@@ -661,7 +656,7 @@ async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, tr
     return primary_after
 
 
-class TestNode:
+class NodeHost:
     def __init__(self, node_id):
         self._host = testinfra.get_host('ssh://node{}'.format(node_id))
 

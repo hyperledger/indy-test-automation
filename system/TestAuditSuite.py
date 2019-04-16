@@ -8,16 +8,16 @@ class TestAuditSuite:
     @pytest.mark.asyncio
     async def test_case_restart_one_node(self, pool_handler, wallet_handler, get_default_trustee):
         trustee_did, _ = get_default_trustee
-        test_nodes = [TestNode(i) for i in range(1, 8)]
+        test_nodes = [NodeHost(i) for i in range(1, 8)]
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
         test_nodes[5].restart_service()
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync, is_self_asserted=True)
+        await eventually_positive(check_ledger_sync)
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
-        p1 = TestNode(primary1)
+        p1 = NodeHost(primary1)
         p1.stop_service()
         primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
-        p2 = TestNode(primary2)
+        p2 = NodeHost(primary2)
         assert primary2 != primary1
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
         test_nodes[5].restart_service()
@@ -31,7 +31,7 @@ class TestAuditSuite:
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
         test_nodes[5].start_service()
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync, is_self_asserted=True)
+        await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
@@ -40,24 +40,24 @@ class TestAuditSuite:
                                                           node_num_shift):
         trustee_did, _ = get_default_trustee
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
-        p1 = TestNode(primary1)
+        p1 = NodeHost(primary1)
         p1.stop_service()
         primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
         assert primary2 != primary1
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
         p1.start_service()
-        next_node = TestNode(int(primary2)+node_num_shift)
+        next_node = NodeHost(int(primary2) + node_num_shift)
         next_node.restart_service()
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync, is_self_asserted=True)
+        await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
     async def test_case_restart_all_nodes_at_the_same_time(self, pool_handler, wallet_handler, get_default_trustee):
         trustee_did, _ = get_default_trustee
-        test_nodes = [TestNode(i) for i in range(1, 8)]
+        test_nodes = [NodeHost(i) for i in range(1, 8)]
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
-        p1 = TestNode(primary1)
+        p1 = NodeHost(primary1)
         p1.stop_service()
         primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
         assert primary2 != primary1
@@ -68,15 +68,15 @@ class TestAuditSuite:
         primary3 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
         assert primary3 != primary2
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync, is_self_asserted=True)
+        await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
     async def test_case_restart_f_nodes(self, pool_handler, wallet_handler, get_default_trustee):
         trustee_did, _ = get_default_trustee
-        test_nodes = [TestNode(i) for i in range(1, 8)]
+        test_nodes = [NodeHost(i) for i in range(1, 8)]
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
-        p1 = TestNode(primary1)
+        p1 = NodeHost(primary1)
         p1.stop_service()
         primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
         assert primary2 != primary1
@@ -86,15 +86,15 @@ class TestAuditSuite:
             node.restart_service()
         time.sleep(30)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync, is_self_asserted=True)
+        await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
     async def test_case_restart_n_minus_f_minus_one_nodes(self, pool_handler, wallet_handler, get_default_trustee):
         trustee_did, _ = get_default_trustee
-        test_nodes = [TestNode(i) for i in range(1, 8)]
+        test_nodes = [NodeHost(i) for i in range(1, 8)]
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
-        p1 = TestNode(primary1)
+        p1 = NodeHost(primary1)
         p1.stop_service()
         primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
         assert primary2 != primary1
@@ -104,15 +104,15 @@ class TestAuditSuite:
             node.restart_service()
         time.sleep(30)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync, is_self_asserted=True)
+        await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
     async def test_case_restart_all_nodes_one_by_one(self, pool_handler, wallet_handler, get_default_trustee):
         trustee_did, _ = get_default_trustee
-        test_nodes = [TestNode(i) for i in range(1, 8)]
+        test_nodes = [NodeHost(i) for i in range(1, 8)]
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
-        p1 = TestNode(primary1)
+        p1 = NodeHost(primary1)
         p1.stop_service()
         primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
         assert primary2 != primary1
@@ -121,9 +121,9 @@ class TestAuditSuite:
         for node in test_nodes:
             node.restart_service()
             time.sleep(10)
-        time.sleep(30)
+        # time.sleep(30)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync, is_self_asserted=True)
+        await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
@@ -132,7 +132,7 @@ class TestAuditSuite:
                                                          node_num_shift):
         trustee_did, _ = get_default_trustee
         primary1, alias1, target_did1 = await get_primary(pool_handler, wallet_handler, trustee_did)
-        p1 = TestNode(primary1)
+        p1 = NodeHost(primary1)
         p1.stop_service()
         primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
         assert primary2 != primary1
@@ -143,11 +143,13 @@ class TestAuditSuite:
         print(alias_for_demotion)
         target_did_for_demotion = get_pool_info(primary2)[alias_for_demotion]
         print(target_did_for_demotion)
-        await demote_node(pool_handler, wallet_handler, trustee_did, alias_for_demotion, target_did_for_demotion)
+        await eventually_positive(demote_node, pool_handler, wallet_handler, trustee_did, alias_for_demotion,
+                                  target_did_for_demotion)
         primary3 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
         assert primary3 != primary2
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await promote_node(pool_handler, wallet_handler, trustee_did, alias_for_demotion, target_did_for_demotion)
+        await eventually_positive(promote_node, pool_handler, wallet_handler, trustee_did, alias_for_demotion,
+                                  target_did_for_demotion)
         time.sleep(60)
-        await eventually_positive(check_ledger_sync, is_self_asserted=True)
+        await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])

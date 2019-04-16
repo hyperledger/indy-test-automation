@@ -30,13 +30,7 @@ async def test_send_and_get_nym_positive(writer_role, reader_role):
     # Writer sends NYM
     res1 = await send_nym(pool_handle, wallet_handle, writer_did, target_did)
     # Reader gets NYM
-    res2 = await eventually_positive\
-        (get_nym, pool_handle, wallet_handle, target_did, target_did, is_reading=True)
-
-    # res2 = await get_nym_helper(pool_handle, wallet_handle, target_did, target_did)
-    # while res2['result']['seqNo'] is None:
-    #     res2 = await get_nym_helper(pool_handle, wallet_handle, target_did, target_did)
-    #     time.sleep(1)
+    res2 = await read_eventually_positive(get_nym, pool_handle, wallet_handle, target_did, target_did)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -88,13 +82,8 @@ async def test_send_and_get_attrib_positive(xhash, raw, enc, raw_key):
     # Writer sends ATTRIB
     res1 = await send_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
     # Reader gets ATTRIB
-    res2 = await eventually_positive\
-        (get_attrib, pool_handle, wallet_handle, target_did, target_did, xhash, raw_key, enc, is_reading=True)
-
-    # res2 = await get_attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw_key, enc)
-    # while res2['result']['seqNo'] is None:
-    #     res2 = await get_attrib_helper(pool_handle, wallet_handle, target_did, target_did, xhash, raw_key, enc)
-    #     time.sleep(1)
+    res2 = await read_eventually_positive\
+        (get_attrib, pool_handle, wallet_handle, target_did, target_did, xhash, raw_key, enc)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -157,15 +146,9 @@ async def test_send_and_get_schema_positive(writer_role, reader_role):
     await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     # Writer sends SCHEMA
     schema_id, res1 = await send_schema(pool_handle, wallet_handle, writer_did,
-                                          'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
+                                        'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
     # Reader gets SCHEMA
-    res2 = await eventually_positive\
-        (get_schema, pool_handle, wallet_handle, reader_did, schema_id, is_reading=True)
-
-    # res2 = await get_schema_helper(pool_handle, wallet_handle, reader_did, schema_id)
-    # while res2['result']['seqNo'] is None:
-    #     res2 = await get_schema_helper(pool_handle, wallet_handle, reader_did, schema_id)
-    #     time.sleep(1)
+    res2 = await read_eventually_positive(get_schema, pool_handle, wallet_handle, reader_did, schema_id)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -230,13 +213,7 @@ async def test_send_and_get_cred_def_positive(writer_role, reader_role):
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res1 = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'TAG',
                                                None, json.dumps({'support_revocation': False}))
-    res2 = await eventually_positive\
-        (get_cred_def, pool_handle, wallet_handle, reader_did, cred_def_id, is_reading=True)
-
-    # res2 = await get_cred_def_helper(pool_handle, wallet_handle, reader_did, cred_def_id)
-    # while res2['result']['seqNo'] is None:
-    #     res2 = await get_cred_def_helper(pool_handle, wallet_handle, reader_did, cred_def_id)
-    #     time.sleep(1)
+    res2 = await read_eventually_positive(get_cred_def, pool_handle, wallet_handle, reader_did, cred_def_id)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -298,23 +275,17 @@ async def test_send_and_get_revoc_reg_def_positive(writer_role, reader_role):
     # Trustee adds REVOC_REG_DEF reader
     await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     schema_id, _ = await send_schema(pool_handle, wallet_handle, writer_did,
-                                       'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
+                                     'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
     time.sleep(1)
     res = await get_schema(pool_handle, wallet_handle, reader_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'cred_def_tag',
-                                              None, json.dumps({"support_revocation": True}))
+                                              None, json.dumps({'support_revocation': True}))
     revoc_reg_def_id, _, _, res1 = await send_revoc_reg_def(pool_handle, wallet_handle, writer_did, None,
-                                                              'revoc_def_tag', cred_def_id,
+                                                            'revoc_def_tag', cred_def_id,
                                                             json.dumps({'max_cred_num': 1,
-                                                                          'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
-    res2 = await eventually_positive\
-        (get_revoc_reg_def, pool_handle, wallet_handle, reader_did, revoc_reg_def_id, is_reading=True)
-
-    # res2 = await get_revoc_reg_def_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id)
-    # while res2['result']['seqNo'] is None:
-    #     res2 = await get_revoc_reg_def_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id)
-    #     time.sleep(1)
+                                                                        'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+    res2 = await read_eventually_positive(get_revoc_reg_def, pool_handle, wallet_handle, reader_did, revoc_reg_def_id)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
@@ -345,36 +316,23 @@ async def test_send_and_get_revoc_reg_entry_positive(writer_role, reader_role):
     # Trustee adds REVOC_REG_ENTRY reader
     await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     schema_id, _ = await send_schema(pool_handle, wallet_handle, writer_did,
-                                       'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
+                                     'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
     time.sleep(1)
     res = await get_schema(pool_handle, wallet_handle, reader_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'cred_def_tag',
                                                 'CL', json.dumps({'support_revocation': True}))
     revoc_reg_def_id, _, _, res1 = await send_revoc_reg_entry(pool_handle, wallet_handle, writer_did, 'CL_ACCUM',
-                                                                'revoc_def_tag', cred_def_id,
+                                                              'revoc_def_tag', cred_def_id,
                                                               json.dumps({'max_cred_num': 1,
-                                                                            'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+                                                                          'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
     timestamp1 = int(time.time())
 
-    res2 = await eventually_positive\
-        (get_revoc_reg, pool_handle, wallet_handle, reader_did, revoc_reg_def_id, timestamp1, is_reading=True)
+    res2 = await read_eventually_positive\
+        (get_revoc_reg, pool_handle, wallet_handle, reader_did, revoc_reg_def_id, timestamp1)
 
-    # res2 = await get_revoc_reg_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id, timestamp1)
-    # while res2['result']['seqNo'] is None:
-    #     res2 = await get_revoc_reg_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id, timestamp1)
-    #     time.sleep(1)
-
-    res3 = await eventually_positive\
-        (get_revoc_reg_delta, pool_handle, wallet_handle, reader_did, revoc_reg_def_id, timestamp0, timestamp1,
-         is_reading=True)
-
-    # res3 = await get_revoc_reg_delta_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id,
-    #                                         timestamp0, timestamp1)
-    # while res3['result']['seqNo'] is None:
-    #     res3 = await get_revoc_reg_delta_helper(pool_handle, wallet_handle, reader_did, revoc_reg_def_id,
-    #                                             timestamp0, timestamp1)
-    #     time.sleep(1)
+    res3 = await read_eventually_positive\
+        (get_revoc_reg_delta, pool_handle, wallet_handle, reader_did, revoc_reg_def_id, timestamp0, timestamp1)
 
     assert res1['op'] == 'REPLY'
     assert res2['result']['seqNo'] is not None
