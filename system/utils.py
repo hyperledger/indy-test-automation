@@ -618,6 +618,14 @@ async def eventually_positive(func, *args, is_reading=False, is_self_asserted=Fa
     return res
 
 
+async def write_eventually_positive():
+    pass
+
+
+async def read_eventually_positive():
+    pass
+
+
 async def eventually_negative(func, *args, cycles_limit=20):
     cycles = 0
     is_exception_raised = False
@@ -669,3 +677,8 @@ class TestNode:
 
     def restart_service(self):
         self.run('systemctl restart indy-node')
+
+
+async def send_random_nyms(pool_handle, wallet_handle, submitter_did, count):
+    for i in range(count):
+        await send_nym(pool_handle, wallet_handle, submitter_did, random_did_and_json()[0], None, None, None)
