@@ -121,7 +121,6 @@ class TestAuditSuite:
         for node in test_nodes:
             node.restart_service()
             time.sleep(10)
-        # time.sleep(30)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
         await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])

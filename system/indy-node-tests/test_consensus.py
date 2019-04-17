@@ -78,8 +78,10 @@ async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_defa
     test_nodes = [NodeHost(i) for i in range(1, 8)]
 
     primary1, alias1, target_did1 = await get_primary(pool_handler, wallet_handler, trustee_did)
+    print('PRIMARY 1: {}'.format(primary1))
     alias, target_did = await demote_random_node(pool_handler, wallet_handler, trustee_did)
     primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
+    print('PRIMARY 2: {}'.format(primary2))
     assert primary2 != primary1
     temp_test_nodes = test_nodes.copy()
     temp_test_nodes.pop(int(alias[4:])-1)
@@ -97,6 +99,7 @@ async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_defa
     for node in test_nodes[-2:]:
         node.stop_service()
     primary4 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
+    print('PRIMARY 4: {}'.format(primary4))
     assert primary4 != primary2
     res2 = await write_eventually_positive(send_nym, pool_handler, wallet_handler, trustee_did, did2, None, None, None)
     assert res2['op'] == 'REPLY'

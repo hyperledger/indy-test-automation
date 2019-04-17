@@ -571,7 +571,7 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     assert promote_res['op'] == 'REPLY'
 
 
-async def eventually_positive(func, *args, cycles_limit=10):
+async def eventually_positive(func, *args, cycles_limit=15):
     # this is for check_ledger_sync, promote_node, demote_node and other self-asserted functions
     cycles = 0
     while True:
@@ -590,7 +590,7 @@ async def eventually_positive(func, *args, cycles_limit=10):
     return res
 
 
-async def write_eventually_positive(func, *args, cycles_limit=20):
+async def write_eventually_positive(func, *args, cycles_limit=40):
     cycles = 0
     res = dict()
     res['op'] = ''
@@ -608,7 +608,7 @@ async def write_eventually_positive(func, *args, cycles_limit=20):
     return res
 
 
-async def read_eventually_positive(func, *args, cycles_limit=20):
+async def read_eventually_positive(func, *args, cycles_limit=30):
     cycles = 0
     res = await func(*args)
     while res['result']['seqNo'] is None:
@@ -641,7 +641,7 @@ async def eventually_negative(func, *args, cycles_limit=15):
     return is_exception_raised
 
 
-async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=10):
+async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=15):
     cycles = 0
     primary_after = primary_before
 

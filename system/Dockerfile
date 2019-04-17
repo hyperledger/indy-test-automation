@@ -27,8 +27,8 @@ RUN useradd -ms /bin/bash -l -u $uid indy
 RUN apt-get update -y && apt-get install -y indy-node sovtoken sovtokenfees
 RUN echo " " >> /etc/indy/indy_config.py \
     && echo "NETWORK_NAME = 'sandbox'" >> /etc/indy/indy_config.py \
-    && echo " " >> /etc/indy/indy_config.py \
-    && echo "ForceViewChangeFreq = 1800" >> /etc/indy/indy_config.py \
     && echo " " >> /etc/indy/indy_config.py
+#    && echo "ForceViewChangeFreq = 1800" >> /etc/indy/indy_config.py \
+#    && echo " " >> /etc/indy/indy_config.py
 #USER indy
 #WORKDIR /home/indy
