@@ -2,7 +2,6 @@ import pytest
 from system.utils import *
 
 
-@pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestAuditSuite:
 
     @pytest.mark.asyncio
@@ -149,6 +148,8 @@ class TestAuditSuite:
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
         await eventually_positive(promote_node, pool_handler, wallet_handler, trustee_did, alias_for_demotion,
                                   target_did_for_demotion)
-        time.sleep(60)
+        primary4 = await wait_until_vc_is_done(primary3, pool_handler, wallet_handler, trustee_did)
+        assert primary4 != primary3
+        # time.sleep(60)
         await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
