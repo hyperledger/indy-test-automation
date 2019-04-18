@@ -125,7 +125,7 @@ class TestAuditSuite:
         await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
-    @pytest.mark.parametrize('node_num_shift', [0, 1, 4])
+    @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
     @pytest.mark.asyncio
     async def test_case_demote_master_backup_non_primary(self, pool_handler, wallet_handler, get_default_trustee,
                                                          node_num_shift):

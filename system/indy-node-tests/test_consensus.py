@@ -69,6 +69,7 @@ async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
 
 
+@pytest.mark.skip(reason='INDY-2059')
 @pytest.mark.asyncio
 async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
@@ -92,8 +93,6 @@ async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_defa
     assert is_exception_raised1 is True
     for node in temp_test_nodes[-2:]:
         node.start_service()
-    # primary3 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
-    # assert primary3 != primary2
     await eventually_positive\
         (promote_node, pool_handler, wallet_handler, trustee_did, alias, target_did)
     for node in test_nodes[-2:]:

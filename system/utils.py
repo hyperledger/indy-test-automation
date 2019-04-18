@@ -505,7 +505,31 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
     try:
         primary = max(primaries, key=primaries.get)
     except ValueError:
-        primary = '1'
+        # primary is not selected so wait and try again
+        time.sleep(60)
+        req = await ledger.build_get_validator_info_request(trustee_did)
+        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        # remove all timeout entries
+        try:
+            for i in range(len(results)):
+                results.pop(list(results.keys())[list(results.values()).index('timeout')])
+        except ValueError:
+            pass
+        # remove all not REPLY and empty (not selected) primaries entries
+        results = {key: json.loads(results[key]) for key in results if
+                   (json.loads(results[key])['op'] == 'REPLY')
+                   & (json.loads(results[key])['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
+                      is not None)}
+        # get primaries numbers from all nodes
+        primaries = [results[key]['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
+                     [len('Node'):-len(':0')] for key in results]
+        # count the same entries
+        primaries = Counter(primaries)
+        # find actual primary
+        try:
+            primary = max(primaries, key=primaries.get)
+        except ValueError:
+            primary = '1'
     alias = 'Node{}'.format(primary)
     host = testinfra.get_host('ssh://node{}'.format(primary))
     pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
