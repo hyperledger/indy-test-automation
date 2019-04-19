@@ -3,3 +3,4 @@ pytest-asyncio==0.10.0
 base58==1.0.0
 testinfra==1.14.1
 python3-indy==1.6.8
+docker==3.7.0

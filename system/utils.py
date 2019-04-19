@@ -505,7 +505,31 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
     try:
         primary = max(primaries, key=primaries.get)
     except ValueError:
-        primary = '1'
+        # primary is not selected so wait and try again
+        time.sleep(60)
+        req = await ledger.build_get_validator_info_request(trustee_did)
+        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        # remove all timeout entries
+        try:
+            for i in range(len(results)):
+                results.pop(list(results.keys())[list(results.values()).index('timeout')])
+        except ValueError:
+            pass
+        # remove all not REPLY and empty (not selected) primaries entries
+        results = {key: json.loads(results[key]) for key in results if
+                   (json.loads(results[key])['op'] == 'REPLY')
+                   & (json.loads(results[key])['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
+                      is not None)}
+        # get primaries numbers from all nodes
+        primaries = [results[key]['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
+                     [len('Node'):-len(':0')] for key in results]
+        # count the same entries
+        primaries = Counter(primaries)
+        # find actual primary
+        try:
+            primary = max(primaries, key=primaries.get)
+        except ValueError:
+            primary = '1'
     alias = 'Node{}'.format(primary)
     host = testinfra.get_host('ssh://node{}'.format(primary))
     pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
@@ -571,7 +595,7 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     assert promote_res['op'] == 'REPLY'
 
 
-async def eventually_positive(func, *args, cycles_limit=10):
+async def eventually_positive(func, *args, cycles_limit=15):
     # this is for check_ledger_sync, promote_node, demote_node and other self-asserted functions
     cycles = 0
     while True:
@@ -590,7 +614,7 @@ async def eventually_positive(func, *args, cycles_limit=10):
     return res
 
 
-async def write_eventually_positive(func, *args, cycles_limit=20):
+async def write_eventually_positive(func, *args, cycles_limit=40):
     cycles = 0
     res = dict()
     res['op'] = ''
@@ -608,7 +632,7 @@ async def write_eventually_positive(func, *args, cycles_limit=20):
     return res
 
 
-async def read_eventually_positive(func, *args, cycles_limit=20):
+async def read_eventually_positive(func, *args, cycles_limit=30):
     cycles = 0
     res = await func(*args)
     while res['result']['seqNo'] is None:
@@ -641,7 +665,7 @@ async def eventually_negative(func, *args, cycles_limit=15):
     return is_exception_raised
 
 
-async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=10):
+async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=15):
     cycles = 0
     primary_after = primary_before
 
