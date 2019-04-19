@@ -438,7 +438,7 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
     output = host.check_output('systemctl start indy-node')
     print(output)
     time.sleep(60)
-    check_ledger_sync()
+    await check_ledger_sync()
 
 
 # @pytest.mark.parametrize('txn_type, action, field, old, new, constraint', [
@@ -616,7 +616,7 @@ async def test_misc_indy_2022(pool_handler, wallet_handler, get_default_trustee)
         results2.append(res)
     assert all([res['op'] == 'REPLY' for res in results2])
     time.sleep(15)
-    check_ledger_sync()
+    await check_ledger_sync()
 
 
 @settings(verbosity=Verbosity.debug)
