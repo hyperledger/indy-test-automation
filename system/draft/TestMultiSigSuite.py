@@ -59,7 +59,6 @@ class TestMultiSigSuite:
         print('\n{}'.format(res))
         assert res['op'] == 'REQNACK'
 
-    @pytest.mark.skip(reason='IS-1237')
     @pytest.mark.parametrize('role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR', 'NETWORK_MONITOR', None])
     @pytest.mark.asyncio
     async def test_case_anyone_can_send_nym(self, pool_handler, wallet_handler, get_default_trustee, role):
@@ -78,12 +77,11 @@ class TestMultiSigSuite:
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         assert res2['op'] == 'REPLY'
         time.sleep(5)
-        req = ledger.build_nym_request(new_did, random_did_and_json()[0], None, None, None)
+        req = await ledger.build_nym_request(new_did, random_did_and_json()[0], None, None, None)
         req = await ledger.multi_sign_request(wallet_handler, new_did, req)
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
         assert res3['op'] == 'REPLY'
 
-    @pytest.mark.skip(reason='IS-1237')
     @pytest.mark.parametrize('role', ['STEWARD', 'TRUST_ANCHOR'])
     @pytest.mark.asyncio
     async def test_case_steward_or_trust_anchor_can_send_nym(self, pool_handler, wallet_handler, get_default_trustee,
@@ -98,14 +96,14 @@ class TestMultiSigSuite:
                                                        'auth_constraints': [
                                                            {
                                                                'constraint_id': 'ROLE',
-                                                               'role': 'STEWARD',
+                                                               'role': '2',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
                                                                'metadata': {}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
-                                                               'role': 'TRUST_ANCHOR',
+                                                               'role': '101',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
                                                                'metadata': {}
@@ -113,20 +111,20 @@ class TestMultiSigSuite:
                                                        ]
                                                    }))
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res2)
         assert res2['op'] == 'REPLY'
         time.sleep(5)
-        req = ledger.build_nym_request(new_did, random_did_and_json()[0], None, None, None)
+        req = await ledger.build_nym_request(new_did, random_did_and_json()[0], None, None, None)
         req = await ledger.multi_sign_request(wallet_handler, new_did, req)
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
         assert res3['op'] == 'REPLY'
         res_negative = await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
         assert res_negative['op'] == 'REJECT'
-        req = ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+        req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
         req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
         res_negative_multisign = json.loads(await ledger.submit_request(pool_handler, req))
         assert res_negative_multisign['op'] == 'REJECT'
 
-    @pytest.mark.skip(reason='IS-1237')
     @pytest.mark.asyncio
     async def test_case_2_stewards_and_3_trust_anchors_can_send_nym(self, pool_handler, wallet_handler,
                                                                     get_default_trustee):
@@ -152,14 +150,14 @@ class TestMultiSigSuite:
                                                        'auth_constraints': [
                                                            {
                                                                'constraint_id': 'ROLE',
-                                                               'role': 'STEWARD',
+                                                               'role': '2',
                                                                'sig_count': 2,
                                                                'need_to_be_owner': False,
                                                                'metadata': {}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
-                                                               'role': 'TRUST_ANCHOR',
+                                                               'role': '101',
                                                                'sig_count': 3,
                                                                'need_to_be_owner': False,
                                                                'metadata': {}
@@ -169,17 +167,18 @@ class TestMultiSigSuite:
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         assert res2['op'] == 'REPLY'
         time.sleep(5)
-        req = ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
-        req = await ledger.multi_sign_request(wallet_handler, s1_did, req)
-        req = await ledger.multi_sign_request(wallet_handler, s2_did, req)
-        req = await ledger.multi_sign_request(wallet_handler, t1_did, req)
-        req = await ledger.multi_sign_request(wallet_handler, t2_did, req)
-        req = await ledger.multi_sign_request(wallet_handler, t3_did, req)
-        res3 = json.loads(await ledger.submit_request(pool_handler, req))
+        _req1 = await ledger.build_nym_request(s1_did, random_did_and_json()[0], None, None, None)
+        _req2 = await ledger.multi_sign_request(wallet_handler, s1_did, _req1)
+        _req3 = await ledger.multi_sign_request(wallet_handler, s2_did, _req2)
+        _req4 = await ledger.multi_sign_request(wallet_handler, t1_did, _req3)
+        _req5 = await ledger.multi_sign_request(wallet_handler, t2_did, _req4)
+        _req6 = await ledger.multi_sign_request(wallet_handler, t3_did, _req5)
+        res3 = json.loads(await ledger.submit_request(pool_handler, _req6))
+        print(res3)
         assert res3['op'] == 'REPLY'
         res_negative_sign = await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
         assert res_negative_sign['op'] == 'REJECT'
-        req = ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+        req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
         req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
         res_negative_multisign = json.loads(await ledger.submit_request(pool_handler, req))
         assert res_negative_multisign['op'] == 'REJECT'
