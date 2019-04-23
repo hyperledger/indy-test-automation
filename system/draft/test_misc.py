@@ -13,6 +13,7 @@ from random import sample
 from datetime import datetime, timedelta, timezone
 import hashlib
 from hypothesis import errors, settings, Verbosity, given, strategies as st
+import pprint
 
 
 # logger = logging.getLogger(__name__)
@@ -674,3 +675,28 @@ async def test_misc_indy_1720(pool_handler, wallet_handler, get_default_trustee)
     print(output)
     await check_ledger_sync()
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
+
+
+@pytest.mark.repeat(3)
+@pytest.mark.asyncio
+async def test_misc_is_1237(get_default_trustee):
+    print()
+    trustee_did, _ = get_default_trustee
+    req1 = json.loads(await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
+                                                           json.dumps({
+                                                                'constraint_id': 'ROLE',
+                                                                'role': '*',
+                                                                'sig_count': 1,
+                                                                'need_to_be_owner': False,
+                                                                'metadata': {}
+                                                           })))
+    pprint.pprint(req1)
+    req2 = json.loads(await ledger.build_auth_rule_request(trustee_did, '1', 'EDIT', 'role', '*', None,
+                                                           json.dumps({
+                                                                'constraint_id': 'ROLE',
+                                                                'role': '*',
+                                                                'sig_count': 1,
+                                                                'need_to_be_owner': False,
+                                                                'metadata': {}
+                                                           })))
+    pprint.pprint(req2)

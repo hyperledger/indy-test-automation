@@ -1,19 +1,12 @@
 import pytest
 from system.utils import *
-import hashlib
 
 
-# @pytest.mark.usefixtures('docker_setup_and_teardown')
+@pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestAuthMapSuite:
 
-    @pytest.mark.parametrize('add_xhash, add_raw, add_enc, edit_xhash, edit_raw, edit_enc', [
-        (hashlib.sha256().hexdigest(), None, None, hashlib.sha256().hexdigest(), None, None),
-        (None, json.dumps({'key': 'value1'}), None, None, json.dumps({'key': 'value2'}), None),
-        (None, None, 'ENCRYPTED_STRING_1', None, None, 'ENCRYPTED_STRING_2')
-    ])
     @pytest.mark.asyncio
-    async def test_case_attrib(self, pool_handler, wallet_handler, get_default_trustee,
-                               add_xhash, add_raw, add_enc, edit_xhash, edit_raw, edit_enc):
+    async def test_case_attrib(self, pool_handler, wallet_handler, get_default_trustee):
         trustee_did, _ = get_default_trustee
         # add target nym
         target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -52,10 +45,12 @@ class TestAuthMapSuite:
         print(res3)
         assert res3['op'] == 'REPLY'
         # add attrib for target did by non-owner Steward
-        res4 = await send_attrib(pool_handler, wallet_handler, s1_did, target_did, add_xhash, add_raw, add_enc)
+        res4 = await send_attrib(pool_handler, wallet_handler, s1_did, target_did,
+                                 None, json.dumps({'key': 'value1'}), None)
         print(res4)
         assert res4['op'] == 'REPLY'
         # edit attrib for target did by non-owner Trustee
-        res5 = await send_attrib(pool_handler, wallet_handler, t1_did, target_did, edit_xhash, edit_raw, edit_enc)
+        res5 = await send_attrib(pool_handler, wallet_handler, t1_did, target_did,
+                                 None, json.dumps({'key': 'value2'}), None)
         print(res5)
         assert res5['op'] == 'REPLY'
