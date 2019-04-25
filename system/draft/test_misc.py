@@ -700,3 +700,19 @@ async def test_misc_is_1237(get_default_trustee):
                                                                 'metadata': {}
                                                            })))
     pprint.pprint(req2)
+
+
+@pytest.mark.asyncio
+async def test_case_nym_special_case(pool_handler, wallet_handler, get_default_trustee):
+    trustee_did, _ = get_default_trustee
+    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    reader_did, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    res1 = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk)
+    assert res1['op'] == 'REPLY'
+    res2 = await send_nym(pool_handler, wallet_handler, trustee_did, new_did)
+    print(res2)
+    res3 = await send_nym(pool_handler, wallet_handler, editor_did, new_did)
+    print(res3)
+    res4 = await get_nym(pool_handler, wallet_handler, reader_did, new_did)
+    print(res4)
