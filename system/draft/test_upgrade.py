@@ -41,7 +41,7 @@ async def test_pool_upgrade_positive():
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
     init_time = 1
-    version = '1.1.115'
+    version = '1.6.85'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -59,7 +59,7 @@ async def test_pool_upgrade_positive():
     # ))
     reinstall = False
     force = True
-    package = 'sovrin'
+    package = 'indy-node'
     # pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
