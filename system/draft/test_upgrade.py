@@ -40,8 +40,8 @@ async def test_pool_upgrade_positive():
                         '6CRQcKzeRMCstErDT2Pso4he3rWWu1m16CRyp1fjYCFx', '53skV1LWLCbcxxdvoxY3pKDx2MAvszA27hA6cBZxLbnf',
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
-    init_time = 3
-    version = '1.6.84'
+    init_time = 1
+    version = '1.1.115'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -57,9 +57,9 @@ async def test_pool_upgrade_positive():
     #         datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*0), '%Y-%m-%dT%H:%M:%S%z')
     #      for dest, i in zip(persistent_dests, range(len(persistent_dests)))}
     # ))
-    reinstall = True
+    reinstall = False
     force = True
-    package = 'indy-node'
+    package = 'sovrin'
     # pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
@@ -75,6 +75,7 @@ async def test_pool_upgrade_positive():
     schema_id, schema_before_res = await send_schema(pool_handle, wallet_handle, trustee_did,
                                                      random_string(10), '1.0',
                                                      json.dumps(["age", "sex", "height", "name"]))
+    time.sleep(5)
     temp = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(temp))
 
