@@ -71,6 +71,7 @@ async def test_misc_freshness():
                                None)
     schema_id, schema = await send_schema(pool_handle, wallet_handle, trustee_did, random_string(10), '1.0',
                                           json.dumps(["age", "sex", "height", "name"]))
+    time.sleep(3)
     temp = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(temp))
     cred_def_id, _, cred_def =\
@@ -103,7 +104,7 @@ async def test_misc_freshness():
     # assert pool_ledger['op'] == 'REPLY'
 
     # write token ledger txn
-    mint = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, mint_req))
+    mint = json.loads(await ledger.submit_request(pool_handle, mint_req))
     assert mint['op'] == 'REPLY'
 
     req, _ = await payment.build_get_payment_sources_request(wallet_handle, trustee_did, address1)
@@ -115,7 +116,7 @@ async def test_misc_freshness():
     assert pay['op'] == 'REPLY'
     full_receipt = json.loads(await payment.parse_payment_response(method, json.dumps(pay)))
 
-    fees = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, fees_req))
+    fees = json.loads(await ledger.submit_request(pool_handle, fees_req))
     assert fees['op'] == 'REPLY'
 
     time.sleep(330)
@@ -129,16 +130,17 @@ async def test_misc_freshness():
     # assert (int(time.time()) - config_result['result']['state_proof']['multi_signature']['value']['timestamp']) <= 300
 
     # read domain ledger txns
-    get_nym = await get_nym(pool_handle, wallet_handle, trustee_did, some_did)
-    get_attrib = await get_attrib(pool_handle, wallet_handle, trustee_did, some_did, None, 'key', None)
-    get_schema = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
-    get_cred_def = await get_cred_def(pool_handle, wallet_handle, trustee_did, cred_def_id)
-    get_revoc_reg_def = await get_revoc_reg_def(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id1)
-    get_revoc_reg = await get_revoc_reg(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp1)
-    get_revoc_reg_delta = await get_revoc_reg_delta(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2,
-                                                    timestamp0, timestamp1)
+    _get_nym = await get_nym(pool_handle, wallet_handle, trustee_did, some_did)
+    _get_attrib = await get_attrib(pool_handle, wallet_handle, trustee_did, some_did, None, 'key', None)
+    _get_schema = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
+    _get_cred_def = await get_cred_def(pool_handle, wallet_handle, trustee_did, cred_def_id)
+    _get_revoc_reg_def = await get_revoc_reg_def(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id1)
+    _get_revoc_reg = await get_revoc_reg(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp1)
+    _get_revoc_reg_delta = await get_revoc_reg_delta(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2,
+                                                     timestamp0, timestamp1)
 
-    get_results = [get_nym, get_attrib, get_schema, get_cred_def, get_revoc_reg_def, get_revoc_reg, get_revoc_reg_delta]
+    get_results = [_get_nym, _get_attrib, _get_schema, _get_cred_def,
+                   _get_revoc_reg_def, _get_revoc_reg, _get_revoc_reg_delta]
     for res in get_results:
         assert res['result']['seqNo'] is not None
         assert (int(time.time()) - res['result']['state_proof']['multi_signature']['value']['timestamp']) <= 300
