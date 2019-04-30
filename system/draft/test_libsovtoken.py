@@ -7,7 +7,7 @@ import pytest
 async def test_libsovtoken_acceptance():
     await pool.set_protocol_version(2)
     await payment_initializer('libsovtoken.so', 'sovtoken_init')
-    await payment_initializer('libnullpay.so', 'nullpay_init')
+    # await payment_initializer('libnullpay.so', 'nullpay_init')
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     libsovtoken_payment_method = 'sov'
@@ -69,6 +69,7 @@ async def test_libsovtoken_acceptance():
     req = await ledger.multi_sign_request(wallet_handle, trustee_did4, req)
 
     res0 = json.loads(await ledger.submit_request(pool_handle, req))
+    print('MINT RESULT: {}'.format(res0))
     assert res0['op'] == 'REPLY'
 
     req, _ = await payment.build_get_payment_sources_request(wallet_handle, trustee_did1, address1)
