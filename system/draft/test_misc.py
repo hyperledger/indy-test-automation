@@ -12,7 +12,7 @@ from random import randrange as rr
 from random import sample
 from datetime import datetime, timedelta, timezone
 import hashlib
-from hypothesis import errors, settings, Verbosity, given, strategies as st
+from hypothesis import errors, settings, Verbosity, given, strategies
 import pprint
 
 
@@ -620,16 +620,14 @@ async def test_misc_indy_2022(pool_handler, wallet_handler, get_default_trustee)
     await check_ledger_sync()
 
 
-@settings(verbosity=Verbosity.debug)
-@given(test_string=st.characters(whitelist_categories=('N', 'L')))
-@pytest.mark.asyncio
-async def test_misc_hypothesis(event_loop, test_string):
-    pool_handle, _ = await pool_helper()
-    wallet_handle, _, _ = await wallet_helper()
-    trustee_did, _ = await default_trustee(wallet_handle)
-    res = await send_schema(pool_handle, wallet_handle, trustee_did, test_string, '1.0',
-                            json.dumps(["age", "sex", "height", "name"]))
-    print(res)
+@settings(verbosity=Verbosity.debug, deadline=2000.0)
+@given(test_string=strategies.characters(whitelist_categories=('N', 'L'), blacklist_characters='0'))
+def test_misc_hypothesis(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, test_string):
+    trustee_did, _ = get_default_trustee
+    res = run_async_method(send_schema, pool_handler, wallet_handler, trustee_did, test_string, '1.0',
+                           json.dumps(["age", "sex", "height", "name"]))
+    print(res[1])
+    assert res[1]['op'] == 'REPLY'
 
 
 @pytest.mark.parametrize('role_under_test', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR', 'NETWORK_MONITOR'])

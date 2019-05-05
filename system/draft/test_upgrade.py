@@ -41,7 +41,7 @@ async def test_pool_upgrade_positive():
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
     init_time = 1
-    version = '1.6.85'
+    version = '1.1.41'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -59,7 +59,7 @@ async def test_pool_upgrade_positive():
     # ))
     reinstall = False
     force = True
-    package = 'indy-node'
+    package = 'sovrin'
     # pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
@@ -114,7 +114,6 @@ async def test_pool_upgrade_positive():
     # aws_25_hosts = [testinfra.get_host('ssh://persistent_node'+str(i),
     #                                    ssh_config='/home/indy/.ssh/config')
     #                 for i in range(1, 26)]
-    # print(aws_25_hosts)
     # os.chdir('/home/indy/indy-node/pool_automation/auto/.ssh/')
     version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in docker_7_hosts]
     print(version_outputs)
