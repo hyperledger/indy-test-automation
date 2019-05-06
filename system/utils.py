@@ -15,7 +15,8 @@ from collections import Counter
 
 def run_async_method(method, *args, **kwargs):
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(method(*args, **kwargs))
+    result = loop.run_until_complete(method(*args, **kwargs))
+    return result
 
 
 def random_string(length):

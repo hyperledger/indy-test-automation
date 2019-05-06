@@ -621,11 +621,18 @@ async def test_misc_indy_2022(pool_handler, wallet_handler, get_default_trustee)
 
 
 @settings(verbosity=Verbosity.debug, deadline=2000.0)
-@given(test_string=strategies.characters(whitelist_categories=('N', 'L'), blacklist_characters='0'))
-def test_misc_hypothesis(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, test_string):
+@given(h_schema_name=strategies.text(alphabet=strategies.characters(whitelist_categories=('N', 'L'),
+                                                                    blacklist_characters='0123456789',),
+                                     min_size=1,
+                                     max_size=25),
+       h_first_number=strategies.integers(min_value=0, max_value=999),
+       h_last_number=strategies.integers(min_value=999, max_value=99999))
+def test_misc_hypothesis(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
+                         h_schema_name, h_first_number, h_last_number):
     trustee_did, _ = get_default_trustee
-    res = run_async_method(send_schema, pool_handler, wallet_handler, trustee_did, test_string, '1.0',
-                           json.dumps(["age", "sex", "height", "name"]))
+    res = run_async_method(send_schema, pool_handler, wallet_handler, trustee_did, h_schema_name,
+                           str(h_first_number)+'.'+str(h_last_number),
+                           json.dumps([random_string(5), random_string(5), random_string(5)]))
     print(res[1])
     assert res[1]['op'] == 'REPLY'
 
