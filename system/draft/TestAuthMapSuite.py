@@ -246,12 +246,8 @@ class TestAuthMapSuite:
         trustee_did, _ = get_default_trustee
         # add adder to add revoc reg def
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-        res01 = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
-        assert res01['op'] == 'REPLY'
-        # add editor to edit revoc reg def
-        editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-        res02 = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
-        assert res02['op'] == 'REPLY'
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
+        assert res['op'] == 'REPLY'
         schema_id, _ = await send_schema(pool_handler, wallet_handler, trustee_did,
                                          'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
         time.sleep(1)
@@ -284,17 +280,33 @@ class TestAuthMapSuite:
         print(res3)
         assert res3['op'] == 'REPLY'
         # add revoc reg def
-        revoc_reg_def_id, _, _, res4 = await send_revoc_reg_def(pool_handler, wallet_handler, adder_did, None,
-                                                                'TAG', cred_def_id,
-                                                                json.dumps({'max_cred_num': 1,
-                                                                            'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+        # revoc_reg_def_id, _, _, res4 = await send_revoc_reg_def(pool_handler, wallet_handler, adder_did, None,
+        #                                                         'TAG', cred_def_id,
+        #                                                         json.dumps({'max_cred_num': 1,
+        #                                                                     'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+        tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
+        tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
+        revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = \
+            await anoncreds.issuer_create_and_store_revoc_reg(wallet_handler, adder_did, None, 'TAG',
+                                                              cred_def_id, json.dumps({
+                                                                'max_cred_num': 1,
+                                                                'issuance_type': 'ISSUANCE_BY_DEFAULT'}),
+                                                              tails_writer_handle)
+        request = await ledger.build_revoc_reg_def_request(adder_did, revoc_reg_def_json)
+        res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, request))
         print(res4)
         assert res4['op'] == 'REPLY'
+        if adder_role != editor_role:
+            # change adder role to edit revoc reg def
+            res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, None, None, editor_role)
+            print(res)
+            assert res['op'] == 'REPLY'
         # edit revoc reg def
-        revoc_reg_def_id, _, _, res5 = await send_revoc_reg_def(pool_handler, wallet_handler, editor_did, None,
-                                                                'TAG', cred_def_id,
-                                                                json.dumps({'max_cred_num': 2,
-                                                                            'issuance_type': 'ISSUANCE_BY_DEMAND'}))
+        request = json.loads(request)
+        request['operation']['value']['tailsHash'] = random_string(20)
+        request['reqId'] += request['reqId']
+        res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did,
+                                                               json.dumps(request)))
         print(res5)
         assert res5['op'] == 'REPLY'
 
