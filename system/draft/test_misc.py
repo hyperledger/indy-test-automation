@@ -737,3 +737,18 @@ async def test_case_nym_special_case(pool_handler, wallet_handler, get_default_t
     print(res3)
     res4 = await get_nym(pool_handler, wallet_handler, reader_did, new_did)
     print(res4)
+
+
+@settings(deadline=None, max_examples=100)
+@given(target_alias=strategies.text(alphabet=strategies.characters(whitelist_categories=('L', 'N', 'S')),
+                                    min_size=1,
+                                    max_size=100))
+@pytest.mark.asyncio
+async def test_misc_nym_alias(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
+                              target_alias):
+    trustee_did, _ = get_default_trustee
+    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    res = await send_nym(pool_handler, wallet_handler, trustee_did,
+                         new_did, None, target_alias, None)
+    print(res)
+    assert res['op'] == 'REPLY'
