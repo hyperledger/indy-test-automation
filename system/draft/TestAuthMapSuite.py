@@ -333,6 +333,18 @@ class TestAuthMapSuite:
         schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
         cred_def_id, _, res = await send_cred_def(pool_handler, wallet_handler, trustee_did, schema_json,
                                                   'cred_def_tag', None, json.dumps({'support_revocation': True}))
+        # set rule for revoc reg entry adding - network monitor case
+        req = await ledger.build_auth_rule_request(trustee_did, '113', 'ADD', '*', None, '*',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': adder_role_num,
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {}
+                                                   }))
+        res21 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res21)
+        assert res21['op'] == 'REPLY'
         # set rule for adding
         req = await ledger.build_auth_rule_request(trustee_did, '114', 'ADD', '*', None, '*',
                                                    json.dumps({
@@ -342,9 +354,9 @@ class TestAuthMapSuite:
                                                        'need_to_be_owner': False,
                                                        'metadata': {}
                                                    }))
-        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res2)
-        assert res2['op'] == 'REPLY'
+        res22 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res22)
+        assert res22['op'] == 'REPLY'
         # set rule for editing
         req = await ledger.build_auth_rule_request(trustee_did, '114', 'EDIT', '*', '*', '*',
                                                    json.dumps({
