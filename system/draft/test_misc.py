@@ -626,12 +626,29 @@ async def test_misc_indy_2022(pool_handler, wallet_handler, get_default_trustee)
                               max_size=50),
        h_first_number=strategies.integers(min_value=0, max_value=999),
        h_last_number=strategies.integers(min_value=999, max_value=99999))
-def test_misc_hypothesis(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
-                         h_text, h_first_number, h_last_number):
+def test_misc_hypothesis_sync(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
+                              h_text, h_first_number, h_last_number):
     trustee_did, _ = get_default_trustee
     res = run_async_method(send_schema, pool_handler, wallet_handler, trustee_did, h_text,
                            str(h_first_number)+'.'+str(h_last_number),
                            json.dumps([random_string(10), random_string(25)]))
+    print(res[1])
+    assert res[1]['op'] == 'REPLY'
+
+
+@settings(verbosity=Verbosity.debug, deadline=2000.0, max_examples=100)
+@given(h_text=strategies.text(alphabet=strategies.characters(whitelist_categories=('L', 'Sc')),
+                              min_size=5,
+                              max_size=50),
+       h_first_number=strategies.integers(min_value=0, max_value=999),
+       h_last_number=strategies.integers(min_value=999, max_value=99999))
+@pytest.mark.asyncio
+async def test_misc_hypothesis_async(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
+                                     h_text, h_first_number, h_last_number):
+    trustee_did, _ = get_default_trustee
+    res = await send_schema(pool_handler, wallet_handler, trustee_did, h_text,
+                            str(h_first_number)+'.'+str(h_last_number),
+                            json.dumps([random_string(10), random_string(25)]))
     print(res[1])
     assert res[1]['op'] == 'REPLY'
 
