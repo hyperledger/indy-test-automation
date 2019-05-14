@@ -1,5 +1,9 @@
 import pytest
 from system.utils import *
+from random import randrange as rr
+import hashlib
+import time
+from datetime import datetime, timedelta, timezone
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
@@ -132,7 +136,7 @@ class TestAuthMapSuite:
     ])
     @pytest.mark.asyncio
     async def test_case_schema(self, pool_handler, wallet_handler, get_default_trustee,
-                               adder_role, adder_role_num):
+                               adder_role, adder_role_num):  # we can add schema only
         trustee_did, _ = get_default_trustee
         # add adder to add schema
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -401,3 +405,299 @@ class TestAuthMapSuite:
                                                                json.dumps(request)))
         print(res5)
         assert res5['op'] == 'REPLY'
+
+    @pytest.mark.skip('INDY-2024')
+    @pytest.mark.parametrize('adder_role, adder_role_num', [
+        ('TRUSTEE', '0'),
+        ('STEWARD', '2'),
+        ('TRUST_ANCHOR', '101'),
+        ('NETWORK_MONITOR', '201')
+    ])
+    @pytest.mark.parametrize('editor_role, editor_role_num', [
+        ('NETWORK_MONITOR', '201'),
+        ('TRUST_ANCHOR', '101'),
+        ('STEWARD', '2'),
+        ('TRUSTEE', '0')
+    ])
+    @pytest.mark.asyncio
+    async def test_case_node(self, pool_handler, wallet_handler, get_default_trustee,
+                             adder_role, adder_role_num, editor_role, editor_role_num):
+        trustee_did, _ = get_default_trustee
+        # add adder to add node
+        adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
+        assert res['op'] == 'REPLY'
+        # add editor to edit node
+        editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
+        assert res['op'] == 'REPLY'
+        # set rule for adding
+        req = await ledger.build_auth_rule_request(trustee_did, '0', 'ADD', 'services', '*', str(['VALIDATOR']),
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': adder_role_num,
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {}
+                                                   }))
+        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res2)
+        assert res2['op'] == 'REPLY'
+        # set rule for editing
+        req = await ledger.build_auth_rule_request(trustee_did, '0', 'EDIT', 'services', str(['VALIDATOR']), str([]),
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': editor_role_num,
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {}
+                                                   }))
+        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res3)
+        assert res3['op'] == 'REPLY'
+        # add node
+        alias = random_string(5)
+        client_ip = '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255))
+        client_port = rr(1, 32767)
+        node_ip = '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255))
+        node_port = rr(1, 32767)
+        req = await ledger.build_node_request(adder_did, adder_vk,  # adder_vk is used as node target did here
+                                              json.dumps(
+                                                   {
+                                                       'alias': alias,
+                                                       'client_ip': client_ip,
+                                                       'client_port': client_port,
+                                                       'node_ip': node_ip,
+                                                       'node_port': node_port,
+                                                       'services': ['VALIDATOR']
+                                                   }))
+        res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
+        print(res4)
+        assert res4['op'] == 'REPLY'
+        # edit node
+        req = await ledger.build_node_request(editor_did, adder_vk,  # adder_vk is used as node target did here
+                                              json.dumps(
+                                                   {
+                                                       'alias': alias,
+                                                       'services': []
+                                                   }))
+        res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, editor_did, req))
+        print(res5)
+        assert res5['op'] == 'REPLY'
+
+    @pytest.mark.parametrize('adder_role, adder_role_num', [
+        ('TRUSTEE', '0'),
+        ('STEWARD', '2'),
+        ('TRUST_ANCHOR', '101'),
+        ('NETWORK_MONITOR', '201')
+    ])
+    @pytest.mark.parametrize('editor_role, editor_role_num', [
+        ('NETWORK_MONITOR', '201'),
+        ('TRUST_ANCHOR', '101'),
+        ('STEWARD', '2'),
+        ('TRUSTEE', '0')
+    ])
+    @pytest.mark.asyncio
+    async def test_case_pool_upgrade(self, pool_handler, wallet_handler, get_default_trustee,
+                                     adder_role, adder_role_num, editor_role, editor_role_num):
+        trustee_did, _ = get_default_trustee
+        # add adder to start pool upgrdae
+        adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
+        assert res['op'] == 'REPLY'
+        # add editor to cancel pool upgrade
+        editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
+        assert res['op'] == 'REPLY'
+        # set rule for adding
+        req = await ledger.build_auth_rule_request(trustee_did, '109', 'ADD', 'action', '*', 'start',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': adder_role_num,
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {}
+                                                   }))
+        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res2)
+        assert res2['op'] == 'REPLY'
+        # set rule for editing
+        req = await ledger.build_auth_rule_request(trustee_did, '109', 'EDIT', 'action', 'start', 'cancel',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': editor_role_num,
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {}
+                                                   }))
+        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res3)
+        assert res3['op'] == 'REPLY'
+        # start pool upgrade
+        init_time = 30
+        version = '1.9.999'
+        name = 'upgrade' + '_' + version + '_' + datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
+        _sha256 = hashlib.sha256().hexdigest()
+        _timeout = 5
+        reinstall = False
+        force = False
+        package = 'indy-node'
+        dests = ['Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv', '8ECVSk179mjsjKRLWiQtssMLgp6EPhWXtaYyStWPSGAb',
+                 'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA',
+                 '4SWokCJWJc69Tn74VvLS6t2G2ucvXqM9FDMsWJjmsUxe', 'Cv1Ehj43DDM5ttNBmC6VPpEfwXWwfGktHwjDJsTV5Fz8',
+                 'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW']
+        docker_7_schedule = json.dumps(dict(
+            {dest: datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time + i * 5),
+                                     '%Y-%m-%dT%H:%M:%S%z')
+             for dest, i in zip(dests, range(len(dests)))}
+        ))
+        req = await ledger.build_pool_upgrade_request(adder_did, name, version, 'start', _sha256, _timeout,
+                                                      docker_7_schedule, None, reinstall, force, package)
+        res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
+        print(res4)
+        assert res4['op'] == 'REPLY'
+        # cancel pool upgrade
+        req = await ledger.build_pool_upgrade_request(editor_did, name, version, 'cancel', _sha256, _timeout,
+                                                      docker_7_schedule, None, reinstall, force, package)
+        res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, editor_did, req))
+        print(res5)
+        assert res5['op'] == 'REPLY'
+
+    @pytest.mark.parametrize('adder_role, adder_role_num', [
+        ('TRUSTEE', '0'),
+        ('STEWARD', '2'),
+        ('TRUST_ANCHOR', '101'),
+        ('NETWORK_MONITOR', '201')
+    ])
+    @pytest.mark.asyncio
+    async def test_case_pool_restart(self, pool_handler, wallet_handler, get_default_trustee,
+                                     adder_role, adder_role_num):  # we can add pool restart only
+        trustee_did, _ = get_default_trustee
+        # add adder to restart pool
+        adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
+        assert res['op'] == 'REPLY'
+        time.sleep(15)
+        # set rule for adding
+        req = await ledger.build_auth_rule_request(trustee_did, '118', 'ADD', 'action', '*', '*',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': adder_role_num,
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {}
+                                                   }))
+        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res2)
+        assert res2['op'] == 'REPLY'
+        # restart pool
+        req = await ledger.build_pool_restart_request\
+            (adder_did, 'start', datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=60),
+                                                   '%Y-%m-%dT%H:%M:%S%z'))
+        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
+        res3 = [json.loads(v) for k, v in res3.items()]
+        print(res3)
+        assert all([res['op'] == 'REPLY' for res in res3])
+
+    @pytest.mark.parametrize('adder_role, adder_role_num', [
+        ('TRUSTEE', '0'),
+        ('STEWARD', '2'),
+        ('TRUST_ANCHOR', '101'),
+        ('NETWORK_MONITOR', '201')
+    ])
+    @pytest.mark.asyncio
+    async def test_case_validator_info(self, pool_handler, wallet_handler, get_default_trustee,
+                                       adder_role, adder_role_num):  # we can add validator info only
+        trustee_did, _ = get_default_trustee
+        # add adder to get validator info
+        adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
+        assert res['op'] == 'REPLY'
+        time.sleep(15)
+        # set rule for adding
+        req = await ledger.build_auth_rule_request(trustee_did, '119', 'ADD', '*', '*', '*',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': adder_role_num,
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {}
+                                                   }))
+        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res2)
+        assert res2['op'] == 'REPLY'
+        req = await ledger.build_get_validator_info_request(adder_did)
+        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
+        res3 = [json.loads(v) for k, v in res3.items()]
+        print(res3)
+        assert all([res['op'] == 'REPLY' for res in res3])
+
+    @pytest.mark.parametrize('editor_role, editor_role_num', [
+        ('NETWORK_MONITOR', '201'),
+        ('TRUST_ANCHOR', '101'),
+        ('STEWARD', '2'),
+        ('TRUSTEE', '0')
+    ])
+    @pytest.mark.asyncio
+    async def test_case_pool_config(self, pool_handler, wallet_handler, get_default_trustee,
+                                    editor_role, editor_role_num):  # we can edit pool config only
+        trustee_did, _ = get_default_trustee
+        # add editor to edit pool config
+        editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
+        assert res['op'] == 'REPLY'
+        # set rule for editing
+        req = await ledger.build_auth_rule_request(trustee_did, '111', 'EDIT', 'action', '*', '*',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': editor_role_num,
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {}
+                                                   }))
+        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res2)
+        assert res2['op'] == 'REPLY'
+        req = await ledger.build_pool_config_request(editor_did, False, False)
+        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, editor_did, req))
+        print(res3)
+        assert res3['op'] == 'REPLY'
+
+    @pytest.mark.parametrize('editor_role, editor_role_num', [
+        ('NETWORK_MONITOR', '201'),
+        ('TRUST_ANCHOR', '101'),
+        ('STEWARD', '2'),
+        ('TRUSTEE', '0')
+    ])
+    @pytest.mark.asyncio
+    async def test_case_auth_rule(self, pool_handler, wallet_handler, get_default_trustee,
+                                  editor_role, editor_role_num):  # we can edit auth rule only
+        trustee_did, _ = get_default_trustee
+        # add editor to edit auth rule
+        editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
+        assert res['op'] == 'REPLY'
+        # set rule for editing
+        req = await ledger.build_auth_rule_request(trustee_did, '120', 'EDIT', '*', '*', '*',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': editor_role_num,
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {}
+                                                   }))
+        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res2)
+        assert res2['op'] == 'REPLY'
+        time.sleep(15)
+        req = await ledger.build_auth_rule_request(editor_did, '111', 'EDIT', 'action', '*', '*',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': '*',
+                                                       'sig_count': 5,
+                                                       'need_to_be_owner': True,
+                                                       'metadata': {}
+                                                   }))
+        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, editor_did, req))
+        print(res3)
+        assert res3['op'] == 'REPLY'
