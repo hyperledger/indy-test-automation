@@ -752,3 +752,39 @@ async def test_misc_nym_alias(docker_setup_and_teardown, pool_handler, wallet_ha
                          new_did, None, target_alias, None)
     print(res)
     assert res['op'] == 'REPLY'
+
+
+@pytest.mark.asyncio
+async def test_misc_mint_to_aws():
+    await pool.set_protocol_version(2)
+    await payment_initializer('libsovtoken.so', 'sovtoken_init')
+    libsovtoken_payment_method = 'sov'
+    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis_test')
+    wallet_handle, _, _ = await wallet_helper()
+    trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
+        {'seed': str('000000000000000000000000Trustee1')}))
+    trustee_did2, trustee_vk2 = await did.create_and_store_my_did(wallet_handle, json.dumps(
+        {"seed": str('000000000000000000000000Trustee2')}))
+    trustee_did3, trustee_vk3 = await did.create_and_store_my_did(wallet_handle, json.dumps(
+        {"seed": str('000000000000000000000000Trustee3')}))
+    await send_nym(pool_handle, wallet_handle, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
+    await send_nym(pool_handle, wallet_handle, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
+
+    addresses = []
+    for i in range(100):
+        address = await payment.create_payment_address(wallet_handle, libsovtoken_payment_method, json.dumps({}))
+        addresses.append(address)
+
+    outputs = []
+    for address in addresses:
+        output = {"recipient": address, "amount": 8000000000*100000}
+        outputs.append(output)
+
+    req, _ = await payment.build_mint_req(wallet_handle, trustee_did,
+                                          json.dumps(outputs), None)
+    req = await ledger.multi_sign_request(wallet_handle, trustee_did, req)
+    req = await ledger.multi_sign_request(wallet_handle, trustee_did2, req)
+    req = await ledger.multi_sign_request(wallet_handle, trustee_did3, req)
+    res1 = json.loads(await ledger.submit_request(pool_handle, req))
+    print(res1)
+    assert res1['op'] == 'REPLY'
