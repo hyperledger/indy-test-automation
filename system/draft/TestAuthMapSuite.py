@@ -877,22 +877,22 @@ class TestAuthMapSuite:
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res2)
         assert res2['op'] == 'REPLY'
+        # initial minting
+        req, _ = await payment.build_mint_req(wallet_handler, trustee_did,
+                                              json.dumps([{"recipient": address1, "amount": 100}]), None)
+        res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res11)
+        assert res11['op'] == 'REPLY'
+        req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
+        res111 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        source1 = \
+            json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method,
+                                                                        res111))[0]['source']
         if sig_count == 0:
             # add identity owner adder to send xfer
             adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
             res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, None)
             assert res['op'] == 'REPLY'
-            # initial minting
-            req, _ = await payment.build_mint_req(wallet_handler, adder_did,
-                                                  json.dumps([{"recipient": address1, "amount": 100}]), None)
-            res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
-            print(res11)
-            assert res11['op'] == 'REPLY'
-            req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
-            res111 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-            source1 = \
-                json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method,
-                                                                            res111))[0]['source']
             req, _ = await payment.build_payment_req(wallet_handler, adder_did,
                                                      json.dumps([source1]),
                                                      json.dumps([{"recipient": address2, "amount": 100}]), None)
@@ -904,17 +904,6 @@ class TestAuthMapSuite:
             adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
             res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
             assert res['op'] == 'REPLY'
-            # initial minting
-            req, _ = await payment.build_mint_req(wallet_handler, adder_did,
-                                                  json.dumps([{"recipient": address1, "amount": 100}]), None)
-            res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
-            print(res11)
-            assert res11['op'] == 'REPLY'
-            req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
-            res111 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-            source1 = \
-                json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method,
-                                                                            res111))[0]['source']
             req, _ = await payment.build_payment_req(wallet_handler, adder_did,
                                                      json.dumps([source1]),
                                                      json.dumps([{"recipient": address2, "amount": 100}]), None)
@@ -932,17 +921,6 @@ class TestAuthMapSuite:
             adder_did3, adder_vk3 = await did.create_and_store_my_did(wallet_handler, '{}')
             res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did3, adder_vk3, None, adder_role)
             assert res['op'] == 'REPLY'
-            # initial minting
-            req, _ = await payment.build_mint_req(wallet_handler, adder_did1,
-                                                  json.dumps([{"recipient": address1, "amount": 100}]), None)
-            res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did1, req))
-            print(res11)
-            assert res11['op'] == 'REPLY'
-            req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
-            res111 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-            source1 = \
-                json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method,
-                                                                            res111))[0]['source']
             req, _ = await payment.build_payment_req(wallet_handler, adder_did1,
                                                      json.dumps([source1]),
                                                      json.dumps([{"recipient": address2, "amount": 100}]), None)
