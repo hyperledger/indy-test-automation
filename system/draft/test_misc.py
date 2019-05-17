@@ -84,12 +84,14 @@ async def test_misc_get_txn_by_seqno():
 @pytest.mark.asyncio
 async def test_misc_state_proof():
     await pool.set_protocol_version(2)
+    timestamp0 = int(time.time())
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
     random_did = random_did_and_json()[0]
     await send_nym(pool_handle, wallet_handle, trustee_did, random_did)
+    await send_attrib(pool_handle, wallet_handle, trustee_did, random_did, None, json.dumps({'key': 'value'}), None)
     schema_id, _ = await send_schema(pool_handle, wallet_handle, trustee_did, random_string(10), '1.0',
                                      json.dumps([random_string(1), random_string(2), random_string(3)]))
     time.sleep(1)
@@ -97,21 +99,42 @@ async def test_misc_state_proof():
     schema_id, schema_json = await ledger.parse_get_schema_response(res)
     cred_def_id, _, _ = await send_cred_def(pool_handle, wallet_handle, trustee_did, schema_json, random_string(3),
                                             None, json.dumps({'support_revocation': True}))
-    hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 5)]
+    revoc_reg_def_id, _, _, res1 = await send_revoc_reg_entry(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM',
+                                                              random_string(3), cred_def_id,
+                                                              json.dumps({'max_cred_num': 1,
+                                                                          'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+    timestamp1 = int(time.time())
+
+    # uncomment to check freshness state proof reading
+    # time.sleep(600)
+
+    hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
     print(hosts)
     outputs0 = [host.run('systemctl stop indy-node') for host in hosts[:-1]]
     print(outputs0)
-
-    time.sleep(1)
     try:
         req1 = await ledger.build_get_nym_request(None, random_did)
         res1 = json.loads(await ledger.submit_request(pool_handle, req1))
 
-        req2 = await ledger.build_get_schema_request(None, schema_id)
+        req2 = await ledger.build_get_attrib_request(None, random_did, 'key', None, None)
         res2 = json.loads(await ledger.submit_request(pool_handle, req2))
 
-        req3 = await ledger.build_get_cred_def_request(None, cred_def_id)
+        req3 = await ledger.build_get_schema_request(None, schema_id)
         res3 = json.loads(await ledger.submit_request(pool_handle, req3))
+
+        req4 = await ledger.build_get_cred_def_request(None, cred_def_id)
+        res4 = json.loads(await ledger.submit_request(pool_handle, req4))
+
+        req5 = await ledger.build_get_revoc_reg_def_request(None, revoc_reg_def_id)
+        res5 = json.loads(await ledger.submit_request(pool_handle, req5))
+
+        # consensus is impossible with timestamp0 here! IS-1263
+        req6 = await ledger.build_get_revoc_reg_request(None, revoc_reg_def_id, timestamp1)
+        res6 = json.loads(await ledger.submit_request(pool_handle, req6))
+
+        # consensus is impossible with (timestamp0, timestamp1) here! IS-1264
+        req7 = await ledger.build_get_revoc_reg_delta_request(None, revoc_reg_def_id, None, timestamp1)
+        res7 = json.loads(await ledger.submit_request(pool_handle, req7))
     finally:
         outputs1 = [host.run('systemctl start indy-node') for host in hosts[:-1]]
         print(outputs1)
@@ -119,10 +142,18 @@ async def test_misc_state_proof():
     assert res1['result']['seqNo'] is not None
     assert res2['result']['seqNo'] is not None
     assert res3['result']['seqNo'] is not None
+    assert res4['result']['seqNo'] is not None
+    assert res5['result']['seqNo'] is not None
+    assert res6['result']['seqNo'] is not None
+    assert res7['result']['seqNo'] is not None
 
     print(res1)
     print(res2)
     print(res3)
+    print(res4)
+    print(res5)
+    print(res6)
+    print(res7)
 
 
 @pytest.mark.asyncio
