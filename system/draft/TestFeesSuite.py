@@ -10,7 +10,7 @@ class TestFeesSuite:
     @pytest.mark.parametrize('cred_def_adder_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
     @pytest.mark.asyncio
     async def test_case_schema_cred_def_rrd_rre_production(self, pool_handler, wallet_handler, get_default_trustee,
-                                                           schema_adder_role, cred_def_adder_role, rrd_adder_role):
+                                                           schema_adder_role, cred_def_adder_role):
         await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
@@ -24,11 +24,14 @@ class TestFeesSuite:
         # add adder to add schema
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, schema_adder_role)
+        print(res)
         assert res['op'] == 'REPLY'
 
         # add adder to add cred_def
         cd_adder_did, cd_adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-        res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, cred_def_adder_role)
+        res = await send_nym\
+            (pool_handler, wallet_handler, trustee_did, cd_adder_did, cd_adder_vk, None, cred_def_adder_role)
+        print(res)
         assert res['op'] == 'REPLY'
 
         # set auth rule for schema
@@ -41,21 +44,21 @@ class TestFeesSuite:
                                                                'role': '0',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': 'schema_fee_250'}
+                                                               'metadata': {'fees': '101'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '2',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': 'schema_fee_250'}
+                                                               'metadata': {'fees': '101'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '101',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': 'schema_fee_250'}
+                                                               'metadata': {'fees': '101'}
                                                            }
                                                        ]
                                                    }))
@@ -73,21 +76,21 @@ class TestFeesSuite:
                                                                'role': '0',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': 'cred_def_fee_125'}
+                                                               'metadata': {'fees': '102'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '2',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': 'cred_def_fee_125'}
+                                                               'metadata': {'fees': '102'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '101',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': 'cred_def_fee_125'}
+                                                               'metadata': {'fees': '102'}
                                                            }
                                                        ]
                                                    }))
@@ -105,21 +108,21 @@ class TestFeesSuite:
                                                                'role': '0',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': 'rrd_fee_100'}
+                                                               'metadata': {'fees': '113'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '2',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': 'rrd_fee_100'}
+                                                               'metadata': {'fees': '113'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '101',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': 'rrd_fee_100'}
+                                                               'metadata': {'fees': '113'}
                                                            }
                                                        ]
                                                    }))
@@ -127,11 +130,24 @@ class TestFeesSuite:
         print(res3)
         assert res3['op'] == 'REPLY'
 
+        # set auth rule for revoc reg entry
+        req = await ledger.build_auth_rule_request(trustee_did, '114', 'ADD', '*', None, '*',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': '*',
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': True,
+                                                       'metadata': {'fees': '114'}
+                                                   }))
+        res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res4)
+        assert res4['op'] == 'REPLY'
+
         # set fees
-        fees = {'schema_fee_250': 250*100000,
-                'cred_def_fee_125': 125*100000,
-                'rrd_fee_100': 100*100000,
-                'rre_fee_0_5': 0.5*100000}
+        fees = {'101': 250*100000,
+                '102': 125*100000,
+                '113': 100*100000,
+                '114': int(0.5*100000)}
         req = await payment.build_set_txn_fees_req(wallet_handler, trustee_did, libsovtoken_payment_method,
                                                    json.dumps(fees))
         req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
@@ -144,8 +160,8 @@ class TestFeesSuite:
         # mint tokens
         address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps(
             {"seed": str('0000000000000000000000000Wallet0')}))
-        req = await payment.build_mint_req(wallet_handler, trustee_did,
-                                           json.dumps([{'recipient': address, 'amount': 1000*100000}]), None)
+        req, _ = await payment.build_mint_req(wallet_handler, trustee_did,
+                                              json.dumps([{'recipient': address, 'amount': 1000*100000}]), None)
         req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
         req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
         req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
@@ -163,12 +179,15 @@ class TestFeesSuite:
         req = await ledger.build_schema_request(adder_did, schema_json)
         req_with_fees_json, _ = await payment.add_request_fees(wallet_handler, adder_did, req, json.dumps([source1]),
                                                                json.dumps([{'recipient': address,
-                                                                            'amount': 750*100000}]), None)
+                                                                            'amount': 750 * 100000}]), None)
         res7 = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req_with_fees_json))
+        print(res7)
         assert res7['op'] == 'REPLY'
 
         # send cred def with fees
+        res = await get_schema(pool_handler, wallet_handler, cd_adder_did, schema_id)
+        schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
         req, _ = await payment.build_get_payment_sources_request(wallet_handler, cd_adder_did, address)
         res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, cd_adder_did, req)
         source2 = \
@@ -183,6 +202,7 @@ class TestFeesSuite:
                                                                             'amount': 625 * 100000}]), None)
         res8 = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, cd_adder_did, req_with_fees_json))
+        print(res8)
         assert res8['op'] == 'REPLY'
 
         # send revoc reg def with fees
@@ -204,4 +224,20 @@ class TestFeesSuite:
                                                                             'amount': 525 * 100000}]), None)
         res9 = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, cd_adder_did, req_with_fees_json))
+        print(res9)
         assert res9['op'] == 'REPLY'
+
+        # send revoc reg entry with fees
+        req, _ = await payment.build_get_payment_sources_request(wallet_handler, cd_adder_did, address)
+        res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, cd_adder_did, req)
+        source4 = \
+            json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res))[0]['source']
+        req = await ledger.build_revoc_reg_entry_request\
+            (cd_adder_did, revoc_reg_def_id, 'CL_ACCUM', revoc_reg_entry_json)
+        req_with_fees_json, _ = await payment.add_request_fees(wallet_handler, cd_adder_did, req, json.dumps([source4]),
+                                                               json.dumps([{'recipient': address,
+                                                                            'amount': int(524.5 * 100000)}]), None)
+        res10 = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, cd_adder_did, req_with_fees_json))
+        print(res10)
+        assert res10['op'] == 'REPLY'

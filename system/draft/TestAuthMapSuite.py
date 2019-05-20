@@ -338,7 +338,7 @@ class TestAuthMapSuite:
         schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
         cred_def_id, _, res = await send_cred_def(pool_handler, wallet_handler, trustee_did, schema_json,
                                                   'cred_def_tag', None, json.dumps({'support_revocation': True}))
-        # set rule for revoc reg entry adding - network monitor case
+        # set rule for revoc reg def adding - network monitor case
         req = await ledger.build_auth_rule_request(trustee_did, '113', 'ADD', '*', None, '*',
                                                    json.dumps({
                                                        'constraint_id': 'ROLE',
