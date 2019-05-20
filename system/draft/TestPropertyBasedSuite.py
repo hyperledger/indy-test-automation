@@ -2,6 +2,8 @@ import pytest
 from system.utils import *
 from hypothesis import settings, given, strategies
 from string import printable, ascii_letters
+import hashlib
+import copy
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
@@ -29,7 +31,7 @@ class TestPropertyBasedSuite:
         print('-'*25)
 
     @settings(deadline=None, max_examples=100)
-    @given(reqid=strategies.integers(),
+    @given(reqid=strategies.integers(min_value=1),
            dest=strategies.text(ascii_letters, min_size=16, max_size=16),
            verkey=strategies.text(ascii_letters, min_size=32, max_size=32),
            alias=strategies.text(min_size=1, max_size=10000))
@@ -45,9 +47,50 @@ class TestPropertyBasedSuite:
                     'dest': base58.b58encode(dest).decode(),
                     'verkey': base58.b58encode(verkey).decode(),
                     'role': random.choice(roles),
-                    'alias': alias}}
+                    'alias': alias
+                    }}
         res = json.loads\
             (await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req)))
         print(req)
         print(res)
         assert res['op'] == 'REPLY'
+
+    @pytest.mark.asyncio
+    async def test_case_attrib(self, pool_handler, wallet_handler, get_default_trustee):
+        trustee_did, trustee_vk = get_default_trustee
+        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, target_vk)
+        assert res['op'] == 'REPLY'
+        req_base = {'protocolVersion': 2,
+                    'identifier': target_did,
+                    'operation':
+                        {'type': '100',
+                         'dest': target_did
+                         }}
+
+        req1 = copy.deepcopy(req_base)
+        req1['reqId'] = int(time.time())
+        req1['operation']['hash'] = hashlib.sha256().hexdigest()
+        res1 = json.loads\
+            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, json.dumps(req1)))
+        print(req1)
+        print(res1)
+        assert res1['op'] == 'REPLY'
+
+        req2 = copy.deepcopy(req_base)
+        req2['reqId'] = int(time.time())
+        req2['operation']['raw'] = '{"key": "value"}'
+        res2 = json.loads\
+            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, json.dumps(req2)))
+        print(req2)
+        print(res2)
+        assert res2['op'] == 'REPLY'
+
+        req3 = copy.deepcopy(req_base)
+        req3['reqId'] = int(time.time())
+        req3['operation']['enc'] = random_string(10)
+        res3 = json.loads\
+            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, json.dumps(req3)))
+        print(req3)
+        print(res3)
+        assert res3['op'] == 'REPLY'
