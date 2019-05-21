@@ -611,7 +611,19 @@ async def test_misc_indy_1554_can_write_false(pool_handler, wallet_handler, get_
 @pytest.mark.parametrize('submitter_did, txn_type, action, field, old_value, new_value', [
     (None, None, None, None, None, None),
     (None, 'NYM', 'ADD', 'role', None, '101'),
-    (None, 'NYM', 'EDIT', 'role', '0', '101')
+    (None, 'NYM', 'EDIT', 'role', '0', '101'),
+    (None, 'NYM', 'ADD', 'role', None, '2'),
+    (None, 'NYM', 'EDIT', 'role', '0', '2'),
+    (None, 'ATTRIB', 'ADD', '*', '*', '*'),
+    (None, 'ATTRIB', 'EDIT', '*', '*', '*'),
+    (None, 'SCHEMA', 'ADD', '*', '*', '*'),
+    (None, 'SCHEMA', 'EDIT', '*', '*', '*'),
+    (None, 'CRED_DEF', 'ADD', '*', '*', '*'),
+    (None, 'CRED_DEF', 'EDIT', '*', '*', '*'),
+    (None, 'REVOC_REG_DEF', 'ADD', '*', '*', '*'),
+    (None, 'REVOC_REG_DEF', 'EDIT', '*', '*', '*'),
+    (None, 'REVOC_REG_ENTRY', 'ADD', '*', '*', '*'),
+    (None, 'REVOC_REG_ENTRY', 'EDIT', '*', '*', '*'),
 ])
 @pytest.mark.asyncio
 async def test_misc_is_1202(pool_handler, wallet_handler, get_default_trustee,

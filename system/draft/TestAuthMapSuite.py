@@ -65,6 +65,16 @@ class TestAuthMapSuite:
         res5 = await send_nym(pool_handler, wallet_handler, editor_did, new_did, editor_vk)  # push editor vk
         print(res5)
         assert res5['op'] == 'REPLY'
+        # negative cases
+        if adder_role != editor_role:
+            # try to add another nym with editor did - should be rejected
+            res6 = await send_nym(pool_handler, wallet_handler, editor_did, random_did_and_json()[0])
+            print(res6)
+            assert res6['op'] == 'REJECT'
+            # try to edit initial nym one more time with adder did - should be rejected
+            res7 = await send_nym(pool_handler, wallet_handler, adder_did, new_did, adder_vk)
+            print(res7)
+            assert res7['op'] == 'REJECT'
 
     @pytest.mark.parametrize('adder_role, adder_role_num', [
         ('TRUSTEE', '0'),
@@ -120,14 +130,26 @@ class TestAuthMapSuite:
         assert res3['op'] == 'REPLY'
         # add attrib for target did by non-owner adder
         res4 = await send_attrib(pool_handler, wallet_handler, adder_did, target_did,
-                                 None, json.dumps({'key': 'value1'}), None)
+                                 None, json.dumps({'key1': 'value1'}), None)
         print(res4)
         assert res4['op'] == 'REPLY'
         # edit attrib for target did by non-owner editor
         res5 = await send_attrib(pool_handler, wallet_handler, editor_did, target_did,
-                                 None, json.dumps({'key': 'value2'}), None)
+                                 None, json.dumps({'key1': 'value2'}), None)
         print(res5)
         assert res5['op'] == 'REPLY'
+        # negative cases
+        if adder_role != editor_role:
+            # try to add another attrib with editor did - should be rejected
+            res6 = await send_attrib(pool_handler, wallet_handler, editor_did, target_did,
+                                     None, json.dumps({'key2': 'value1'}), None)
+            print(res6)
+            assert res6['op'] == 'REJECT'
+            # try to edit initial attrib one more time with adder did - should be rejected
+            res7 = await send_attrib(pool_handler, wallet_handler, adder_did, target_did,
+                                     None, json.dumps({'key1': 'value3'}), None)
+            print(res7)
+            assert res7['op'] == 'REJECT'
 
     @pytest.mark.parametrize('adder_role, adder_role_num', [
         ('TRUSTEE', '0'),
@@ -159,6 +181,11 @@ class TestAuthMapSuite:
         res4 = await send_schema(pool_handler, wallet_handler, adder_did, 'schema1', '1.0', json.dumps(['attr1']))
         print(res4)
         assert res4[1]['op'] == 'REPLY'
+        # edit schema - nobody can edit schemas - should be rejected
+        res5 = await send_schema(pool_handler, wallet_handler, adder_did, 'schema1', '1.0',
+                                 json.dumps(['attr1', 'attr2']))
+        print(res5)
+        assert res5[1]['op'] == 'REJECT'
 
     @pytest.mark.parametrize('adder_role, adder_role_num', [
         ('TRUSTEE', '0'),
@@ -212,13 +239,21 @@ class TestAuthMapSuite:
         assert res3['op'] == 'REPLY'
         # add cred def
         cred_def_id, cred_def_json = \
-            await anoncreds.issuer_create_and_store_credential_def(wallet_handler, adder_did, schema_json, 'TAG',
+            await anoncreds.issuer_create_and_store_credential_def(wallet_handler, adder_did, schema_json, 'TAG1',
                                                                    None, json.dumps({'support_revocation': False}))
         request = await ledger.build_cred_def_request(adder_did, cred_def_json)
         res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, request))
         print(res4)
         assert res4['op'] == 'REPLY'
         if adder_role != editor_role:
+            # try to edit cred def as adder - should be rejected
+            _request = json.loads(request)
+            _request['operation']['data']['primary']['n'] = '123456789'
+            _request['reqId'] += _request['reqId']
+            res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did,
+                                                                   json.dumps(_request)))
+            print(res5)
+            assert res5['op'] == 'REJECT'
             # change adder role to edit cred def
             res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, None, None, editor_role)
             print(res)
@@ -227,10 +262,19 @@ class TestAuthMapSuite:
         request = json.loads(request)
         request['operation']['data']['primary']['n'] = '123456'
         request['reqId'] += request['reqId']
-        res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did,
+        res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did,
                                                                json.dumps(request)))
-        print(res5)
-        assert res5['op'] == 'REPLY'
+        print(res6)
+        assert res6['op'] == 'REPLY'
+        if adder_role != editor_role:
+            # try to add another cred def as editor - should be rejected
+            cred_def_id, cred_def_json = \
+                await anoncreds.issuer_create_and_store_credential_def(wallet_handler, adder_did, schema_json, 'TAG2',
+                                                                       None, json.dumps({'support_revocation': True}))
+            request = await ledger.build_cred_def_request(adder_did, cred_def_json)
+            res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, request))
+            print(res7)
+            assert res7['op'] == 'REJECT'
 
     @pytest.mark.parametrize('adder_role, adder_role_num', [
         ('TRUSTEE', '0'),
@@ -288,7 +332,7 @@ class TestAuthMapSuite:
         tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
         tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
         revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = \
-            await anoncreds.issuer_create_and_store_revoc_reg(wallet_handler, adder_did, None, 'TAG',
+            await anoncreds.issuer_create_and_store_revoc_reg(wallet_handler, adder_did, None, 'TAG1',
                                                               cred_def_id, json.dumps({
                                                                 'max_cred_num': 1,
                                                                 'issuance_type': 'ISSUANCE_BY_DEFAULT'}),
@@ -298,6 +342,14 @@ class TestAuthMapSuite:
         print(res4)
         assert res4['op'] == 'REPLY'
         if adder_role != editor_role:
+            # try to edit revoc reg def as adder - should be rejected
+            _request = json.loads(request)
+            _request['operation']['value']['tailsHash'] = random_string(30)
+            _request['reqId'] += _request['reqId']
+            res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did,
+                                                                   json.dumps(_request)))
+            print(res5)
+            assert res5['op'] == 'REJECT'
             # change adder role to edit revoc reg def
             res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, None, None, editor_role)
             print(res)
@@ -306,10 +358,22 @@ class TestAuthMapSuite:
         request = json.loads(request)
         request['operation']['value']['tailsHash'] = random_string(20)
         request['reqId'] += request['reqId']
-        res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did,
+        res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did,
                                                                json.dumps(request)))
-        print(res5)
-        assert res5['op'] == 'REPLY'
+        print(res6)
+        assert res6['op'] == 'REPLY'
+        if adder_role != editor_role:
+            # try to add another revoc reg def as editor - should be rejected
+            revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = \
+                await anoncreds.issuer_create_and_store_revoc_reg(wallet_handler, adder_did, None, 'TAG2',
+                                                                  cred_def_id, json.dumps({
+                                                                      'max_cred_num': 2,
+                                                                      'issuance_type': 'ISSUANCE_BY_DEFAULT'}),
+                                                                  tails_writer_handle)
+            request = await ledger.build_revoc_reg_def_request(adder_did, revoc_reg_def_json)
+            res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, request))
+            print(res7)
+            assert res7['op'] == 'REJECT'
 
     @pytest.mark.parametrize('adder_role, adder_role_num', [
         ('TRUSTEE', '0'),
@@ -342,7 +406,7 @@ class TestAuthMapSuite:
         req = await ledger.build_auth_rule_request(trustee_did, '113', 'ADD', '*', None, '*',
                                                    json.dumps({
                                                        'constraint_id': 'ROLE',
-                                                       'role': adder_role_num,
+                                                       'role': '*',
                                                        'sig_count': 1,
                                                        'need_to_be_owner': False,
                                                        'metadata': {}
@@ -378,7 +442,7 @@ class TestAuthMapSuite:
         tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
         tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
         revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = \
-            await anoncreds.issuer_create_and_store_revoc_reg(wallet_handler, adder_did, None, 'TAG',
+            await anoncreds.issuer_create_and_store_revoc_reg(wallet_handler, adder_did, None, 'TAG1',
                                                               cred_def_id, json.dumps({
                                                                 'max_cred_num': 10,
                                                                 'issuance_type': 'ISSUANCE_BY_DEFAULT'}),
@@ -392,6 +456,16 @@ class TestAuthMapSuite:
         print(res4)
         assert res4['op'] == 'REPLY'
         if adder_role != editor_role:
+            # try to edit revoc reg entry as adder - should be rejected
+            _request = json.loads(request)
+            _request['operation']['value']['prevAccum'] = _request['operation']['value']['accum']
+            _request['operation']['value']['accum'] = random_string(20)
+            _request['operation']['value']['revoked'] = [7, 8, 9]
+            _request['reqId'] += _request['reqId']
+            res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did,
+                                                                   json.dumps(_request)))
+            print(res5)
+            assert res5['op'] == 'REJECT'
             # change adder role to edit revoc reg def
             res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, None, None, editor_role)
             print(res)
@@ -402,10 +476,26 @@ class TestAuthMapSuite:
         request['operation']['value']['accum'] = random_string(10)
         request['operation']['value']['revoked'] = [1, 2, 3]
         request['reqId'] += request['reqId']
-        res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did,
+        res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did,
                                                                json.dumps(request)))
-        print(res5)
-        assert res5['op'] == 'REPLY'
+        print(res6)
+        assert res6['op'] == 'REPLY'
+        if adder_role != editor_role:
+            # try to add another revoc reg entry as editor - should be rejected
+            revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = \
+                await anoncreds.issuer_create_and_store_revoc_reg(wallet_handler, adder_did, None, 'TAG2',
+                                                                  cred_def_id, json.dumps({
+                                                                        'max_cred_num': 20,
+                                                                        'issuance_type': 'ISSUANCE_BY_DEFAULT'}),
+                                                                  tails_writer_handle)
+            req = await ledger.build_revoc_reg_def_request(adder_did, revoc_reg_def_json)
+            res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
+            assert res['op'] == 'REPLY'
+            request = await ledger.build_revoc_reg_entry_request(adder_did, revoc_reg_def_id, 'CL_ACCUM',
+                                                                 revoc_reg_entry_json)
+            res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, request))
+            print(res7)
+            assert res7['op'] == 'REJECT'
 
     @pytest.mark.skip('INDY-2024')
     @pytest.mark.parametrize('adder_role, adder_role_num', [

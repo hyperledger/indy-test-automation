@@ -6,6 +6,19 @@ from indy import payment
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestFeesSuite:
 
+    @pytest.mark.asyncio
+    async def test_case_nym_attrib(self, pool_handler, wallet_handler, get_default_trustee):
+        await payment_initializer('libsovtoken.so', 'sovtoken_init')
+        libsovtoken_payment_method = 'sov'
+        trustee_did, _ = get_default_trustee
+        trustee_did2, trustee_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps(
+            {"seed": str('000000000000000000000000Trustee2')}))
+        trustee_did3, trustee_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps(
+            {"seed": str('000000000000000000000000Trustee3')}))
+        await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
+        await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
+        # TODO
+
     @pytest.mark.parametrize('schema_adder_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
     @pytest.mark.parametrize('cred_def_adder_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
     @pytest.mark.asyncio
@@ -44,21 +57,21 @@ class TestFeesSuite:
                                                                'role': '0',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': '101'}
+                                                               'metadata': {'fees': 'add_schema_250'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '2',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': '101'}
+                                                               'metadata': {'fees': 'add_schema_250'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '101',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': '101'}
+                                                               'metadata': {'fees': 'add_schema_250'}
                                                            }
                                                        ]
                                                    }))
@@ -76,21 +89,21 @@ class TestFeesSuite:
                                                                'role': '0',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': '102'}
+                                                               'metadata': {'fees': 'add_cred_def_125'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '2',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': '102'}
+                                                               'metadata': {'fees': 'add_cred_def_125'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '101',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': '102'}
+                                                               'metadata': {'fees': 'add_cred_def_125'}
                                                            }
                                                        ]
                                                    }))
@@ -108,21 +121,21 @@ class TestFeesSuite:
                                                                'role': '0',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': '113'}
+                                                               'metadata': {'fees': 'add_rrd_100'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '2',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': '113'}
+                                                               'metadata': {'fees': 'add_rrd_100'}
                                                            },
                                                            {
                                                                'constraint_id': 'ROLE',
                                                                'role': '101',
                                                                'sig_count': 1,
                                                                'need_to_be_owner': False,
-                                                               'metadata': {'fees': '113'}
+                                                               'metadata': {'fees': 'add_rrd_100'}
                                                            }
                                                        ]
                                                    }))
@@ -137,17 +150,17 @@ class TestFeesSuite:
                                                        'role': '*',
                                                        'sig_count': 1,
                                                        'need_to_be_owner': True,
-                                                       'metadata': {'fees': '114'}
+                                                       'metadata': {'fees': 'add_rre_0_5'}
                                                    }))
         res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res4)
         assert res4['op'] == 'REPLY'
 
         # set fees
-        fees = {'101': 250*100000,
-                '102': 125*100000,
-                '113': 100*100000,
-                '114': int(0.5*100000)}
+        fees = {'add_schema_250': 250*100000,
+                'add_cred_def_125': 125*100000,
+                'add_rrd_100': 100*100000,
+                'add_rre_0_5': int(0.5*100000)}
         req = await payment.build_set_txn_fees_req(wallet_handler, trustee_did, libsovtoken_payment_method,
                                                    json.dumps(fees))
         req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
