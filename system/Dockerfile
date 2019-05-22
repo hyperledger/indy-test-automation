@@ -30,7 +30,3 @@ RUN echo " " >> /etc/indy/indy_config.py \
     && echo " " >> /etc/indy/indy_config.py \
     && echo "logLevel = 0" >> /etc/indy/indy_config.py \
     && echo " " >> /etc/indy/indy_config.py
-#    && echo "ForceViewChangeFreq = 1800" >> /etc/indy/indy_config.py \
-#    && echo " " >> /etc/indy/indy_config.py
-#USER indy
-#WORKDIR /home/indy
