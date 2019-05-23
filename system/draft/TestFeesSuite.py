@@ -7,26 +7,196 @@ from indy import payment
 class TestFeesSuite:
 
     @pytest.mark.asyncio
-    async def test_case_nym_attrib(self, pool_handler, wallet_handler, get_default_trustee):
+    async def test_case_nyms(self, pool_handler, wallet_handler, get_default_trustee, initial_token_minting):
         await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
+        address = initial_token_minting
         trustee_did2, trustee_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps(
             {"seed": str('000000000000000000000000Trustee2')}))
         trustee_did3, trustee_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps(
             {"seed": str('000000000000000000000000Trustee3')}))
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
-        # TODO
+
+        # set fees
+        fees = {'add_trustee_0': 0*100000,
+                'add_steward_0': 0*100000,
+                'add_trust_anchor_0': 0*100000,
+                'add_network_monitor_0': 0*100000,
+                'add_identity_owner_50': 50*100000}
+        req = await payment.build_set_txn_fees_req(wallet_handler, trustee_did, libsovtoken_payment_method,
+                                                   json.dumps(fees))
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res)
+        assert res['op'] == 'REPLY'
+
+        # set auth rule for trustee adding
+        req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '0',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': '0',
+                                                       'sig_count': 3,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {'fees': 'add_trustee_0'}
+                                                   }))
+        res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res1)
+        assert res1['op'] == 'REPLY'
+
+        # set auth rule for steward adding
+        req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '2',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': '0',
+                                                       'sig_count': 3,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {'fees': 'add_steward_0'}
+                                                   }))
+        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res2)
+        assert res2['op'] == 'REPLY'
+
+        # set auth rule for trust anchor adding
+        req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '101',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': '0',
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {'fees': 'add_trust_anchor_0'}
+                                                   }))
+        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res3)
+        assert res3['op'] == 'REPLY'
+
+        # set auth rule for network monitor adding
+        req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '201',
+                                                   json.dumps({
+                                                       'constraint_id': 'ROLE',
+                                                       'role': '0',
+                                                       'sig_count': 1,
+                                                       'need_to_be_owner': False,
+                                                       'metadata': {'fees': 'add_network_monitor_0'}
+                                                   }))
+        res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res4)
+        assert res4['op'] == 'REPLY'
+
+        # set auth rule for identity owner adding
+        req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', None,
+                                                   json.dumps({
+                                                       'constraint_id': 'OR',
+                                                       'auth_constraints': [
+                                                           {
+                                                               'constraint_id': 'ROLE',
+                                                               'role': '0',
+                                                               'sig_count': 1,
+                                                               'need_to_be_owner': False,
+                                                               'metadata': {'fees': 'add_identity_owner_50'}
+                                                           },
+                                                           {
+                                                               'constraint_id': 'ROLE',
+                                                               'role': '2',
+                                                               'sig_count': 1,
+                                                               'need_to_be_owner': False,
+                                                               'metadata': {'fees': 'add_identity_owner_50'}
+                                                           },
+                                                           {
+                                                               'constraint_id': 'ROLE',
+                                                               'role': '101',
+                                                               'sig_count': 1,
+                                                               'need_to_be_owner': False,
+                                                               'metadata': {'fees': 'add_identity_owner_50'}
+                                                           }
+                                                       ]
+                                                   }))
+        res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res5)
+        assert res5['op'] == 'REPLY'
+
+        # try to add trustee with one trustee (default rule) - should be rejected
+        new_t_did, new_t_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        res6 = await send_nym(pool_handler, wallet_handler, trustee_did, new_t_did, new_t_vk, 'new trustee', 'TRUSTEE')
+        print(res6)
+        assert res6['op'] == 'REJECT'
+        # add new trustee according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_t_did, new_t_vk, 'new trustee', 'TRUSTEE')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res66 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res66)
+        assert res66['op'] == 'REPLY'
+
+        # try to add steward with one trustee (default rule) - should be rejected
+        new_s_did, new_s_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        res7 = await send_nym(pool_handler, wallet_handler, trustee_did, new_s_did, new_s_vk, 'new steward', 'STEWARD')
+        print(res7)
+        assert res7['op'] == 'REJECT'
+        # add new trustee according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_s_did, new_s_vk, 'new steward', 'STEWARD')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res77 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res77)
+        assert res77['op'] == 'REPLY'
+
+        # try to add trust anchor with one steward (default rule) - should be rejected
+        new_ta_did, new_ta_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        res8 = await send_nym(pool_handler, wallet_handler, new_s_did, new_ta_did, new_ta_vk, 'new TA', 'TRUST_ANCHOR')
+        print(res8)
+        assert res8['op'] == 'REJECT'
+        # add new trust anchor according to new rule
+        res88 = await send_nym(pool_handler, wallet_handler, new_t_did, new_ta_did, new_ta_vk, 'new TA', 'TRUST_ANCHOR')
+        print(res88)
+        assert res88['op'] == 'REPLY'
+
+        # try to add network monitor with one trust anchor (default rule) - should be rejected
+        new_nm_did, new_nm_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        res9 = await send_nym\
+            (pool_handler, wallet_handler, new_ta_did, new_nm_did, new_nm_vk, 'new NM', 'NETWORK_MONITOR')
+        print(res9)
+        assert res9['op'] == 'REJECT'
+        # add new trust anchor according to new rule
+        res99 = await send_nym\
+            (pool_handler, wallet_handler, new_t_did, new_nm_did, new_nm_vk, 'new NM', 'NETWORK_MONITOR')
+        print(res99)
+        assert res99['op'] == 'REPLY'
+
+        # try to add identity owner with one trust anchor without fees (default rule) - should be rejected
+        new_io_did, new_io_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        res = await send_nym\
+            (pool_handler, wallet_handler, new_ta_did, new_io_did, new_io_vk, 'new IO', None)
+        print(res)
+        assert res['op'] == 'REJECT'
+        # add new identity owner according to new rule
+        req, _ = await payment.build_get_payment_sources_request(wallet_handler, new_ta_did, address)
+        res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, new_ta_did, req)
+        source1 = \
+            json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res))[0]['source']
+        req = await ledger.build_nym_request(new_ta_did, new_io_did, new_io_vk, 'new IO', None)
+        req_with_fees_json, _ = await payment.add_request_fees(wallet_handler, new_ta_did, req, json.dumps([source1]),
+                                                               json.dumps([{'recipient': address,
+                                                                            'amount': 950 * 100000}]), None)
+        res10 = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, new_ta_did, req_with_fees_json))
+        print(res10)
+        assert res10['op'] == 'REPLY'
 
     @pytest.mark.parametrize('schema_adder_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
     @pytest.mark.parametrize('cred_def_adder_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
     @pytest.mark.asyncio
-    async def test_case_schema_cred_def_rrd_rre_production(self, pool_handler, wallet_handler, get_default_trustee,
-                                                           schema_adder_role, cred_def_adder_role):
+    async def test_case_schema_cred_def_rrd_rre(self, pool_handler, wallet_handler, get_default_trustee,
+                                                initial_token_minting, schema_adder_role, cred_def_adder_role):
         await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
+        address = initial_token_minting
         trustee_did2, trustee_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps(
             {"seed": str('000000000000000000000000Trustee2')}))
         trustee_did3, trustee_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps(
@@ -46,6 +216,20 @@ class TestFeesSuite:
             (pool_handler, wallet_handler, trustee_did, cd_adder_did, cd_adder_vk, None, cred_def_adder_role)
         print(res)
         assert res['op'] == 'REPLY'
+
+        # set fees
+        fees = {'add_schema_250': 250*100000,
+                'add_cred_def_125': 125*100000,
+                'add_rrd_100': 100*100000,
+                'add_rre_0_5': int(0.5*100000)}
+        req = await payment.build_set_txn_fees_req(wallet_handler, trustee_did, libsovtoken_payment_method,
+                                                   json.dumps(fees))
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res5 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res5)
+        assert res5['op'] == 'REPLY'
 
         # set auth rule for schema
         req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
@@ -155,32 +339,6 @@ class TestFeesSuite:
         res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res4)
         assert res4['op'] == 'REPLY'
-
-        # set fees
-        fees = {'add_schema_250': 250*100000,
-                'add_cred_def_125': 125*100000,
-                'add_rrd_100': 100*100000,
-                'add_rre_0_5': int(0.5*100000)}
-        req = await payment.build_set_txn_fees_req(wallet_handler, trustee_did, libsovtoken_payment_method,
-                                                   json.dumps(fees))
-        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
-        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
-        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
-        res5 = json.loads(await ledger.submit_request(pool_handler, req))
-        print(res5)
-        assert res5['op'] == 'REPLY'
-
-        # mint tokens
-        address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps(
-            {"seed": str('0000000000000000000000000Wallet0')}))
-        req, _ = await payment.build_mint_req(wallet_handler, trustee_did,
-                                              json.dumps([{'recipient': address, 'amount': 1000*100000}]), None)
-        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
-        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
-        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
-        res6 = json.loads(await ledger.submit_request(pool_handler, req))
-        print(res6)
-        assert res6['op'] == 'REPLY'
 
         # send schema with fees
         req, _ = await payment.build_get_payment_sources_request(wallet_handler, adder_did, address)

@@ -37,6 +37,28 @@ async def get_default_trustee(wallet_handler):
     await yield_((trustee_did, trustee_vk))
 
 
+@pytest.fixture()
+@async_generator
+async def initial_token_minting(pool_handler, wallet_handler, get_default_trustee):
+    await payment_initializer('libsovtoken.so', 'sovtoken_init')
+    libsovtoken_payment_method = 'sov'
+    trustee_did, _ = get_default_trustee
+    address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps(
+        {"seed": str('0000000000000000000000000Wallet0')}))
+    trustee_did_second, trustee_vk_second = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+    trustee_did_third, trustee_vk_third = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+    await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_second, trustee_vk_second, None, 'TRUSTEE')
+    await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_third, trustee_vk_third, None, 'TRUSTEE')
+    req, _ = await payment.build_mint_req(wallet_handler, trustee_did,
+                                          json.dumps([{'recipient': address, 'amount': 1000 * 100000}]), None)
+    req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+    req = await ledger.multi_sign_request(wallet_handler, trustee_did_second, req)
+    req = await ledger.multi_sign_request(wallet_handler, trustee_did_third, req)
+    res = json.loads(await ledger.submit_request(pool_handler, req))
+    assert res['op'] == 'REPLY'
+    await yield_(address)
+
+
 @pytest.fixture(scope='function')
 @async_generator
 async def docker_setup_and_teardown():
