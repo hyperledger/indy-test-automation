@@ -201,8 +201,10 @@ class TestFeesSuite:
             {"seed": str('000000000000000000000000Trustee2')}))
         trustee_did3, trustee_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps(
             {"seed": str('000000000000000000000000Trustee3')}))
+        io_did, io_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
+        await send_nym(pool_handler, wallet_handler, trustee_did, io_did, io_vk, None, None)
 
         # add adder to add schema
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -345,6 +347,18 @@ class TestFeesSuite:
         res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req)
         source1 = \
             json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res))[0]['source']
+        # negative
+        schema_id, schema_json = \
+            await anoncreds.issuer_create_schema(io_did, random_string(5), '1.0', json.dumps(['name', 'age']))
+        req = await ledger.build_schema_request(io_did, schema_json)
+        req_with_fees_json, _ = await payment.add_request_fees(wallet_handler, io_did, req, json.dumps([source1]),
+                                                               json.dumps([{'recipient': address,
+                                                                            'amount': 750 * 100000}]), None)
+        res = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, io_did, req_with_fees_json))
+        print(res)
+        assert res['op'] == 'REJECT'
+        # positive
         schema_id, schema_json = \
             await anoncreds.issuer_create_schema(adder_did, random_string(5), '1.0', json.dumps(['name', 'age']))
         req = await ledger.build_schema_request(adder_did, schema_json)
@@ -363,6 +377,20 @@ class TestFeesSuite:
         res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, cd_adder_did, req)
         source2 = \
             json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res))[0]['source']
+        # negative
+        cred_def_id, cred_def_json = \
+            await anoncreds.issuer_create_and_store_credential_def(wallet_handler, io_did, schema_json,
+                                                                   random_string(5), None,
+                                                                   json.dumps({'support_revocation': True}))
+        req = await ledger.build_cred_def_request(io_did, cred_def_json)
+        req_with_fees_json, _ = await payment.add_request_fees(wallet_handler, io_did, req, json.dumps([source2]),
+                                                               json.dumps([{'recipient': address,
+                                                                            'amount': 625 * 100000}]), None)
+        res = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, io_did, req_with_fees_json))
+        print(res)
+        assert res['op'] == 'REJECT'
+        # positive
         cred_def_id, cred_def_json = \
             await anoncreds.issuer_create_and_store_credential_def(wallet_handler, cd_adder_did, schema_json,
                                                                    random_string(5), None,
@@ -383,6 +411,22 @@ class TestFeesSuite:
             json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res))[0]['source']
         tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
         tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
+        # negative
+        revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = \
+            await anoncreds.issuer_create_and_store_revoc_reg(wallet_handler, io_did, None, random_string(5),
+                                                              cred_def_id, json.dumps({'max_cred_num': 1,
+                                                                                       'issuance_type':
+                                                                                           'ISSUANCE_BY_DEFAULT'}),
+                                                              tails_writer_handle)
+        req = await ledger.build_revoc_reg_def_request(io_did, revoc_reg_def_json)
+        req_with_fees_json, _ = await payment.add_request_fees(wallet_handler, io_did, req, json.dumps([source3]),
+                                                               json.dumps([{'recipient': address,
+                                                                            'amount': 525 * 100000}]), None)
+        res = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, io_did, req_with_fees_json))
+        print(res)
+        assert res['op'] == 'REJECT'
+        # positive
         revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = \
             await anoncreds.issuer_create_and_store_revoc_reg(wallet_handler, cd_adder_did, None, random_string(5),
                                                               cred_def_id, json.dumps({'max_cred_num': 1,
@@ -403,6 +447,17 @@ class TestFeesSuite:
         res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, cd_adder_did, req)
         source4 = \
             json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res))[0]['source']
+        # negative
+        req = await ledger.build_revoc_reg_entry_request\
+            (io_did, revoc_reg_def_id, 'CL_ACCUM', revoc_reg_entry_json)
+        req_with_fees_json, _ = await payment.add_request_fees(wallet_handler, io_did, req, json.dumps([source4]),
+                                                               json.dumps([{'recipient': address,
+                                                                            'amount': int(524.5 * 100000)}]), None)
+        res = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, io_did, req_with_fees_json))
+        print(res)
+        assert res['op'] == 'REJECT'
+        # positive
         req = await ledger.build_revoc_reg_entry_request\
             (cd_adder_did, revoc_reg_def_id, 'CL_ACCUM', revoc_reg_entry_json)
         req_with_fees_json, _ = await payment.add_request_fees(wallet_handler, cd_adder_did, req, json.dumps([source4]),
