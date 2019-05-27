@@ -16,6 +16,14 @@ class TestFeesSuite:
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
 
+        # add bunch of trustees for role changing
+        new_t_did2, new_t_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        new_t_did3, new_t_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        new_t_did4, new_t_vk4 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_t_did2, new_t_vk2, None, 'TRUSTEE')
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_t_did3, new_t_vk3, None, 'TRUSTEE')
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_t_did4, new_t_vk4, None, 'TRUSTEE')
+
         print(initial_fees_setting)
 
         # set auth rule for trustee adding
@@ -85,19 +93,69 @@ class TestFeesSuite:
 
         # try to add trustee with one trustee (default rule) - should be rejected
         new_t_did, new_t_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-        res6 = await send_nym(pool_handler, wallet_handler, trustee_did, new_t_did, new_t_vk, 'new trustee', 'TRUSTEE')
-        print(res6)
-        assert res6['op'] == 'REJECT'
+        res1 = await send_nym(pool_handler, wallet_handler, trustee_did, new_t_did, new_t_vk, 'new trustee', 'TRUSTEE')
+        print(res1)
+        assert res1['op'] == 'REJECT'
         # add new trustee according to new rule
         req = await ledger.build_nym_request(trustee_did, new_t_did, new_t_vk, 'new trustee', 'TRUSTEE')
         req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
         req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
         req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
-        res66 = json.loads(await ledger.submit_request(pool_handler, req))
-        print(res66)
-        assert res66['op'] == 'REPLY'
+        res2 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res2)
+        assert res2['op'] == 'REPLY'
 
-        # TODO add edit actions
+        # try to change trustee to steward with one trustee (default rule) - should be rejected
+        res3 = await send_nym(pool_handler, wallet_handler, trustee_did, new_t_did, None, None, 'STEWARD')
+        print(res3)
+        assert res3['op'] == 'REJECT'
+        # change new trustee to steward according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_t_did, None, None, 'STEWARD')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res4 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res4)
+        assert res4['op'] == 'REPLY'
+
+        # try to change trustee to trust anchor with one trustee (default rule) - should be rejected
+        res5 = await send_nym(pool_handler, wallet_handler, trustee_did, new_t_did2, None, None, 'TRUST_ANCHOR')
+        print(res5)
+        assert res5['op'] == 'REJECT'
+        # change new trustee to trust anchor according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_t_did2, None, None, 'TRUST_ANCHOR')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res6 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res6)
+        assert res6['op'] == 'REPLY'
+
+        # try to change trustee to network monitor with one trustee (default rule) - should be rejected
+        res7 = await send_nym(pool_handler, wallet_handler, trustee_did, new_t_did3, None, None, 'NETWORK_MONITOR')
+        print(res7)
+        assert res7['op'] == 'REJECT'
+        # change new trustee to network monitor according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_t_did3, None, None, 'NETWORK_MONITOR')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res8 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res8)
+        assert res8['op'] == 'REPLY'
+
+        # try to change trustee to identity owner with one trustee (default rule) - should be rejected
+        res9 = await send_nym(pool_handler, wallet_handler, trustee_did, new_t_did4, None, None, '')
+        print(res9)
+        assert res9['op'] == 'REJECT'
+        # change new trustee to identity owner according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_t_did4, None, None, '')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res10 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res10)
+        assert res10['op'] == 'REPLY'
 
     @pytest.mark.asyncio
     async def test_case_steward(self, pool_handler, wallet_handler, get_default_trustee, initial_fees_setting):
@@ -108,6 +166,14 @@ class TestFeesSuite:
             {"seed": str('000000000000000000000000Trustee3')}))
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
+
+        # add bunch of stewards for role changing
+        new_s_did2, new_s_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        new_s_did3, new_s_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        new_s_did4, new_s_vk4 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_s_did2, new_s_vk2, None, 'STEWARD')
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_s_did3, new_s_vk3, None, 'STEWARD')
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_s_did4, new_s_vk4, None, 'STEWARD')
 
         print(initial_fees_setting)
 
@@ -178,19 +244,69 @@ class TestFeesSuite:
 
         # try to add steward with one trustee (default rule) - should be rejected
         new_s_did, new_s_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-        res7 = await send_nym(pool_handler, wallet_handler, trustee_did, new_s_did, new_s_vk, 'new steward', 'STEWARD')
-        print(res7)
-        assert res7['op'] == 'REJECT'
+        res1 = await send_nym(pool_handler, wallet_handler, trustee_did, new_s_did, new_s_vk, 'new steward', 'STEWARD')
+        print(res1)
+        assert res1['op'] == 'REJECT'
         # add new trustee according to new rule
         req = await ledger.build_nym_request(trustee_did, new_s_did, new_s_vk, 'new steward', 'STEWARD')
         req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
         req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
         req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
-        res77 = json.loads(await ledger.submit_request(pool_handler, req))
-        print(res77)
-        assert res77['op'] == 'REPLY'
+        res2 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res2)
+        assert res2['op'] == 'REPLY'
 
-        # TODO add edit actions
+        # try to change steward to trustee with one trustee (default rule) - should be rejected
+        res3 = await send_nym(pool_handler, wallet_handler, trustee_did, new_s_did, None, None, 'TRUSTEE')
+        print(res3)
+        assert res3['op'] == 'REJECT'
+        # change new steward to trustee according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_s_did, None, None, 'TRUSTEE')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res4 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res4)
+        assert res4['op'] == 'REPLY'
+
+        # try to change steward to trust anchor with one trustee (default rule) - should be rejected
+        res5 = await send_nym(pool_handler, wallet_handler, trustee_did, new_s_did2, None, None, 'TRUST_ANCHOR')
+        print(res5)
+        assert res5['op'] == 'REJECT'
+        # change new steward to trust anchor according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_s_did2, None, None, 'TRUST_ANCHOR')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res6 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res6)
+        assert res6['op'] == 'REPLY'
+
+        # try to change steward to network monitor with one trustee (default rule) - should be rejected
+        res7 = await send_nym(pool_handler, wallet_handler, trustee_did, new_s_did3, None, None, 'NETWORK_MONITOR')
+        print(res7)
+        assert res7['op'] == 'REJECT'
+        # change new steward to network monitor according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_s_did3, None, None, 'NETWORK_MONITOR')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res8 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res8)
+        assert res8['op'] == 'REPLY'
+
+        # try to change steward to identity owner with one trustee (default rule) - should be rejected
+        res9 = await send_nym(pool_handler, wallet_handler, trustee_did, new_s_did4, None, None, '')
+        print(res9)
+        assert res9['op'] == 'REJECT'
+        # change new steward to identity owner according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_s_did4, None, None, '')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res10 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res10)
+        assert res10['op'] == 'REPLY'
 
     @pytest.mark.asyncio
     async def test_case_trust_anchor(self, pool_handler, wallet_handler, get_default_trustee, initial_fees_setting):
@@ -204,6 +320,14 @@ class TestFeesSuite:
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
         await send_nym(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+
+        # add bunch of trust anchors for role changing
+        new_ta_did2, new_ta_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        new_ta_did3, new_ta_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        new_ta_did4, new_ta_vk4 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_ta_did2, new_ta_vk2, None, 'TRUST_ANCHOR')
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_ta_did3, new_ta_vk3, None, 'TRUST_ANCHOR')
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_ta_did4, new_ta_vk4, None, 'TRUST_ANCHOR')
 
         print(initial_fees_setting)
 
@@ -274,17 +398,63 @@ class TestFeesSuite:
 
         # try to add trust anchor with one steward (default rule) - should be rejected
         new_ta_did, new_ta_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-        res8 = await send_nym\
+        res1 = await send_nym\
             (pool_handler, wallet_handler, steward_did, new_ta_did, new_ta_vk, 'new TA', 'TRUST_ANCHOR')
-        print(res8)
-        assert res8['op'] == 'REJECT'
+        print(res1)
+        assert res1['op'] == 'REJECT'
         # add new trust anchor according to new rule
-        res88 = await send_nym\
+        res2 = await send_nym\
             (pool_handler, wallet_handler, trustee_did, new_ta_did, new_ta_vk, 'new TA', 'TRUST_ANCHOR')
-        print(res88)
-        assert res88['op'] == 'REPLY'
+        print(res2)
+        assert res2['op'] == 'REPLY'
 
-        # TODO add edit actions
+        # try to change trust anchor to trustee with one trustee (default rule) - should be rejected
+        res3 = await send_nym(pool_handler, wallet_handler, trustee_did, new_ta_did, None, None, 'TRUSTEE')
+        print(res3)
+        assert res3['op'] == 'REJECT'
+        # change new trust anchor to trustee according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_ta_did, None, None, 'TRUSTEE')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res4 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res4)
+        assert res4['op'] == 'REPLY'
+
+        # try to change trust anchor to steward with one trustee (default rule) - should be rejected
+        res5 = await send_nym(pool_handler, wallet_handler, trustee_did, new_ta_did2, None, None, 'STEWARD')
+        print(res5)
+        assert res5['op'] == 'REJECT'
+        # change new trust anchor to steward according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_ta_did2, None, None, 'STEWARD')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res6 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res6)
+        assert res6['op'] == 'REPLY'
+
+        # try to change trust anchor to network monitor with one trustee (default rule) - should be rejected
+        res7 = await send_nym(pool_handler, wallet_handler, trustee_did, new_ta_did3, None, None, 'NETWORK_MONITOR')
+        print(res7)
+        assert res7['op'] == 'REJECT'
+        # change new trust anchor to network monitor according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_ta_did3, None, None, 'NETWORK_MONITOR')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res8 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res8)
+        assert res8['op'] == 'REPLY'
+
+        # try to change trust anchor to identity owner with one steward (default rule) - should be rejected
+        res9 = await send_nym(pool_handler, wallet_handler, steward_did, new_ta_did4, None, None, '')
+        print(res9)
+        assert res9['op'] == 'REJECT'
+        # change trust anchor to identity owner with one trustee according to new rule
+        res10 = await send_nym(pool_handler, wallet_handler, trustee_did, new_ta_did4, None, None, '')
+        print(res10)
+        assert res10['op'] == 'REPLY'
 
     @pytest.mark.asyncio
     async def test_case_network_monitor(self, pool_handler, wallet_handler, get_default_trustee, initial_fees_setting):
@@ -298,6 +468,14 @@ class TestFeesSuite:
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
         await send_nym(pool_handler, wallet_handler, trustee_did, ta_did, ta_vk, None, 'TRUST_ANCHOR')
+
+        # add bunch of network monitors for role changing
+        new_nm_did2, new_nm_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        new_nm_did3, new_nm_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        new_nm_did4, new_nm_vk4 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_nm_did2, new_nm_vk2, None, 'NETWORK_MONITOR')
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_nm_did3, new_nm_vk3, None, 'NETWORK_MONITOR')
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_nm_did4, new_nm_vk4, None, 'NETWORK_MONITOR')
 
         print(initial_fees_setting)
 
@@ -368,17 +546,63 @@ class TestFeesSuite:
 
         # try to add network monitor with one trust anchor (default rule) - should be rejected
         new_nm_did, new_nm_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-        res9 = await send_nym\
+        res1 = await send_nym\
             (pool_handler, wallet_handler, ta_did, new_nm_did, new_nm_vk, 'new NM', 'NETWORK_MONITOR')
+        print(res1)
+        assert res1['op'] == 'REJECT'
+        # add new network monitor according to new rule
+        res2 = await send_nym\
+            (pool_handler, wallet_handler, trustee_did, new_nm_did, new_nm_vk, 'new NM', 'NETWORK_MONITOR')
+        print(res2)
+        assert res2['op'] == 'REPLY'
+
+        # try to change network monitor to trustee with one trustee (default rule) - should be rejected
+        res3 = await send_nym(pool_handler, wallet_handler, trustee_did, new_nm_did, None, None, 'TRUSTEE')
+        print(res3)
+        assert res3['op'] == 'REJECT'
+        # change new network monitor to trustee according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_nm_did, None, None, 'TRUSTEE')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res4 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res4)
+        assert res4['op'] == 'REPLY'
+
+        # try to change network monitor to steward with one trustee (default rule) - should be rejected
+        res5 = await send_nym(pool_handler, wallet_handler, trustee_did, new_nm_did2, None, None, 'STEWARD')
+        print(res5)
+        assert res5['op'] == 'REJECT'
+        # change new network monitor to steward according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_nm_did2, None, None, 'STEWARD')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res6 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res6)
+        assert res6['op'] == 'REPLY'
+
+        # try to change network monitor to trust anchor with one trustee (default rule) - should be rejected
+        res7 = await send_nym(pool_handler, wallet_handler, trustee_did, new_nm_did3, None, None, 'TRUST_ANCHOR')
+        print(res7)
+        assert res7['op'] == 'REJECT'
+        # change new network monitor to trust anchor according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_nm_did3, None, None, 'TRUST_ANCHOR')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res8 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res8)
+        assert res8['op'] == 'REPLY'
+
+        # try to change network monitor to identity owner with one trust anchor (default rule) - should be rejected
+        res9 = await send_nym(pool_handler, wallet_handler, ta_did, new_nm_did4, None, None, '')
         print(res9)
         assert res9['op'] == 'REJECT'
-        # add new trust anchor according to new rule
-        res99 = await send_nym\
-            (pool_handler, wallet_handler, trustee_did, new_nm_did, new_nm_vk, 'new NM', 'NETWORK_MONITOR')
-        print(res99)
-        assert res99['op'] == 'REPLY'
-
-        # TODO add edit actions
+        # change network monitor to identity owner with one trustee according to new rule
+        res10 = await send_nym(pool_handler, wallet_handler, trustee_did, new_nm_did4, None, None, '')
+        print(res10)
+        assert res10['op'] == 'REPLY'
 
     @pytest.mark.asyncio
     async def test_case_identity_owner(self, pool_handler, wallet_handler, get_default_trustee, initial_fees_setting,
@@ -394,6 +618,14 @@ class TestFeesSuite:
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
         await send_nym(pool_handler, wallet_handler, trustee_did, ta_did, ta_vk, None, 'TRUST_ANCHOR')
+
+        # add bunch of identity owners for role changing
+        new_io_did2, new_io_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        new_io_did3, new_io_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        new_io_did4, new_io_vk4 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_io_did2, new_io_vk2, None, None)
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_io_did3, new_io_vk3, None, None)
+        await send_nym(pool_handler, wallet_handler, trustee_did, new_io_did4, new_io_vk4, None, None)
 
         print(initial_fees_setting)
         address = initial_token_minting
@@ -484,10 +716,10 @@ class TestFeesSuite:
 
         # try to add identity owner with one trust anchor without fees (default rule) - should be rejected
         new_io_did, new_io_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-        res = await send_nym\
+        res1 = await send_nym\
             (pool_handler, wallet_handler, ta_did, new_io_did, new_io_vk, 'new IO', None)
-        print(res)
-        assert res['op'] == 'REJECT'
+        print(res1)
+        assert res1['op'] == 'REJECT'
         # add new identity owner according to new rule
         req, _ = await payment.build_get_payment_sources_request(wallet_handler, ta_did, address)
         res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, ta_did, req)
@@ -497,12 +729,62 @@ class TestFeesSuite:
         req_with_fees_json, _ = await payment.add_request_fees(wallet_handler, ta_did, req, json.dumps([source1]),
                                                                json.dumps([{'recipient': address,
                                                                             'amount': 950 * 100000}]), None)
-        res10 = json.loads(
+        res2 = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, ta_did, req_with_fees_json))
+        print(res2)
+        assert res2['op'] == 'REPLY'
+
+        # try to change identity owner to trustee with one trustee (default rule) - should be rejected
+        res3 = await send_nym(pool_handler, wallet_handler, trustee_did, new_io_did, None, None, 'TRUSTEE')
+        print(res3)
+        assert res3['op'] == 'REJECT'
+        # change new identity owner to trustee according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_io_did, None, None, 'TRUSTEE')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res4 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res4)
+        assert res4['op'] == 'REPLY'
+
+        # try to change identity owner to steward with one trustee (default rule) - should be rejected
+        res5 = await send_nym(pool_handler, wallet_handler, trustee_did, new_io_did2, None, None, 'STEWARD')
+        print(res5)
+        assert res5['op'] == 'REJECT'
+        # change new identity owner to steward according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_io_did2, None, None, 'STEWARD')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res6 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res6)
+        assert res6['op'] == 'REPLY'
+
+        # try to change identity owner to trust anchor with one trustee (default rule) - should be rejected
+        res7 = await send_nym(pool_handler, wallet_handler, trustee_did, new_io_did3, None, None, 'TRUST_ANCHOR')
+        print(res7)
+        assert res7['op'] == 'REJECT'
+        # change new identity owner to trust anchor according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_io_did3, None, None, 'TRUST_ANCHOR')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res8 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res8)
+        assert res8['op'] == 'REPLY'
+
+        # try to change identity owner to network monitor with one trustee (default rule) - should be rejected
+        res9 = await send_nym(pool_handler, wallet_handler, trustee_did, new_io_did4, None, None, 'NETWORK_MONITOR')
+        print(res9)
+        assert res9['op'] == 'REJECT'
+        # change new identity owner to network monitor according to new rule
+        req = await ledger.build_nym_request(trustee_did, new_io_did4, None, None, 'NETWORK_MONITOR')
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res10 = json.loads(await ledger.submit_request(pool_handler, req))
         print(res10)
         assert res10['op'] == 'REPLY'
-
-        # TODO add edit actions
 
     @pytest.mark.parametrize('schema_adder_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
     @pytest.mark.parametrize('cred_def_adder_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
@@ -685,6 +967,7 @@ class TestFeesSuite:
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req_with_fees_json))
         print(res7)
         assert res7['op'] == 'REPLY'
+        time.sleep(5)
 
         # send cred def with fees
         res = await get_schema(pool_handler, wallet_handler, cd_adder_did, schema_id)
