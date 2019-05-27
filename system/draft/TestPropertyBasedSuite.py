@@ -31,7 +31,7 @@ class TestPropertyBasedSuite:
         print(var_dt_lists)
         print('-'*25)
 
-    @settings(deadline=None, max_examples=100)
+    @settings(deadline=None, max_examples=200)
     @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
            dest=strategies.text(ascii_letters, min_size=16, max_size=16),
            # verkey=strategies.text(ascii_letters, min_size=32, max_size=32),
@@ -40,16 +40,18 @@ class TestPropertyBasedSuite:
     async def test_case_nym(self, pool_handler, wallet_handler, get_default_trustee, reqid, dest, alias):
         trustee_did, trustee_vk = get_default_trustee
         roles = ['0', '2', '101', '201']
-        req = {'protocolVersion': 2,
+        req = {
+               'protocolVersion': 2,
                'reqId': reqid,
                'identifier': trustee_did,
-               'operation':
-                   {'type': '1',
-                    'dest': base58.b58encode(dest).decode(),
-                    # 'verkey': base58.b58encode(verkey).decode(),
-                    'role': random.choice(roles),
-                    'alias': alias
-                    }}
+               'operation': {
+                             'type': '1',
+                             'dest': base58.b58encode(dest).decode(),
+                             # 'verkey': base58.b58encode(verkey).decode(),
+                             'role': random.choice(roles),
+                             'alias': alias
+                            }
+                }
         res = json.loads\
             (await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req)))
         print(req)
@@ -68,12 +70,14 @@ class TestPropertyBasedSuite:
         target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         res = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, target_vk)
         assert res['op'] == 'REPLY'
-        req_base = {'protocolVersion': 2,
+        req_base = {
+                    'protocolVersion': 2,
                     'identifier': target_did,
-                    'operation':
-                        {'type': '100',
-                         'dest': target_did
-                         }}
+                    'operation': {
+                                  'type': '100',
+                                  'dest': target_did
+                                 }
+                    }
 
         req1 = copy.deepcopy(req_base)
         req1['reqId'] = reqid + 1
@@ -102,7 +106,7 @@ class TestPropertyBasedSuite:
         print(res3)
         assert res3['op'] == 'REPLY'
 
-    @settings(deadline=None, max_examples=100)
+    @settings(deadline=None, max_examples=200)
     @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
            version=strategies.floats(min_value=0.1, max_value=999.999),
            name=strategies.text(min_size=1),
@@ -113,19 +117,60 @@ class TestPropertyBasedSuite:
         creator_did, creator_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         res = await send_nym(pool_handler, wallet_handler, trustee_did, creator_did, creator_vk, None, 'TRUSTEE')
         assert res['op'] == 'REPLY'
-        req = {'protocolVersion': 2,
+        req = {
+               'protocolVersion': 2,
                'reqId': reqid,
                'identifier': creator_did,
-               'operation':
-               {'type': '101',
-                'data': {
-                    'version': str(version),
-                    'name': name,
-                    'attr_names': attrs
+               'operation': {
+                             'type': '101',
+                             'data': {
+                                      'version': str(version),
+                                      'name': name,
+                                      'attr_names': attrs
+                                     }
                     }
-               }}
+               }
         res = json.loads\
             (await ledger.sign_and_submit_request(pool_handler, wallet_handler, creator_did, json.dumps(req)))
         print(req)
+        print(res)
+        assert res['op'] == 'REPLY'
+
+    @settings(deadline=None, max_examples=50)
+    @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
+           tag=strategies.text(printable, min_size=1),
+           primary=strategies.recursive(
+               strategies.dictionaries(
+                   strategies.text(printable), strategies.text(printable, min_size=1), min_size=1, max_size=3),
+               lambda x: strategies.dictionaries(strategies.text(printable, min_size=1), x, min_size=1, max_size=3)
+           ))
+    @pytest.mark.asyncio
+    async def test_case_cred_def(self, pool_handler, wallet_handler, get_default_trustee,
+                                 reqid, tag, primary):
+        trustee_did, trustee_vk = get_default_trustee
+        creator_did, creator_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, creator_did, creator_vk, None, 'TRUSTEE')
+        assert res['op'] == 'REPLY'
+        schema_id, res = await send_schema\
+            (pool_handler, wallet_handler, creator_did, random_string(10), '1.0', json.dumps(['attribute']))
+        assert res['op'] == 'REPLY'
+        res = await get_schema(pool_handler, wallet_handler, creator_did, schema_id)
+        schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
+        req = {
+               'protocolVersion': 2,
+               'reqId': reqid,
+               'identifier': creator_did,
+               'operation': {
+                             'type': '102',
+                             'ref': json.loads(schema_json)['seqNo'],
+                             'signature_type': 'CL',
+                             'tag': tag,
+                             'data': {
+                                      'primary': primary
+                                     }
+                            }
+                }
+        res = json.loads\
+            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, creator_did, json.dumps(req)))
         print(res)
         assert res['op'] == 'REPLY'
