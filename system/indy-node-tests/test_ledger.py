@@ -1,11 +1,19 @@
-from system.utils import *
 import pytest
 import json
-from indy import pool, did, ledger, IndyError
 import hashlib
 import time
 import logging
+from async_generator import async_generator
 
+from indy import pool, did, ledger, IndyError
+
+from system.utils import *
+from system.helper import docker_setup_and_teardown as _docker_setup_and_teardown
+
+@pytest.fixture(scope='module', autouse=True)
+@async_generator
+async def docker_setup_and_teardown():
+    await _docker_setup_and_teardown()
 
 # logger = logging.getLogger(__name__)
 # logging.basicConfig(level=0, format='%(asctime)s %(message)s')
