@@ -21,13 +21,13 @@ class TestTAASuite:
         assert res1['op'] == 'REPLY'
         # aml with the same version should be rejected
         req = await ledger.build_acceptance_mechanism_request(trustee_did, json.dumps(aml), version_set, context)
-        res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res11)
-        assert res11['op'] == 'REJECT'
-        req = await ledger.build_get_acceptance_mechanism_request(None, timestamp, version_get)
-        res2 = json.loads(await ledger.submit_request(pool_handler, req))
+        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res2)
-        assert res2['op'] == 'REPLY'
+        assert res2['op'] == 'REJECT'
+        req = await ledger.build_get_acceptance_mechanism_request(None, timestamp, version_get)
+        res3 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res3)
+        assert res3['op'] == 'REPLY'
 
     @pytest.mark.parametrize('taa_text, taa_ver', [
         (random_string(1), random_string(100)),
@@ -104,16 +104,30 @@ class TestTAASuite:
         assert res2['op'] == 'REJECT'
 
     @pytest.mark.asyncio
-    async def test_case_aml_taa_with_xfer(self, pool_handler, wallet_handler, get_default_trustee,
-                                          initial_token_minting):
+    async def test_case_taa_with_xfer(self, pool_handler, wallet_handler, get_default_trustee,
+                                      initial_token_minting):
         await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         address1 = initial_token_minting
         address2 = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps({}))
+        req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
+        res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        source1 = \
+            json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res))[0]['source']
         aml_key = 'aml_key'
         taa_text = 'some TAA text'
         taa_ver = 'some TAA version'
+        # try to send xfer with taa without aml and taa in ledger - should be failed
+        extra = await payment.prepare_payment_extra_with_acceptance_data(
+            None, taa_text, taa_ver, None, aml_key, int(time.time()))
+        req, _ = await payment.build_payment_req(wallet_handler, trustee_did,
+                                                 json.dumps([source1]),
+                                                 json.dumps([{"recipient": address2, "amount": 100*100000},
+                                                             {"recipient": address1, "amount": 900*100000}]), extra)
+        res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res1)
+        assert res1['op'] == 'REJECT'
         req = await ledger.build_acceptance_mechanism_request(trustee_did,
                                                               json.dumps({aml_key: random_string(5)}),
                                                               random_string(10), None)
@@ -124,10 +138,6 @@ class TestTAASuite:
         res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res3)
         assert res3['op'] == 'REPLY'
-        req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
-        res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-        source1 = \
-            json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res))[0]['source']
         extra = await payment.prepare_payment_extra_with_acceptance_data(
             None, taa_text, taa_ver, None, aml_key, int(time.time()))
         req, _ = await payment.build_payment_req(wallet_handler, trustee_did,
@@ -137,3 +147,15 @@ class TestTAASuite:
         res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res4)
         assert res4['op'] == 'REPLY'
+        # try to send xfer without taa to ledger with aml and taa - should be failed
+        req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
+        res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        source2 = \
+            json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res))[0]['source']
+        req, _ = await payment.build_payment_req(wallet_handler, trustee_did,
+                                                 json.dumps([source2]),
+                                                 json.dumps([{"recipient": address2, "amount": 200*100000},
+                                                             {"recipient": address1, "amount": 700*100000}]), None)
+        res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res5)
+        assert res5['op'] == 'REJECT'
