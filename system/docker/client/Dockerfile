@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         software-properties-common \
         curl \
         wget \
+        ssh \
         vim \
     && rm -rf /var/lib/apt/lists/*
 

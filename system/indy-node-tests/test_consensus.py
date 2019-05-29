@@ -1,10 +1,17 @@
 import pytest
-from system.utils import *
 import logging
+from async_generator import async_generator
 
+from system.utils import *
+from system.helper import docker_setup_and_teardown as _docker_setup_and_teardown
 
 # logger = logging.getLogger(__name__)
 # logging.basicConfig(level=0, format='%(asctime)s %(message)s')
+
+@pytest.fixture(scope='function', autouse=True)
+@async_generator
+async def docker_setup_and_teardown():
+    await _docker_setup_and_teardown()
 
 
 @pytest.mark.asyncio
@@ -69,7 +76,7 @@ async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
 
 
-@pytest.mark.skip(reason='INDY-2059')
+@pytest.mark.skip(reason='INDY-2059, INDY-2023')
 @pytest.mark.asyncio
 async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee

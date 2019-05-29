@@ -10,13 +10,13 @@ from indy import pool, did, ledger, IndyError
 from system.utils import *
 from system.helper import docker_setup_and_teardown as _docker_setup_and_teardown
 
+# logger = logging.getLogger(__name__)
+# logging.basicConfig(level=0, format='%(asctime)s %(message)s')
+
 @pytest.fixture(scope='module', autouse=True)
 @async_generator
 async def docker_setup_and_teardown():
     await _docker_setup_and_teardown()
-
-# logger = logging.getLogger(__name__)
-# logging.basicConfig(level=0, format='%(asctime)s %(message)s')
 
 
 @pytest.mark.parametrize('writer_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
