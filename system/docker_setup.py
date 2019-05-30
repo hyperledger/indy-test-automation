@@ -19,7 +19,11 @@ def network_builder(network_subnet, network_name):
 
 def pool_builder(dockerfile_path, node_name_base, network_name, nodes_num):
     # build image from Dockerfile
-    image, _ = client.images.build(path=dockerfile_path)
+    try:
+        image, _ = client.images.build(path=dockerfile_path)
+    except docker.errors.APIError:
+        dockerfile_path = '../.'
+        image, _ = client.images.build(path=dockerfile_path)
     # enable systemd
     client.containers.run(image,
                           'setup',

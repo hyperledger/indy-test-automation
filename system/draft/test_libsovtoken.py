@@ -7,7 +7,7 @@ import pytest
 async def test_libsovtoken_acceptance():
     await pool.set_protocol_version(2)
     await payment_initializer('libsovtoken.so', 'sovtoken_init')
-    await payment_initializer('libnullpay.so', 'nullpay_init')
+    # await payment_initializer('libnullpay.so', 'nullpay_init')
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     libsovtoken_payment_method = 'sov'
@@ -26,7 +26,7 @@ async def test_libsovtoken_acceptance():
     await send_nym(pool_handle, wallet_handle, trustee_did1, trustee_did3, trustee_vk3, None, 'TRUSTEE')
     await send_nym(pool_handle, wallet_handle, trustee_did1, trustee_did4, trustee_vk4, None, 'TRUSTEE')
 
-    fees = {'10001': 1, '102': 1, '101': 1, '1': 1, '100': 1, '113': 1, '114': 1}
+    fees = {'1': 1, '100': 1, '101': 1, '102': 1, '113': 1, '114': 1, '10001': 1}
     req = await payment.build_set_txn_fees_req(wallet_handle, trustee_did1, libsovtoken_payment_method,
                                                json.dumps(fees))
 
@@ -35,7 +35,8 @@ async def test_libsovtoken_acceptance():
     req = await ledger.multi_sign_request(wallet_handle, trustee_did3, req)
     req = await ledger.multi_sign_request(wallet_handle, trustee_did4, req)
 
-    res2 = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did1, req))
+    res2 = json.loads(await ledger.submit_request(pool_handle, req))
+    print(res2)
     assert res2['op'] == 'REPLY'
 
     req = await payment.build_get_txn_fees_req(wallet_handle, trustee_did1, libsovtoken_payment_method)
@@ -67,7 +68,8 @@ async def test_libsovtoken_acceptance():
     req = await ledger.multi_sign_request(wallet_handle, trustee_did3, req)
     req = await ledger.multi_sign_request(wallet_handle, trustee_did4, req)
 
-    res0 = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did1, req))
+    res0 = json.loads(await ledger.submit_request(pool_handle, req))
+    print('MINT RESULT: {}'.format(res0))
     assert res0['op'] == 'REPLY'
 
     req, _ = await payment.build_get_payment_sources_request(wallet_handle, trustee_did1, address1)

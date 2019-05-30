@@ -24,11 +24,9 @@ RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/s
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88
 RUN echo "deb https://repo.sovrin.org/deb xenial master" >> /etc/apt/sources.list
 RUN useradd -ms /bin/bash -l -u $uid indy
-RUN apt-get update -y && apt-get install -y indy-node sovtoken sovtokenfees
+RUN apt-get update -y && apt-get install -y indy-node=1.8.0~dev975 indy-plenum=1.8.0~dev802 sovtoken=0.9.6~36 sovtokenfees=0.9.6~36
 RUN echo " " >> /etc/indy/indy_config.py \
     && echo "NETWORK_NAME = 'sandbox'" >> /etc/indy/indy_config.py \
+    && echo " " >> /etc/indy/indy_config.py \
+    && echo "logLevel = 0" >> /etc/indy/indy_config.py \
     && echo " " >> /etc/indy/indy_config.py
-#    && echo "ForceViewChangeFreq = 1800" >> /etc/indy/indy_config.py \
-#    && echo " " >> /etc/indy/indy_config.py
-#USER indy
-#WORKDIR /home/indy
