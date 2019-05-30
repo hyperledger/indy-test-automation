@@ -2,7 +2,7 @@
 
 ## Client
 
-Describes system tests environment.
+The [Dockerfile](client/Dockerfile) describes system tests environment.
 
 ### Environment variables
 
@@ -13,7 +13,7 @@ Describes system tests environment.
 
 ## Node
 
-Describes environment of nodes inside a pool as a counterpart for system tests.
+The [Dockerfile](node/Dockerfile) describes environment of nodes inside a pool as a counterpart for system tests.
 
 ### Environment variables
 
@@ -23,12 +23,32 @@ Describes environment of nodes inside a pool as a counterpart for system tests.
 - `INDY_PLENUM_VERSION`: version of the Indy Node debian package, default: `1.8.0~dev802`.
 - `INDY_NODE_VERSION`: version of the Indy Node debian package, default: `1.8.0~dev975`.
 - `SOVTOKEN_VERSION`: version of the `sovtoken` plugin, default: `0.9.12~37`.
-- `SOVTOKENFEES_VERSION`: version of the `sovtokenfees` plugin, default: equal `sovtoken`.
+- `SOVTOKENFEES_VERSION`: version of the `sovtokenfees` plugin, default: equal to `sovtoken` version.
 
-# prepare.sh
+## Images Builder (docker-compose)
 
-Builds Client docker images for client and node and might be run with variables expected by them.
+The [Dockerfile](docker-compose/Dockerfile) allows to use in-docker docker-compose to build client and node images.
 
-# create_network.sh
+# Scripts
 
-Create user-defined docker bridge network for system tests.
+## [prepare.sh](prepare.sh)
+
+- Builds docker images for client and node passing env variables expected by them.
+- Creates user-defined docker bridge network for system tests.
+
+## [clean.sh](clean.sh)
+
+- Removes all containers attached to test network and the network itself.
+
+## [run.sh](run.sh)
+
+- Calls [prepare.sh](prepare.sh) to build environment for system tests.
+- Runs pytest inside client docker container.
+
+## [docker-compose.yml](docker-compose.yml)
+
+- A spec to automate docker images build process.
+
+# Requirements
+
+- `docker` `17.09.0+`
