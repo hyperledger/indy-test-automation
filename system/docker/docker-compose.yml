@@ -11,7 +11,7 @@ services:
           - LIBINDY_VERSION
           - LIBSOVTOKEN_VERSION
           - u_id
-    image: hyperledger/indy-test-automation:client
+    image: ${IMAGE_REPOSITORY}:client
 
   node:
     build:
@@ -25,4 +25,4 @@ services:
           - SOVTOKEN_VERSION
           - SOVTOKENFEES_VERSION
           - u_id
-    image: hyperledger/indy-test-automation:node
+    image: ${IMAGE_REPOSITORY}:node
