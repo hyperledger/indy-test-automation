@@ -29,8 +29,10 @@ repo_path=$(git rev-parse --show-toplevel)
 user_id=$(id -u)
 docker_socket_path="/var/run/docker.sock"
 workdir_path="/tmp/indy-test-automation"
-client_image_name="system-tests-client"
-client_container_name="$client_image_name"
+
+image_repository="hyperledger/indy-test-automation"
+client_image_name="${image_repository}:client"
+client_container_name="indy-test-automation-client"
 
 # TODO pass specified env variables
 docker run -it --rm --name "$client_container_name" \
