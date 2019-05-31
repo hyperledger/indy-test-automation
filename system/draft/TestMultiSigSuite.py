@@ -42,8 +42,9 @@ class TestMultiSigSuite:
         trustee_did, _ = get_default_trustee
         new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         req = await ledger.build_nym_request(trustee_did, new_did, new_vk, random_string(5), None)
-        req = await ledger.sign_request(wallet_handler, trustee_did, req)
+        # if order of sign and multisign will be changed - test fails
         req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.sign_request(wallet_handler, trustee_did, req)
         print('\n{}'.format(req))
         res = json.loads(await ledger.submit_request(pool_handler, req))
         print('\n{}'.format(res))

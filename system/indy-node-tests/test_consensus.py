@@ -69,7 +69,9 @@ async def test_consensus_state_proof_reading(pool_handler, wallet_handler,
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
 
 
-@pytest.mark.skip(reason='INDY-2059')
+@pytest.mark.skip(reason='INDY-2059 / INDY-2023')
+# run several times during acceptance testing to prove that we still pass this case at least 1 time
+# @pytest.mark.repeat(5)
 @pytest.mark.asyncio
 async def test_consensus_n_and_f_changing(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee

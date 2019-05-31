@@ -22,9 +22,9 @@ RUN pip3 install -U \
 COPY test_key.pub /root/.ssh/authorized_keys
 RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88
-RUN echo "deb https://repo.sovrin.org/deb xenial master" >> /etc/apt/sources.list
+RUN echo "deb https://repo.sovrin.org/deb xenial rc" >> /etc/apt/sources.list
 RUN useradd -ms /bin/bash -l -u $uid indy
-RUN apt-get update -y && apt-get install -y indy-node=1.8.0~dev975 indy-plenum=1.8.0~dev802 sovtoken=0.9.6~36 sovtokenfees=0.9.6~36
+RUN apt-get update -y && apt-get install -y sovrin=1.1.44 indy-node=1.8.0~rc2 indy-plenum=1.8.0
 RUN echo " " >> /etc/indy/indy_config.py \
     && echo "NETWORK_NAME = 'sandbox'" >> /etc/indy/indy_config.py \
     && echo " " >> /etc/indy/indy_config.py \

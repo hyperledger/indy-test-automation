@@ -802,7 +802,7 @@ async def test_misc_mint_to_aws():
     await pool.set_protocol_version(2)
     await payment_initializer('libsovtoken.so', 'sovtoken_init')
     libsovtoken_payment_method = 'sov'
-    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis_test')
+    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
     wallet_handle, _, _ = await wallet_helper()
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': str('000000000000000000000000Trustee1')}))
