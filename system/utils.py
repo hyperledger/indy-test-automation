@@ -21,7 +21,8 @@ POOL_GENESIS_PATH = os.path.join(MODULE_PATH, 'docker_genesis')
 
 def run_async_method(method, *args, **kwargs):
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(method(*args, **kwargs))
+    result = loop.run_until_complete(method(*args, **kwargs))
+    return result
 
 
 def random_string(length):
@@ -205,17 +206,8 @@ def run_in_event_loop(async_func):
 
 
 async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
-    # add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-    # while add['op'] != 'REPLY':
-    #     add = await nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-    #     time.sleep(10)
     add = await write_eventually_positive(send_nym, pool_handle, wallet_handle, trustee_did, some_did)
     assert add['op'] == 'REPLY'
-
-    # get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-    # while get['result']['seqNo'] is None:
-    #     get = await get_nym_helper(pool_handle, wallet_handle, trustee_did, some_did)
-    #     time.sleep(1)
     get = await read_eventually_positive(get_nym, pool_handle, wallet_handle, trustee_did, some_did)
     assert get['result']['seqNo'] is not None
 
@@ -707,3 +699,32 @@ class NodeHost:
 async def send_random_nyms(pool_handle, wallet_handle, submitter_did, count):
     for i in range(count):
         await send_nym(pool_handle, wallet_handle, submitter_did, random_did_and_json()[0], None, None, None)
+
+
+class Color:
+    INFOBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'  # Normal default color.
+
+
+def print_with_color(message, color):
+    import sys
+    print('\n' + color + str(message) + Color.ENDC, file=sys.stderr)
+
+
+def print_info(message):
+    print_with_color(message, Color.INFOBLUE)
+
+
+def print_ok(message):
+    print_with_color(message, Color.OKGREEN)
+
+
+def print_warning(message):
+    print_with_color(message, Color.WARNING)
+
+
+def print_fail(message):
+    print_with_color(message, Color.FAIL)

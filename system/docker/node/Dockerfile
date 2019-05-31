@@ -46,14 +46,9 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88 \
 
 RUN echo " " >> /etc/indy/indy_config.py \
     && echo "NETWORK_NAME = 'sandbox'" >> /etc/indy/indy_config.py \
+    && echo " " >> /etc/indy/indy_config.py \
+    && echo "logLevel = 0" >> /etc/indy/indy_config.py \
     && echo " " >> /etc/indy/indy_config.py
-#    && echo "ForceViewChangeFreq = 1800" >> /etc/indy/indy_config.py \
-#    && echo " " >> /etc/indy/indy_config.py
 
 RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 COPY test_key.pub /root/.ssh/authorized_keys
-
-ARG u_id=1000
-
-#USER indy
-#WORKDIR /home/indy
