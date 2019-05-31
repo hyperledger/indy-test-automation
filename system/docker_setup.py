@@ -1,7 +1,9 @@
 import os
+import time
 import subprocess
 from subprocess import CalledProcessError
 import docker
+from async_generator import yield_
 
 
 DOCKER_BUILD_CTX_PATH = os.path.join(
@@ -117,6 +119,19 @@ def main():
                     network_builder(NETWORK_SUBNET,
                                     NETWORK_NAME),
                     NODES_NUM))))
+
+
+async def setup_and_teardown():
+
+    pool_stop()
+
+    main()
+    time.sleep(30)
+    print('\nDOCKER SETUP HAS BEEN FINISHED!\n')
+    await yield_()
+
+    pool_stop()
+    print('\nDOCKER TEARDOWN HAS BEEN FINISHED!\n')
 
 
 if __name__ == '__main__':

@@ -5,7 +5,7 @@ from async_generator import async_generator, yield_
 from indy import pool
 
 from .utils import pool_helper, wallet_helper, default_trustee
-from .helper import docker_setup_and_teardown as _docker_setup_and_teardown
+from .docker_setup import setup_and_teardown
 
 
 @pytest.fixture(scope='session')
@@ -93,4 +93,4 @@ async def initial_fees_setting(pool_handler, wallet_handler, get_default_trustee
 @pytest.fixture(scope='function')
 @async_generator
 async def docker_setup_and_teardown():
-    await _docker_setup_and_teardown()
+    await setup_and_teardown()
