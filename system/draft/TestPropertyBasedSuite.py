@@ -33,13 +33,13 @@ class TestPropertyBasedSuite:
         print(var_dt_lists)
         print('-'*25)
 
-    @settings(deadline=None, max_examples=100, phases=[Phase.generate], verbosity=Verbosity.verbose)
+    @settings(deadline=None, max_examples=100, verbosity=Verbosity.verbose)
     @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
            dest=strategies.text(ascii_letters, min_size=16, max_size=16),
-           verkey=strategies.text(ascii_letters, min_size=32, max_size=32),
+           # verkey=strategies.text(ascii_letters, min_size=32, max_size=32),
            alias=strategies.text(min_size=1, max_size=10000))
     @pytest.mark.asyncio
-    async def test_case_nym(self, pool_handler, wallet_handler, get_default_trustee, reqid, dest, verkey, alias):
+    async def test_case_nym(self, pool_handler, wallet_handler, get_default_trustee, reqid, dest, alias):
         trustee_did, trustee_vk = get_default_trustee
         roles = ['0', '2', '101', '201']
         req = {
@@ -49,7 +49,7 @@ class TestPropertyBasedSuite:
                'operation': {
                              'type': '1',
                              'dest': base58.b58encode(dest).decode(),
-                             'verkey': base58.b58encode(verkey).decode(),
+                             # 'verkey': base58.b58encode(verkey).decode(),
                              'role': random.choice(roles),
                              'alias': alias
                             }
@@ -178,3 +178,49 @@ class TestPropertyBasedSuite:
             (await ledger.sign_and_submit_request(pool_handler, wallet_handler, creator_did, json.dumps(req)))
         print(res)
         assert res['op'] == 'REPLY'
+
+    @settings(deadline=None, max_examples=100, verbosity=Verbosity.verbose)
+    @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
+           # TODO fine-tune operation structure
+           operation=strategies.recursive(strategies.dictionaries(
+                   strategies.text(printable, min_size=1), strategies.text(printable, min_size=1),
+                   min_size=1, max_size=5),
+               lambda x: strategies.dictionaries(strategies.text(printable, min_size=1), x, min_size=1, max_size=3)))
+    @pytest.mark.asyncio
+    async def test_case_random_req_op(self, pool_handler, wallet_handler, get_default_trustee, reqid, operation):
+        trustee_did, trustee_vk = get_default_trustee
+        req = {
+            'protocolVersion': 2,
+            'reqId': reqid,
+            'identifier': trustee_did,
+            'operation': operation
+        }
+        # client-side validation
+        with pytest.raises(IndyError):
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
+
+    @settings(deadline=None, max_examples=100, verbosity=Verbosity.verbose)
+    @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
+           _type=strategies.integers(),
+           # TODO fine-tune data structure
+           data=strategies.recursive(strategies.dictionaries(
+                   strategies.text(printable, min_size=1), strategies.text(printable, min_size=1),
+                   min_size=1, max_size=5),
+               lambda x: strategies.dictionaries(strategies.text(printable, min_size=1), x, min_size=1, max_size=3)))
+    @pytest.mark.asyncio
+    async def test_case_random_req_data(self, pool_handler, wallet_handler, get_default_trustee, reqid, _type, data):
+        trustee_did, trustee_vk = get_default_trustee
+        req = {
+            'protocolVersion': 2,
+            'reqId': reqid,
+            'identifier': trustee_did,
+            'operation': {
+                'type': str(_type),
+                'data': data
+            }
+        }
+        res = json.loads\
+            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req)))
+        print(res)
+        # server-side static validation
+        assert res['op'] == 'REQNACK'
