@@ -9,6 +9,7 @@ services:
           - PYTHON3_VERSION
           - LIBINDY_REPO_COMPONENT
           - LIBINDY_VERSION
+          - LIBSOVTOKEN_INSTALL
           - LIBSOVTOKEN_VERSION
           - u_id
     image: ${IMAGE_REPOSITORY}:client
@@ -22,7 +23,7 @@ services:
           - PYTHON3_LIBINDY_CRYPTO_VERSION
           - INDY_PLENUM_VERSION
           - INDY_NODE_VERSION
+          - TOKEN_PLUGINS_INSTALL
           - SOVTOKEN_VERSION
           - SOVTOKENFEES_VERSION
-          - u_id
     image: ${IMAGE_REPOSITORY}:node

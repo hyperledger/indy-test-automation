@@ -11,6 +11,7 @@ The [Dockerfile](client/Dockerfile) describes system tests environment.
 - `PYTHON3_VERSION`: version of the python3 to install.
 - `LIBINDY_REPO_COMPONENT`: Indy SDK debian repo component.
 - `LIBINDY_VERISION`: version of the libindy library.
+- `LIBSOVTOKEN_INSTALL`: should be set to `yes` to trigger `libsovtoken` installation.
 - `LIBSOVTOKEN_VERSION`: version of the libsovtoken library to install.
 
 ### Node
@@ -24,6 +25,7 @@ The [Dockerfile](node/Dockerfile) describes environment of nodes inside a pool a
 - `PYTHON3_LIBINDY_CRYPTO_VERSION`: version of the Indy Node debian package.
 - `INDY_PLENUM_VERSION`: version of the Indy Node debian package.
 - `INDY_NODE_VERSION`: version of the Indy Node debian package.
+- `TOKEN_PLUGINS_INSTALL`: should be set to `yes` to trigger `sovtoken` and `sovtokenfees` installation.
 - `SOVTOKEN_VERSION`: version of the `sovtoken` plugin.
 - `SOVTOKENFEES_VERSION`: version of the `sovtokenfees` plugin.
 

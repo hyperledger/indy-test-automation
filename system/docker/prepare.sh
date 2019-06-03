@@ -51,6 +51,7 @@ docker run -it --rm \
     -e PYTHON3_VERSION \
     -e LIBINDY_REPO_COMPONENT \
     -e LIBINDY_VERSION \
+    -e LIBSOVTOKEN_INSTALL \
     -e LIBSOVTOKEN_VERSION \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build client
 
@@ -68,6 +69,7 @@ docker run -it --rm \
     -e PYTHON3_LIBINDY_CRYPTO_VERSION \
     -e INDY_PLENUM_VERSION \
     -e INDY_NODE_VERSION \
+    -e TOKEN_PLUGINS_INSTALL \
     -e SOVTOKEN_VERSION \
     -e SOVTOKENFEES_VERSION \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build node
