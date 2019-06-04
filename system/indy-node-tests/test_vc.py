@@ -1,10 +1,18 @@
 import pytest
-from system.utils import *
 import logging
+from async_generator import async_generator
+
+from system.utils import *
+from system.docker_setup import setup_and_teardown
 
 
 # logger = logging.getLogger(__name__)
 # logging.basicConfig(level=0, format='%(asctime)s %(message)s')
+
+@pytest.fixture(scope='function', autouse=True)
+@async_generator
+async def docker_setup_and_teardown():
+    await setup_and_teardown()
 
 
 @pytest.mark.asyncio

@@ -1,16 +1,22 @@
 import json
+from json import JSONDecodeError
 import string
-import random
 import base58
-from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError
 from ctypes import CDLL
 import functools
 import asyncio
 import testinfra
+import random
 from random import sample, shuffle
-from json import JSONDecodeError
 import time
 from collections import Counter
+import os
+
+from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError
+
+
+MODULE_PATH = os.path.abspath(os.path.dirname(__file__))
+POOL_GENESIS_PATH = os.path.join(MODULE_PATH, 'docker_genesis')
 
 
 def run_async_method(method, *args, **kwargs):
@@ -32,7 +38,7 @@ def random_seed_and_json():
     return random_string(32), json.dumps({'seed': random_string(32)})
 
 
-async def pool_helper(pool_name=None, path_to_genesis='../docker_genesis', node_list=None):
+async def pool_helper(pool_name=None, path_to_genesis=POOL_GENESIS_PATH, node_list=None):
     if not pool_name:
         pool_name = random_string(25)
     if node_list:
