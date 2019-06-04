@@ -496,7 +496,7 @@ def get_node_alias(node_num):
 
 def get_node_did(node_alias, pool_info=None):
     if pool_info is None:
-        pool_info = get_pool_info()
+        pool_info = get_pool_info('1')
     return pool_info[node_alias]
 
 
@@ -600,12 +600,12 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     assert promote_res['op'] == 'REPLY'
 
 
-async def eventually_positive(func, *args, cycles_limit=15, **kwargs):
+async def eventually_positive(func, *args, cycles_limit=15, sleep=30, **kwargs):
     # this is for check_ledger_sync, promote_node, demote_node and other self-asserted functions
     cycles = 0
     while True:
         try:
-            time.sleep(30)
+            time.sleep(sleep)
             cycles += 1
             res = await func(*args, **kwargs)
             print('NO ERRORS HERE SO BREAK THE LOOP!')
@@ -670,7 +670,7 @@ async def eventually_negative(func, *args, cycles_limit=15):
     return is_exception_raised
 
 
-async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=15):
+async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=15, sleep=30):
     cycles = 0
     primary_after = primary_before
 
@@ -680,7 +680,7 @@ async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, tr
             print('CYCLES LIMIT IS EXCEEDED BUT PRIMARY HAS NOT BEEN CHANGED!')
             break
         primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
-        time.sleep(30)
+        time.sleep(sleep)
 
     return primary_after
 
