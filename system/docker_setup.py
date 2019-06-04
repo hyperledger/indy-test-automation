@@ -14,7 +14,7 @@ NETWORK_NAME = os.environ.get('INDY_SYSTEM_TESTS_NETWORK', 'indy-test-automation
 # TODO limit subnet range to reduce risk of overlapping with system resources
 NETWORK_SUBNET = os.environ.get('INDY_SYSTEM_TESTS_SUBNET', '10.0.0.0/24')
 NODE_NAME_BASE = 'node'
-NODES_NUM = 7
+NODES_NUM = int(os.environ.get('INDY_SYSTEM_NODES_NUM', 7))
 
 
 client = docker.from_env()
@@ -109,7 +109,8 @@ def pool_stop():
     #     pass
 
 
-def main():
+def main(nodes_num=None):
+    nodes_num = NODES_NUM if nodes_num is None else nodes_num
     print(pool_initializer(
             pool_starter(
                 pool_builder(
@@ -118,14 +119,14 @@ def main():
                     NODE_NAME_BASE,
                     network_builder(NETWORK_SUBNET,
                                     NETWORK_NAME),
-                    NODES_NUM))))
+                    nodes_num))))
 
 
-async def setup_and_teardown():
+async def setup_and_teardown(nodes_num):
 
     pool_stop()
 
-    main()
+    main(nodes_num=nodes_num)
     time.sleep(30)
     print('\nDOCKER SETUP HAS BEEN FINISHED!\n')
     await yield_()

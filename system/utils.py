@@ -212,8 +212,10 @@ async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
     assert get['result']['seqNo'] is not None
 
 
-async def check_ledger_sync():
-    hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in range(1, 8)]
+async def check_ledger_sync(node_ids=None, nodes_num=7):
+    if node_ids is None:
+        node_ids = [(i + 1) for i in range(nodes_num)]
+    hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in node_ids]
     pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
     print('\nPOOL LEDGER SYNC: {}'.format([result.stdout for result in pool_results]))
     config_results = [host.run('read_ledger --type=config --count') for host in hosts]
@@ -480,6 +482,24 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
     return primary_after
 
 
+def get_pool_info(primary: str) -> dict:
+    host = testinfra.get_host('ssh://node{}'.format(primary))
+    pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
+    pool_info = [json.loads(item) for item in pool_info]
+    pool_info = {item['txn']['data']['data']['alias']: item['txn']['data']['dest'] for item in pool_info}
+    return pool_info
+
+
+def get_node_alias(node_num):
+    return 'Node{}'.format(node_num)
+
+
+def get_node_did(node_alias, pool_info=None):
+    if pool_info is None:
+        pool_info = get_pool_info()
+    return pool_info[node_alias]
+
+
 async def get_primary(pool_handle, wallet_handle, trustee_did):
     req = await ledger.build_get_validator_info_request(trustee_did)
     results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
@@ -528,22 +548,9 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
             primary = max(primaries, key=primaries.get)
         except ValueError:
             primary = '1'
-    alias = 'Node{}'.format(primary)
-    host = testinfra.get_host('ssh://node{}'.format(primary))
-    pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
-    pool_info = [json.loads(item) for item in pool_info]
-    pool_info = {item['txn']['data']['data']['alias']: item['txn']['data']['dest'] for item in pool_info}
-    target_did = pool_info[alias]
 
-    return primary, alias, target_did
-
-
-def get_pool_info(primary: str) -> dict:
-    host = testinfra.get_host('ssh://node{}'.format(primary))
-    pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
-    pool_info = [json.loads(item) for item in pool_info]
-    pool_info = {item['txn']['data']['data']['alias']: item['txn']['data']['dest'] for item in pool_info}
-    return pool_info
+    alias = get_node_alias(primary)
+    return primary, alias, get_node_did(alias)
 
 
 async def demote_random_node(pool_handle, wallet_handle, trustee_did):
@@ -593,14 +600,14 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     assert promote_res['op'] == 'REPLY'
 
 
-async def eventually_positive(func, *args, cycles_limit=15):
+async def eventually_positive(func, *args, cycles_limit=15, **kwargs):
     # this is for check_ledger_sync, promote_node, demote_node and other self-asserted functions
     cycles = 0
     while True:
         try:
             time.sleep(30)
             cycles += 1
-            res = await func(*args)
+            res = await func(*args, **kwargs)
             print('NO ERRORS HERE SO BREAK THE LOOP!')
             break
         except AssertionError or IndyError:
@@ -680,6 +687,7 @@ async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, tr
 
 class NodeHost:
     def __init__(self, node_id):
+        self.id = node_id
         self._host = testinfra.get_host('ssh://node{}'.format(node_id))
 
     def run(self, command: str):

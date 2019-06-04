@@ -1,5 +1,6 @@
 import pytest
 import asyncio
+import os
 from async_generator import async_generator, yield_
 
 from indy import pool
@@ -90,7 +91,31 @@ async def initial_fees_setting(pool_handler, wallet_handler, get_default_trustee
     await yield_(fees)
 
 
+
+@pytest.fixture(scope='function')
+async def nodes_num(request):
+    marker = request.node.get_closest_marker('nodes_num')
+    return marker.args[0] if marker else 7
+
+
+# TODO options instead:
+#   - use template
+#   - use docker connection
+@pytest.fixture(scope='function', autouse=True)
+async def ssh_config(nodes_num):
+    config_entry = (
+        "Host node{}\n"
+        "\tHostName 10.0.0.{}\n"
+        "\tUser root\n"
+        "\tIdentityFile ~/.ssh/test_key\n"
+        "\tStrictHostKeyChecking no"
+    )
+    config = '\n'.join([config_entry.format(i + 1, i + 2) for i in range(nodes_num)])
+    with open(os.path.expanduser('~/.ssh/config'), 'w') as f:
+        f.write(config)
+
+
 @pytest.fixture(scope='function')
 @async_generator
-async def docker_setup_and_teardown():
-    await setup_and_teardown()
+async def docker_setup_and_teardown(nodes_num):
+    await setup_and_teardown(nodes_num)
