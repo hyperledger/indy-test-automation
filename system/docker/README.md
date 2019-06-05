@@ -66,6 +66,18 @@ Prepare docker environment
 ./prepare.sh
 ```
 
+Prepare docker environment for specific versions of packages
+
+```bash
+INDY_NODE_REPO_COMPONENT=rc INDY_NODE_VERSION=1.8.1~rc1 INDY_PLENUM_VERSION=1.8.1 ./prepare.sh
+```
+
+Prepare docker environment with plugins installed
+
+```bash
+LIBSOVTOKEN_INSTALL=yes TOKEN_PLUGINS_INSTALL=yes ./prepare.sh
+```
+
 Collect tests for some test target
 
 ```bash
