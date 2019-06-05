@@ -212,23 +212,33 @@ async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
     assert get['result']['seqNo'] is not None
 
 
+# TODO make that async
+def check_no_failures(hosts):
+    for host in hosts:
+        result = host.run('journalctl -u indy-node.service -b -p info')
+        assert result.find("indy-node.service: Failed") == -1, (
+            "Node service on host{} failed:\n{}".format(host.id, result)
+        )
+
+# TODO make that async
 async def check_ledger_sync(node_ids=None, nodes_num=7):
     if node_ids is None:
         node_ids = [(i + 1) for i in range(nodes_num)]
-    hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in node_ids]
-    pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
-    print('\nPOOL LEDGER SYNC: {}'.format([result.stdout for result in pool_results]))
-    config_results = [host.run('read_ledger --type=config --count') for host in hosts]
-    print('\nCONFIG LEDGER SYNC: {}'.format([result.stdout for result in config_results]))
-    domain_results = [host.run('read_ledger --type=domain --count') for host in hosts]
-    print('\nDOMAIN LEDGER SYNC: {}'.format([result.stdout for result in domain_results]))
-    audit_results = [host.run('read_ledger --type=audit --count') for host in hosts]
-    print('\nAUDIT LEDGER SYNC: {}'.format([result.stdout for result in audit_results]))
+    hosts = [NodeHost(i) for i in node_ids]
 
-    assert all([pool_results[i].stdout == pool_results[i + 1].stdout for i in range(-1, len(pool_results) - 1)])
-    assert all([config_results[i].stdout == config_results[i + 1].stdout for i in range(-1, len(config_results) - 1)])
-    assert all([domain_results[i].stdout == domain_results[i + 1].stdout for i in range(-1, len(domain_results) - 1)])
-    assert all([audit_results[i].stdout == audit_results[i + 1].stdout for i in range(-1, len(audit_results) - 1)])
+    pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
+    print('\nPOOL LEDGER SYNC: {}'.format([result for result in pool_results]))
+    config_results = [host.run('read_ledger --type=config --count') for host in hosts]
+    print('\nCONFIG LEDGER SYNC: {}'.format([result for result in config_results]))
+    domain_results = [host.run('read_ledger --type=domain --count') for host in hosts]
+    print('\nDOMAIN LEDGER SYNC: {}'.format([result for result in domain_results]))
+    audit_results = [host.run('read_ledger --type=audit --count') for host in hosts]
+    print('\nAUDIT LEDGER SYNC: {}'.format([result for result in audit_results]))
+
+    assert all([pool_results[i] == pool_results[i + 1] for i in range(-1, len(pool_results) - 1)])
+    assert all([config_results[i] == config_results[i + 1] for i in range(-1, len(config_results) - 1)])
+    assert all([domain_results[i] == domain_results[i + 1] for i in range(-1, len(domain_results) - 1)])
+    assert all([audit_results[i] == audit_results[i + 1] for i in range(-1, len(audit_results) - 1)])
 
 
 async def stop_primary(pool_handle, wallet_handle, trustee_did):
@@ -250,7 +260,7 @@ async def stop_primary(pool_handle, wallet_handle, trustee_did):
                                                                                                   -len(':0')]
     except TypeError:
         try:
-            time.sleep(120)
+            await asyncio.sleep(120)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -267,7 +277,7 @@ async def stop_primary(pool_handle, wallet_handle, trustee_did):
                 result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
                                                                                                         -len(':0')]
         except TypeError:
-            time.sleep(240)
+            await asyncio.sleep(240)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -310,7 +320,7 @@ async def start_primary(pool_handle, wallet_handle, trustee_did, primary_before)
             result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
     except TypeError:
         try:
-            time.sleep(120)
+            await asyncio.sleep(120)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -327,7 +337,7 @@ async def start_primary(pool_handle, wallet_handle, trustee_did, primary_before)
                 result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][len('Node'):
                                                                                                        -len(':0')]
         except TypeError:
-            time.sleep(240)
+            await asyncio.sleep(240)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -368,7 +378,7 @@ async def demote_primary(pool_handle, wallet_handle, trustee_did):
                                                                                                   -len(':0')]
     except TypeError:
         try:
-            time.sleep(120)
+            await asyncio.sleep(120)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -385,7 +395,7 @@ async def demote_primary(pool_handle, wallet_handle, trustee_did):
                 result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
                                                                                                         -len(':0')]
         except TypeError:
-            time.sleep(240)
+            await asyncio.sleep(240)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -418,7 +428,7 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
     promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
     promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
     if promote_res['op'] != 'REPLY':
-        time.sleep(60)
+        await asyncio.sleep(60)
         promote_res = json.loads(
             await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
     print(promote_res)
@@ -444,7 +454,7 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
             result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
     except TypeError:
         try:
-            time.sleep(120)
+            await asyncio.sleep(120)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -461,7 +471,7 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
                 result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][len('Node'):
                                                                                                        -len(':0')]
         except TypeError:
-            time.sleep(240)
+            await asyncio.sleep(240)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -524,7 +534,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         primary = max(primaries, key=primaries.get)
     except ValueError:
         # primary is not selected so wait and try again
-        time.sleep(60)
+        await asyncio.sleep(60)
         req = await ledger.build_get_validator_info_request(trustee_did)
         results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
         # remove all timeout entries
@@ -605,7 +615,7 @@ async def eventually_positive(func, *args, cycles_limit=15, sleep=30, **kwargs):
     cycles = 0
     while True:
         try:
-            time.sleep(sleep)
+            await asyncio.sleep(sleep)
             cycles += 1
             res = await func(*args, **kwargs)
             print('NO ERRORS HERE SO BREAK THE LOOP!')
@@ -630,9 +640,9 @@ async def write_eventually_positive(func, *args, cycles_limit=40):
                 print('CYCLES LIMIT IS EXCEEDED!')
                 break
             res = await func(*args)
-            time.sleep(10)
+            await asyncio.sleep(10)
         except IndyError:
-            time.sleep(10)
+            await asyncio.sleep(10)
             pass
     return res
 
@@ -646,7 +656,7 @@ async def read_eventually_positive(func, *args, cycles_limit=30):
             print('CYCLES LIMIT IS EXCEEDED!')
             break
         res = await func(*args)
-        time.sleep(5)
+        await asyncio.sleep(5)
     return res
 
 
@@ -656,7 +666,7 @@ async def eventually_negative(func, *args, cycles_limit=15):
 
     while True:
         try:
-            time.sleep(15)
+            await asyncio.sleep(15)
             await func(*args)
             cycles += 1
             if cycles >= cycles_limit:
@@ -680,28 +690,38 @@ async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, tr
             print('CYCLES LIMIT IS EXCEEDED BUT PRIMARY HAS NOT BEEN CHANGED!')
             break
         primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
-        time.sleep(sleep)
+        await asyncio.sleep(sleep)
 
     return primary_after
 
 
 class NodeHost:
     def __init__(self, node_id):
-        self.id = node_id
+        self._id = node_id
         self._host = testinfra.get_host('ssh://node{}'.format(node_id))
 
-    def run(self, command: str):
+    @property
+    def host(self):
+        return self._host
+
+    @property
+    def id(self):
+        return self._id
+
+    def run(self, command: str, print_res=False):
         output = self._host.check_output(command)
-        print(output)
+        if print_res:
+            print(output)
+        return output
 
     def start_service(self):
-        self.run('systemctl start indy-node')
+        return self.run('systemctl start indy-node')
 
     def stop_service(self):
-        self.run('systemctl stop indy-node')
+        return self.run('systemctl stop indy-node')
 
     def restart_service(self):
-        self.run('systemctl restart indy-node')
+        return self.run('systemctl restart indy-node')
 
 
 async def send_random_nyms(pool_handle, wallet_handle, submitter_did, count):

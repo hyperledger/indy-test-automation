@@ -5,7 +5,10 @@ from async_generator import async_generator, yield_
 
 from indy import pool
 
-from .utils import pool_helper, wallet_helper, default_trustee
+from .utils import (
+    pool_helper, wallet_helper, default_trustee,
+    check_no_failures, NodeHost
+)
 from .docker_setup import setup_and_teardown
 
 
@@ -119,3 +122,27 @@ async def ssh_config(nodes_num):
 @async_generator
 async def docker_setup_and_teardown(nodes_num):
     await setup_and_teardown(nodes_num)
+
+
+@pytest.fixture
+def check_no_failures_fixture(request, docker_setup_and_teardown, nodes_num):
+    marker = request.node.get_closest_marker('check_no_failures_interval')
+    check_interval = 10 if marker is None else marker.args[0]
+
+    loop = asyncio.get_event_loop()
+    hosts = [NodeHost(node_id + 1) for node_id in range(nodes_num)]
+
+    stop = False
+    def check():
+        try:
+            if not stop:
+                check_no_failures(hosts)
+        except AssertionError as ex:
+            pytest.fail()
+        else:
+            if not stop:
+                loop.call_later(check_interval, check)
+
+    loop.call_later(check_interval, check)
+    yield
+    stop = True

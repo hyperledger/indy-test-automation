@@ -10,8 +10,8 @@ from system.docker_setup import setup_and_teardown
 
 @pytest.fixture(scope='function', autouse=True)
 @async_generator
-async def docker_setup_and_teardown():
-    await setup_and_teardown()
+async def docker_setup_and_teardown(nodes_num):
+    await setup_and_teardown(nodes_num)
 
 
 @pytest.mark.asyncio

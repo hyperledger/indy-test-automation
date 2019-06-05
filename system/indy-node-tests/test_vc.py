@@ -1,5 +1,6 @@
 import pytest
 import logging
+import asyncio
 from async_generator import async_generator
 
 from system.utils import *
@@ -7,7 +8,6 @@ from system.docker_setup import setup_and_teardown
 
 import logging
 logger = logging.getLogger(__name__)
-
 
 # logger = logging.getLogger(__name__)
 # logging.basicConfig(level=0, format='%(asctime)s %(message)s')
@@ -56,7 +56,7 @@ async def test_vc_by_demotion(pool_handler, wallet_handler, get_default_trustee)
 @pytest.mark.nodes_num(8)
 @pytest.mark.asyncio
 async def test_demotion_of_backup_primary_with_restart_with_vc(
-    pool_handler, wallet_handler, get_default_trustee, nodes_num
+    pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
 ):
     logger.info("1 Have 8 nodes in the pool, so that primaries are [Node1, Node2, Node3]")
 
@@ -77,12 +77,18 @@ async def test_demotion_of_backup_primary_with_restart_with_vc(
 
     primary_r2_alias = get_node_alias(R2_PRIMARY_ID)
     primary_r2_did = get_node_did(primary_r2_alias, pool_info=pool_info)
-    await eventually_positive(demote_node, pool_handler, wallet_handler, trustee_did, primary_r2_alias, primary_r2_did)
+    await eventually_positive(
+        demote_node, pool_handler, wallet_handler, trustee_did, primary_r2_alias, primary_r2_did
+    )
 
     logger.info("3 Wait for view change")
 
     # timeouts
-    await wait_until_vc_is_done(str(R0_PRIMARY_ID), pool_handler, wallet_handler, trustee_did, cycles_limit=5, sleep=5)
+    logger.info('Primary before: {}'.format(R0_PRIMARY_ID))
+    primary_after = await wait_until_vc_is_done(
+        str(R0_PRIMARY_ID), pool_handler, wallet_handler, trustee_did, cycles_limit=5, sleep=5
+    )
+    logger.info('Primary after: {}'.format(primary_after))
 
     logger.info("4 Order 1 more txn")
 
@@ -117,7 +123,7 @@ async def test_demotion_of_backup_primary_with_restart_with_vc(
 @pytest.mark.nodes_num(8)
 @pytest.mark.asyncio
 async def test_demotion_of_backup_primary_with_restart_without_vc(
-    pool_handler, wallet_handler, get_default_trustee, nodes_num
+    pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
 ):
     R0_PRIMARY_ID = 1
     R1_PRIMARY_ID = 2
@@ -144,7 +150,9 @@ async def test_demotion_of_backup_primary_with_restart_without_vc(
     # has been stopped
     primary_r2_alias = get_node_alias(R2_PRIMARY_ID)
     primary_r2_did = get_node_did(primary_r2_alias, pool_info=pool_info)
-    await eventually_positive(demote_node, pool_handler, wallet_handler, trustee_did, primary_r2_alias, primary_r2_did)
+    await eventually_positive(
+        demote_node, pool_handler, wallet_handler, trustee_did, primary_r2_alias, primary_r2_did
+    )
 
     logger.info("4 Restart the whole pool right after Demote NODE txn is written on all nodes")
 

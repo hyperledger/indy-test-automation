@@ -16,7 +16,7 @@ from system.docker_setup import setup_and_teardown
 @pytest.fixture(scope='module', autouse=True)
 @async_generator
 async def docker_setup_and_teardown():
-    await setup_and_teardown()
+    await setup_and_teardown(7)
 
 
 @pytest.mark.parametrize('writer_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
