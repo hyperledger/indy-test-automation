@@ -68,9 +68,11 @@ ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
 # init ssh env
-COPY test_key config /home/$u_name/.ssh/
+COPY test_key /home/$u_name/.ssh/
 RUN chmod 0400 /home/$u_name/.ssh/test_key \
     && chown -R $u_name:$u_name /home/$u_name/.ssh
+
+ENV IN_DOCKER_ENV yes
 
 USER $u_id
 WORKDIR /home/$u_name

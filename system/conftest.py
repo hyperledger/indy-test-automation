@@ -106,6 +106,9 @@ async def nodes_num(request):
 #   - use docker connection
 @pytest.fixture(scope='function', autouse=True)
 async def ssh_config(nodes_num):
+    if os.environ.get('IN_DOCKER_ENV') != 'yes':
+        return
+
     config_entry = (
         "Host node{}\n"
         "\tHostName 10.0.0.{}\n"

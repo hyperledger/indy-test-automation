@@ -6,7 +6,7 @@
 
 The [Dockerfile](client/Dockerfile) describes system tests environment.
 
-#### Environment variables
+#### Arguments
 
 - `PYTHON3_VERSION`: version of the python3 to install.
 - `LIBINDY_REPO_COMPONENT`: Indy SDK debian repo component.
@@ -18,7 +18,7 @@ The [Dockerfile](client/Dockerfile) describes system tests environment.
 
 The [Dockerfile](node/Dockerfile) describes environment of nodes inside a pool as a counterpart for system tests.
 
-#### Environment variables
+#### Arguments
 
 - `INDY_NODE_REPO_COMPONENT`: Indy Node debian repo component.
 - `LIBINDY_CRYPTO_VERSION`: version of the Indy Node debian package.
@@ -43,7 +43,7 @@ Each script provides a short help, use `--help` for the details.
 
 ### [prepare.sh](prepare.sh)
 
-- Builds docker images for client and node passing env variables expected by them.
+- Builds docker images for client and node passing arguments expected by them as enviroment variables.
 - Creates user-defined docker bridge network for system tests.
 
 ### [run.sh](run.sh)
