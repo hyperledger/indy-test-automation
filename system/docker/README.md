@@ -10,7 +10,7 @@ The [Dockerfile](client/Dockerfile) describes system tests environment.
 
 - `PYTHON3_VERSION`: version of the python3 to install.
 - `LIBINDY_REPO_COMPONENT`: Indy SDK debian repo component.
-- `LIBINDY_VERISION`: version of the libindy library.
+- `LIBINDY_VERSION`: version of the libindy library.
 - `LIBSOVTOKEN_INSTALL`: should be set to `yes` to trigger `libsovtoken` installation.
 - `LIBSOVTOKEN_VERSION`: version of the libsovtoken library to install.
 
