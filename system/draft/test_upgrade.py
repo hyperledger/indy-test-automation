@@ -10,6 +10,7 @@ import testinfra
 import os
 
 
+# TODO dynamic install of old version to upgrade from
 @pytest.mark.asyncio
 async def test_pool_upgrade_positive():
     await pool.set_protocol_version(2)

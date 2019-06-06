@@ -5,7 +5,7 @@ import asyncio
 
 
 @pytest.mark.asyncio
-async def test_libsovtoken_acceptance():
+async def test_libsovtoken_acceptance(docker_setup_and_teardown):
     await pool.set_protocol_version(2)
     await payment_initializer('libsovtoken.so', 'sovtoken_init')
     # await payment_initializer('libnullpay.so', 'nullpay_init')
