@@ -1,6 +1,7 @@
 from system.utils import *
 from indy import pool, did, payment
 import pytest
+import asyncio
 
 
 @pytest.mark.asyncio
@@ -117,7 +118,7 @@ async def test_libsovtoken_acceptance():
     assert res5['op'] == 'REPLY'
 
     # get schema
-    time.sleep(1)
+    await asyncio.sleep(1)
     res6 = await get_schema(pool_handle, wallet_handle, trustee_did1, schema_id)
     assert res6['result']['seqNo'] is not None
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res6))

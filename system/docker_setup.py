@@ -3,6 +3,7 @@ import time
 import subprocess
 from subprocess import CalledProcessError
 import docker
+import asyncio
 from async_generator import yield_
 
 
@@ -127,7 +128,7 @@ async def setup_and_teardown(nodes_num):
     pool_stop()
 
     main(nodes_num=nodes_num)
-    time.sleep(30)
+    await asyncio.sleep(30)
     print('\nDOCKER SETUP HAS BEEN FINISHED!\n')
     await yield_()
 

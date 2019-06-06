@@ -1,4 +1,5 @@
 import pytest
+import asyncio
 from system.utils import *
 from indy import payment
 
@@ -967,7 +968,7 @@ class TestFeesSuite:
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req_with_fees_json))
         print(res7)
         assert res7['op'] == 'REPLY'
-        time.sleep(5)
+        await asyncio.sleep(5)
 
         # send cred def with fees
         res = await get_schema(pool_handler, wallet_handler, cd_adder_did, schema_id)

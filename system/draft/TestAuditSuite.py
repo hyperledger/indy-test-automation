@@ -1,4 +1,5 @@
 import pytest
+import asyncio
 from system.utils import *
 
 
@@ -84,7 +85,7 @@ class TestAuditSuite:
         p1.start_service()
         for node in test_nodes[5:]:
             node.restart_service()
-        time.sleep(30)
+        await asyncio.sleep(30)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
         await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
@@ -102,7 +103,7 @@ class TestAuditSuite:
         p1.start_service()
         for node in test_nodes[3:]:
             node.restart_service()
-        time.sleep(30)
+        await asyncio.sleep(30)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
         await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
@@ -120,7 +121,7 @@ class TestAuditSuite:
         p1.start_service()
         for node in test_nodes:
             node.restart_service()
-            time.sleep(10)
+            await asyncio.sleep(10)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
         await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
@@ -151,6 +152,6 @@ class TestAuditSuite:
                                   target_did_for_demotion)
         primary4 = await wait_until_vc_is_done(primary3, pool_handler, wallet_handler, trustee_did)
         assert primary4 != primary3
-        # time.sleep(60)
+        # await asyncio.sleep(60)
         await eventually_positive(check_ledger_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])

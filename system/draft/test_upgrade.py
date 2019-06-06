@@ -3,6 +3,7 @@ from indy import did
 import pytest
 import hashlib
 import time
+import asyncio
 from datetime import datetime, timedelta, timezone
 import json
 import testinfra
@@ -75,7 +76,7 @@ async def test_pool_upgrade_positive():
     schema_id, schema_before_res = await send_schema(pool_handle, wallet_handle, trustee_did,
                                                      random_string(10), '1.0',
                                                      json.dumps(["age", "sex", "height", "name"]))
-    time.sleep(5)
+    await asyncio.sleep(5)
     temp = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(temp))
 
@@ -108,7 +109,7 @@ async def test_pool_upgrade_positive():
     # print(res)
     # assert res['op'] == 'REPLY'
 
-    time.sleep(300)
+    await asyncio.sleep(300)
 
     docker_7_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
     # aws_25_hosts = [testinfra.get_host('ssh://persistent_node'+str(i),
@@ -141,7 +142,7 @@ async def test_pool_upgrade_positive():
 
     # write and read NYM after the upgrade
     nym_res = await send_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
-    time.sleep(1)
+    await asyncio.sleep(1)
     get_nym_res = await get_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
 
     add_before_results = [nym_before_res, attrib_before_res, schema_before_res, cred_def_before_res,

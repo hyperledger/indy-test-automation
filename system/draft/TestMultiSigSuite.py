@@ -1,4 +1,5 @@
 import pytest
+import asyncio
 from system.utils import *
 from indy import payment
 
@@ -31,7 +32,7 @@ class TestMultiSigSuite:
         res1 = json.loads(await ledger.submit_request(pool_handler, req))
         print('\n{}'.format(res1))
         assert res1['op'] == 'REPLY'
-        time.sleep(5)
+        await asyncio.sleep(5)
         req = await ledger.multi_sign_request(wallet_handler, trustee_did4, req)
         res2 = json.loads(await ledger.submit_request(pool_handler, req))
         print('\n{}'.format(res2))
@@ -76,7 +77,7 @@ class TestMultiSigSuite:
                                                    }))
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         assert res2['op'] == 'REPLY'
-        time.sleep(5)
+        await asyncio.sleep(5)
         req = await ledger.build_nym_request(new_did, random_did_and_json()[0], None, None, None)
         req = await ledger.multi_sign_request(wallet_handler, new_did, req)
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
@@ -113,7 +114,7 @@ class TestMultiSigSuite:
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res2)
         assert res2['op'] == 'REPLY'
-        time.sleep(5)
+        await asyncio.sleep(5)
         req = await ledger.build_nym_request(new_did, random_did_and_json()[0], None, None, None)
         req = await ledger.multi_sign_request(wallet_handler, new_did, req)
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
@@ -166,7 +167,7 @@ class TestMultiSigSuite:
                                                    }))
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         assert res2['op'] == 'REPLY'
-        time.sleep(5)
+        await asyncio.sleep(5)
         _req1 = await ledger.build_nym_request(s1_did, random_did_and_json()[0], None, None, None)
         _req2 = await ledger.multi_sign_request(wallet_handler, s1_did, _req1)
         _req3 = await ledger.multi_sign_request(wallet_handler, s2_did, _req2)

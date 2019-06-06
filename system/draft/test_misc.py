@@ -1,6 +1,7 @@
 import pytest
 import time
 import logging
+import asyncio
 from indy import *
 from indy.error import IndyError
 from system.utils import *
@@ -94,7 +95,7 @@ async def test_misc_state_proof():
     await send_attrib(pool_handle, wallet_handle, trustee_did, random_did, None, json.dumps({'key': 'value'}), None)
     schema_id, _ = await send_schema(pool_handle, wallet_handle, trustee_did, random_string(10), '1.0',
                                      json.dumps([random_string(1), random_string(2), random_string(3)]))
-    time.sleep(1)
+    await asyncio.sleep(1)
     res = json.dumps(await get_schema(pool_handle, wallet_handle, trustee_did, schema_id))
     schema_id, schema_json = await ledger.parse_get_schema_response(res)
     cred_def_id, _, _ = await send_cred_def(pool_handle, wallet_handle, trustee_did, schema_json, random_string(3),
@@ -106,7 +107,7 @@ async def test_misc_state_proof():
     timestamp1 = int(time.time())
 
     # uncomment to check freshness state proof reading
-    # time.sleep(600)
+    # await asyncio.sleep(600)
 
     hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
     print(hosts)
@@ -469,7 +470,7 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
     # os.system('pkill -9 perf_processes')
     output = host.check_output('systemctl start indy-node')
     print(output)
-    time.sleep(60)
+    await asyncio.sleep(60)
     await check_ledger_sync()
 
 
@@ -533,7 +534,7 @@ async def test_misc_indy_1554_can_write_true(pool_handler, wallet_handler, get_d
 
     schema_id, _ = await send_schema(pool_handler, wallet_handler, new_did,
                                        'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
-    time.sleep(1)
+    await asyncio.sleep(1)
     res = await get_schema(pool_handler, wallet_handler, new_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res = await send_cred_def(pool_handler, wallet_handler, new_did, schema_json, 'cred_def_tag',
@@ -563,7 +564,7 @@ async def test_misc_indy_1554_can_write_false(pool_handler, wallet_handler, get_
 
     schema_id, _ = await send_schema(pool_handler, wallet_handler, trustee_did,
                                        'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
-    time.sleep(1)
+    await asyncio.sleep(1)
     res = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res = await send_cred_def(pool_handler, wallet_handler, trustee_did, schema_json, 'cred_def_tag',
@@ -650,7 +651,7 @@ async def test_misc_indy_2022(pool_handler, wallet_handler, get_default_trustee)
         res = await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         results1.append(res)
     assert all([res['op'] == 'REPLY' for res in results1])
-    time.sleep(720)
+    await asyncio.sleep(720)
     primary, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
     output = testinfra.get_host('ssh://node{}'.format(primary)).check_output('systemctl restart indy-node')
     print(output)
@@ -659,7 +660,7 @@ async def test_misc_indy_2022(pool_handler, wallet_handler, get_default_trustee)
         res = await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
         results2.append(res)
     assert all([res['op'] == 'REPLY' for res in results2])
-    time.sleep(15)
+    await asyncio.sleep(15)
     await check_ledger_sync()
 
 

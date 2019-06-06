@@ -1,4 +1,5 @@
 import pytest
+import asyncio
 from system.utils import *
 from random import randrange as rr
 import hashlib
@@ -210,7 +211,7 @@ class TestAuthMapSuite:
         assert res['op'] == 'REPLY'
         schema_id, _ = await send_schema(pool_handler, wallet_handler, trustee_did,
                                          'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
-        time.sleep(1)
+        await asyncio.sleep(1)
         res = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id)
         schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
         # set rule for adding
@@ -299,7 +300,7 @@ class TestAuthMapSuite:
         assert res['op'] == 'REPLY'
         schema_id, _ = await send_schema(pool_handler, wallet_handler, trustee_did,
                                          'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
-        time.sleep(1)
+        await asyncio.sleep(1)
         res = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id)
         schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
         cred_def_id, _, res = await send_cred_def(pool_handler, wallet_handler, trustee_did, schema_json,
@@ -397,7 +398,7 @@ class TestAuthMapSuite:
         assert res['op'] == 'REPLY'
         schema_id, _ = await send_schema(pool_handler, wallet_handler, trustee_did,
                                          'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
-        time.sleep(1)
+        await asyncio.sleep(1)
         res = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id)
         schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
         cred_def_id, _, res = await send_cred_def(pool_handler, wallet_handler, trustee_did, schema_json,
@@ -668,7 +669,7 @@ class TestAuthMapSuite:
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
         assert res['op'] == 'REPLY'
-        time.sleep(15)
+        await asyncio.sleep(15)
         # set rule for adding
         req = await ledger.build_auth_rule_request(trustee_did, '118', 'ADD', 'action', '*', '*',
                                                    json.dumps({
@@ -704,7 +705,7 @@ class TestAuthMapSuite:
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
         assert res['op'] == 'REPLY'
-        time.sleep(15)
+        await asyncio.sleep(15)
         # set rule for adding
         req = await ledger.build_auth_rule_request(trustee_did, '119', 'ADD', '*', '*', '*',
                                                    json.dumps({
@@ -780,7 +781,7 @@ class TestAuthMapSuite:
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res2)
         assert res2['op'] == 'REPLY'
-        time.sleep(15)
+        await asyncio.sleep(15)
         req = await ledger.build_auth_rule_request(editor_did, '111', 'EDIT', 'action', '*', '*',
                                                    json.dumps({
                                                        'constraint_id': 'ROLE',

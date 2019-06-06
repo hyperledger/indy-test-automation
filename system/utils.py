@@ -688,7 +688,7 @@ async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, tr
         cycles += 1
         if cycles >= cycles_limit:
             print('CYCLES LIMIT IS EXCEEDED BUT PRIMARY HAS NOT BEEN CHANGED!')
-            break
+            raise AssertionError
         primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
         await asyncio.sleep(sleep)
 

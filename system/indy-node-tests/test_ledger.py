@@ -3,6 +3,7 @@ import json
 import hashlib
 import time
 import logging
+import asyncio
 from async_generator import async_generator
 
 from indy import pool, did, ledger, IndyError
@@ -216,7 +217,7 @@ async def test_send_and_get_cred_def_positive(writer_role, reader_role):
     await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     schema_id, _ = await send_schema(pool_handle, wallet_handle, writer_did,
                                        'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
-    time.sleep(1)
+    await asyncio.sleep(1)
     res = await get_schema(pool_handle, wallet_handle, reader_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res1 = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'TAG',
@@ -284,7 +285,7 @@ async def test_send_and_get_revoc_reg_def_positive(writer_role, reader_role):
     await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     schema_id, _ = await send_schema(pool_handle, wallet_handle, writer_did,
                                      'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
-    time.sleep(1)
+    await asyncio.sleep(1)
     res = await get_schema(pool_handle, wallet_handle, reader_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'cred_def_tag',
@@ -325,7 +326,7 @@ async def test_send_and_get_revoc_reg_entry_positive(writer_role, reader_role):
     await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     schema_id, _ = await send_schema(pool_handle, wallet_handle, writer_did,
                                      'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
-    time.sleep(1)
+    await asyncio.sleep(1)
     res = await get_schema(pool_handle, wallet_handle, reader_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'cred_def_tag',
