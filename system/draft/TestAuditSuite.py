@@ -2,6 +2,8 @@ import pytest
 import asyncio
 from system.utils import *
 
+import logging
+logger = logging.getLogger(__name__)
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestAuditSuite:
@@ -54,23 +56,38 @@ class TestAuditSuite:
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
-    async def test_case_restart_all_nodes_at_the_same_time(self, pool_handler, wallet_handler, get_default_trustee):
+    async def test_case_restart_all_nodes_at_the_same_time(
+        self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+    ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
+
+        logger.info("1: Initiating a view change by stopping master primary")
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         p1 = NodeHost(primary1)
         p1.stop_service()
-        primary2 = await wait_until_vc_is_done(primary1, pool_handler, wallet_handler, trustee_did)
-        assert primary2 != primary1
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
+
+        logger.info("2: Ensure that primary has been changed")
+        primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
+
+        logger.info("3: Ensure pool works")
+        await check_pool_is_workable(pool_handler, wallet_handler, trustee_did, nyms_count=15)
         p1.start_service()
-        for node in test_nodes:
-            node.restart_service()
-        primary3 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
-        assert primary3 != primary2
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync)
-        await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
+
+        logger.info("4: Restarting the pool")
+        restart_pool(test_nodes)
+
+        logger.info("5: Ensure pool is in sync")
+        await ensure_pool_is_in_sync(nodes_num=nodes_num)
+
+        logger.info("6: Ensure that primary has not been changed")
+        primary_after_restart, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        assert primary_after_restart == primary2
+
+        logger.info("7: Ensure pool works")
+        await ensure_pool_is_workable(
+            pool_handler, wallet_handler, trustee_did, nyms_count=30
+        )
 
     @pytest.mark.asyncio
     async def test_case_restart_f_nodes(self, pool_handler, wallet_handler, get_default_trustee):
