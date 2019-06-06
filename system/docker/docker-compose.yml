@@ -24,6 +24,7 @@ services:
           - INDY_PLENUM_VERSION
           - INDY_NODE_VERSION
           - TOKEN_PLUGINS_INSTALL
+          - SOVRIN_VERSION
           - SOVTOKEN_VERSION
           - SOVTOKENFEES_VERSION
     image: ${IMAGE_REPOSITORY}:node

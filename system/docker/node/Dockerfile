@@ -39,14 +39,18 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88 \
 	&& rm -rf /var/lib/apt/lists/*
 
 ARG TOKEN_PLUGINS_INSTALL
+ARG SOVRIN_VERSION
 ARG SOVTOKEN_VERSION
 ARG SOVTOKENFEES_VERSION
 ENV TOKEN_PLUGINS_INSTALL=$TOKEN_PLUGINS_INSTALL
+# TODO default version for master
+ENV SOVRIN_VERSION=${SOVRIN_VERSION:-1.1.120}
 ENV SOVTOKEN_VERSION=${SOVTOKEN_VERSION:-0.9.12~37}
 ENV SOVTOKENFEES_VERSION=${SOVTOKENFEES_VERSION:-${SOVTOKEN_VERSION}}
 RUN if [ "$TOKEN_PLUGINS_INSTALL" = "yes" ]; then \
         set -ex; \
         apt-get update && apt-get install -y \
+            sovrin=${SOVRIN_VERSION} \
             sovtoken=${SOVTOKEN_VERSION} \
             sovtokenfees=${SOVTOKENFEES_VERSION}; \
         rm -rf /var/lib/apt/lists/*; \

@@ -70,6 +70,7 @@ docker run -it --rm \
     -e INDY_PLENUM_VERSION \
     -e INDY_NODE_VERSION \
     -e TOKEN_PLUGINS_INSTALL \
+    -e SOVRIN_VERSION \
     -e SOVTOKEN_VERSION \
     -e SOVTOKENFEES_VERSION \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build node

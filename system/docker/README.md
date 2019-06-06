@@ -25,7 +25,8 @@ The [Dockerfile](node/Dockerfile) describes environment of nodes inside a pool a
 - `PYTHON3_LIBINDY_CRYPTO_VERSION`: version of the Indy Node debian package.
 - `INDY_PLENUM_VERSION`: version of the Indy Node debian package.
 - `INDY_NODE_VERSION`: version of the Indy Node debian package.
-- `TOKEN_PLUGINS_INSTALL`: should be set to `yes` to trigger `sovtoken` and `sovtokenfees` installation.
+- `TOKEN_PLUGINS_INSTALL`: should be set to `yes` to trigger installation of `sovrin` with `sovtoken` and `sovtokenfees`.
+- `SOVRIN_VERSION`: version of the `sovtoken` plugin.
 - `SOVTOKEN_VERSION`: version of the `sovtoken` plugin.
 - `SOVTOKENFEES_VERSION`: version of the `sovtokenfees` plugin.
 
@@ -69,7 +70,7 @@ Prepare docker environment
 Prepare docker environment for specific versions of packages
 
 ```bash
-INDY_NODE_REPO_COMPONENT=rc INDY_NODE_VERSION=1.8.1~rc1 INDY_PLENUM_VERSION=1.8.1 ./prepare.sh
+INDY_NODE_REPO_COMPONENT=stable INDY_NODE_VERSION=1.8.1 INDY_PLENUM_VERSION=1.8.1 LIBINDY_REPO_COMPONENT=stable LIBINDY_VERSION=1.9.0 ./prepare.sh
 ```
 
 Prepare docker environment with plugins installed
