@@ -1,18 +1,24 @@
-import json
-from json import JSONDecodeError
+import time
+import os
 import string
 import base58
-from ctypes import CDLL
-import functools
 import asyncio
-import testinfra
-import random
 from random import sample, shuffle
-import time
 from collections import Counter
-import os
+from collections.abc import Iterable
+from inspect import isawaitable
+import random
+import functools
+from ctypes import CDLL
+import testinfra
+import json
+from json import JSONDecodeError
 
 from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError
+
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 MODULE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -83,6 +89,56 @@ async def payment_initializer(library_name, initializer_name):
     library = CDLL(library_name)
     init = getattr(library, initializer_name)
     init()
+
+
+async def eventually(awaited_func,
+                     *args,
+                     retry_wait: float=0.1,
+                     timeout: float=5,
+                     acceptableExceptions=None,
+                     verbose=True,
+                     **kwargs):
+    if not timeout > 0:
+        raise ValueError("'timeout' is {}".format(timeout))
+    if acceptableExceptions and not isinstance(acceptableExceptions, Iterable):
+        acceptableExceptions = [acceptableExceptions]
+
+    start = time.perf_counter()
+
+    fname = awaited_func.__name__
+    while True:
+        remain = 0
+        try:
+            remain = start + timeout - time.perf_counter()
+            if remain < 0:
+                # this provides a convenient breakpoint for a debugger
+                logger.debug("{} last try...".format(fname))
+            # noinspection PyCallingNonCallable
+            res = awaited_func(*args, **kwargs)
+
+            if isawaitable(res):
+                result = await res
+            else:
+                result = res
+
+            if verbose:
+                logger.debug("{} succeeded with {:.2f} seconds to spare".
+                             format(fname, remain))
+            return result
+        except Exception as ex:
+            if acceptableExceptions and type(ex) not in acceptableExceptions:
+                raise
+            if remain >= 0:
+                sleep_dur = retry_wait
+                if verbose:
+                    logger.debug("{} not succeeded yet, {:.2f} seconds "
+                                 "remaining..., will sleep for {}".format(fname, remain, sleep_dur))
+                await asyncio.sleep(sleep_dur)
+            else:
+                logger.error("{} failed; not trying any more because {} "
+                             "seconds have passed; args were {}".
+                             format(fname, timeout, args))
+                raise ex
 
 
 async def send_nym(pool_handle, wallet_handle, submitter_did, target_did,
@@ -205,7 +261,9 @@ def run_in_event_loop(async_func):
     return wrapped
 
 
-async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
+async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did=None):
+    if some_did is None:
+        some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
     add = await write_eventually_positive(send_nym, pool_handle, wallet_handle, trustee_did, some_did)
     assert add['op'] == 'REPLY'
     get = await read_eventually_positive(get_nym, pool_handle, wallet_handle, trustee_did, some_did)
@@ -239,6 +297,63 @@ async def check_ledger_sync(node_ids=None, nodes_num=7):
     assert all([config_results[i] == config_results[i + 1] for i in range(-1, len(config_results) - 1)])
     assert all([domain_results[i] == domain_results[i + 1] for i in range(-1, len(domain_results) - 1)])
     assert all([audit_results[i] == audit_results[i + 1] for i in range(-1, len(audit_results) - 1)])
+
+
+async def check_pool_performs_write_read(pool_handle, wallet_handle, trustee_did, nyms_count=1):
+    for i in range(nyms_count):
+        some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
+        add = await send_nym(pool_handle, wallet_handle, trustee_did, some_did)
+        assert add['op'] == 'REPLY'
+        get = await get_nym(pool_handle, wallet_handle, trustee_did, some_did)
+        assert get['result']['seqNo'] is not None
+
+
+async def check_pool_is_workable(pool_handle, wallet_handle, trustee_did, nyms_count=3):
+    await check_pool_performs_write_read(
+        pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
+    )
+
+
+async def ensure_pool_is_workable(pool_handle, wallet_handle, trustee_did, nyms_count=3, timeout=30):
+    await eventually(
+        check_pool_is_workable, pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count,
+        retry_wait=1, timeout=timeout
+    )
+
+
+async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
+    await check_ledger_sync(node_ids=node_ids, nodes_num=nodes_num)
+
+
+async def ensure_pool_is_in_sync(node_ids=None, nodes_num=7):
+    await eventually(
+        check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num,
+        retry_wait=1, timeout=30
+    )
+
+
+async def check_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
+    primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+    assert primary_after != primary_before
+    return primary_after
+
+
+async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
+    return await eventually(
+        check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before,
+        retry_wait=1, timeout=30
+    )
+
+
+# TODO use threads to make that concurrent/async
+def restart_pool(hosts):
+    # restart all nodes using stop/start just to avoid
+    # the case when some node is already restarted while
+    # some others are still running
+    for host in hosts:
+        host.stop_service()
+    for host in hosts:
+        host.start_service()
 
 
 async def stop_primary(pool_handle, wallet_handle, trustee_did):
@@ -511,30 +626,8 @@ def get_node_did(node_alias, pool_info=None):
 
 
 async def get_primary(pool_handle, wallet_handle, trustee_did):
-    req = await ledger.build_get_validator_info_request(trustee_did)
-    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-    # remove all timeout entries
-    try:
-        for i in range(len(results)):
-            results.pop(list(results.keys())[list(results.values()).index('timeout')])
-    except ValueError:
-        pass
-    # remove all not REPLY and empty (not selected) primaries entries
-    results = {key: json.loads(results[key]) for key in results if
-               (json.loads(results[key])['op'] == 'REPLY')
-               & (json.loads(results[key])['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
-                  is not None)}
-    # get primaries numbers from all nodes
-    primaries = [results[key]['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
-                 [len('Node'):-len(':0')] for key in results]
-    # count the same entries
-    primaries = Counter(primaries)
-    # find actual primary
-    try:
-        primary = max(primaries, key=primaries.get)
-    except ValueError:
-        # primary is not selected so wait and try again
-        await asyncio.sleep(60)
+
+    async def _get_primary():
         req = await ledger.build_get_validator_info_request(trustee_did)
         results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
         # remove all timeout entries
@@ -553,12 +646,9 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
                      [len('Node'):-len(':0')] for key in results]
         # count the same entries
         primaries = Counter(primaries)
-        # find actual primary
-        try:
-            primary = max(primaries, key=primaries.get)
-        except ValueError:
-            primary = '1'
+        return max(primaries, key=primaries.get)
 
+    primary = await eventually(_get_primary, retry_wait=1, timeout=30)
     alias = get_node_alias(primary)
     return primary, alias, get_node_did(alias)
 

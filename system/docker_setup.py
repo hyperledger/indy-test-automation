@@ -6,6 +6,12 @@ import docker
 import asyncio
 from async_generator import yield_
 
+from .utils import (
+    pool_helper, wallet_helper, default_trustee, ensure_pool_is_workable
+)
+
+import logging
+logger = logging.getLogger(__name__)
 
 DOCKER_BUILD_CTX_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 'docker', 'node'
@@ -123,17 +129,24 @@ def main(nodes_num=None):
                     nodes_num))))
 
 
+async def wait_until_pool_is_ready():
+    wallet_handle, _, _ = await wallet_helper()
+    trustee_did, _ = await default_trustee(wallet_handle)
+    pool_handle, _ = await pool_helper()
+    await ensure_pool_is_workable(pool_handle, wallet_handle, trustee_did)
+
+
 async def setup_and_teardown(nodes_num):
 
     pool_stop()
 
     main(nodes_num=nodes_num)
-    await asyncio.sleep(30)
-    print('\nDOCKER SETUP HAS BEEN FINISHED!\n')
+    await wait_until_pool_is_ready()
+    logger.info('DOCKER SETUP HAS BEEN FINISHED!')
     await yield_()
 
     pool_stop()
-    print('\nDOCKER TEARDOWN HAS BEEN FINISHED!\n')
+    logger.info('DOCKER TEARDOWN HAS BEEN FINISHED!\n')
 
 
 if __name__ == '__main__':
