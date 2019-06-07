@@ -35,7 +35,7 @@ RUN python3 -m pip install -U \
 ARG LIBINDY_REPO_COMPONENT
 ARG LIBINDY_VERSION
 ENV LIBINDY_REPO_COMPONENT=${LIBINDY_REPO_COMPONENT:-master}
-ENV LIBINDY_VERSION=${LIBINDY_VERSION:-1.9.0~1122}
+ENV LIBINDY_VERSION=${LIBINDY_VERSION:-1.9.0~1130}
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88 \
     && add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial ${LIBINDY_REPO_COMPONENT}" \
     && apt-get update && apt-get install -y \

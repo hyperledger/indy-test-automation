@@ -1061,3 +1061,97 @@ class TestAuthMapSuite:
             pool_handler, wallet_handler, trustee_did, one_more_new_trustee_did, one_more_new_trustee_vk, None, trustee_role
         )
         assert res['op'] == 'REJECT'
+
+    # TODO might make sense to move to separate module since other tests here
+    # organized per txn type
+    @pytest.mark.asyncio
+    async def test_case_auth_rules(self, pool_handler, wallet_handler, get_default_trustee):
+
+        trustee_did, _ = get_default_trustee
+        trustee_role, trustee_role_num = 'TRUSTEE', '0'
+        steward_role, steward_role_num = 'STEWARD', '2'
+
+        logger.info("1 Creating new steward")
+        steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, steward_role)
+        assert res['op'] == 'REPLY'
+
+        logger.info("2 Creating some new trustee")
+        _new_trustee_did, _new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, _new_trustee_did, _new_trustee_vk, None, trustee_role)
+        assert res['op'] == 'REPLY'
+
+        logger.info("3 Trying to add new trustee using steward as submitter")
+        new_trustee_did, new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, steward_did, new_trustee_did, new_trustee_vk, None, trustee_role
+        )
+        assert res['op'] == 'REJECT'
+
+        logger.info("4 Trying to add new steward using steward as submitter")
+        new_steward_did, new_steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, steward_did, new_steward_did, new_steward_vk, None, trustee_role
+        )
+        assert res['op'] == 'REJECT'
+
+        logger.info("5 Send auth rules txn to allow stewards to add new trustees and stewrds")
+        one_steward_constraint = {
+           'constraint_id': 'ROLE',
+           'role': steward_role_num,
+           'sig_count': 1,
+           'need_to_be_owner': False,
+           'metadata': {}
+        }
+        req = await ledger.build_auth_rules_request(trustee_did, json.dumps([
+            {
+                'auth_type': '1',
+                'auth_action': 'ADD',
+                'field': 'role',
+                'old_value': '*',
+                'new_value': trustee_role_num,
+                'constraint': one_steward_constraint
+            }, {
+                'auth_type': '1',
+                'auth_action': 'ADD',
+                'field': 'role',
+                'old_value': '*',
+                'new_value': steward_role_num,
+                'constraint': one_steward_constraint
+            },
+        ]))
+        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        assert res['op'] == 'REPLY'
+
+        logger.info("6 Getting recently set auth rules")
+        for role_num in (trustee_role_num, steward_role_num):
+            req = await ledger.build_get_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', role_num)
+            res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+            assert res['op'] == 'REPLY'
+            assert res['result']['data'][0]['constraint'] == one_steward_constraint
+
+        logger.info("7 Trying to add new trustee using trustee as submitter")
+        res = await send_nym(
+            pool_handler, wallet_handler, trustee_did, new_trustee_did, new_trustee_vk, None, trustee_role
+        )
+        assert res['op'] == 'REJECT'
+
+        logger.info("8 Trying to add new steward using trustee as submitter")
+        res = await send_nym(
+            pool_handler, wallet_handler, trustee_did, new_trustee_did, new_steward_vk, None, trustee_role
+        )
+        assert res['op'] == 'REJECT'
+
+        logger.info("9 Adding new trustee using steward as submitter")
+        new_trustee_did, new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, steward_did, new_trustee_did, new_trustee_vk, None, trustee_role
+        )
+        assert res['op'] == 'REPLY'
+
+        logger.info("10 Adding new steward using steward as submitter")
+        new_steward_did, new_steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, steward_did, new_steward_did, new_steward_vk, None, trustee_role
+        )
+        assert res['op'] == 'REPLY'
