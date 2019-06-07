@@ -27,6 +27,7 @@ test_network_name="${3:-$DEF_TEST_NETWORK_NAME}"
 
 repo_path=$(git rev-parse --show-toplevel)
 user_id=$(id -u)
+group_id=$(id -g)
 docker_socket_path="/var/run/docker.sock"
 workdir_path="/tmp/indy-test-automation"
 
@@ -41,7 +42,7 @@ docker run -t --rm --name "$client_container_name" \
     --group-add $(stat -c '%g' "$docker_socket_path") \
     -v "$docker_socket_path:"$docker_socket_path \
     -v "$repo_path:$workdir_path" \
-    -u "$user_id" \
+    -u "$user_id:$group_id" \
     -w "$workdir_path" \
     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
     "$client_image_name" /bin/bash -c "
