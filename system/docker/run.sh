@@ -35,7 +35,7 @@ client_image_name="${image_repository}:client"
 client_container_name="indy-test-automation-client"
 
 # TODO pass specified env variables
-docker run -it --rm --name "$client_container_name" \
+docker run -t --rm --name "$client_container_name" \
     --network "${test_network_name}" \
     --ip "10.0.0.99" \
     --group-add $(stat -c '%g' "$docker_socket_path") \

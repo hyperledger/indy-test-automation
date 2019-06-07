@@ -40,7 +40,7 @@ docker version
 docker build -t "$docker_compose_image_name" "$docker_routine_path/docker-compose"
 
 # 2. build client image
-docker run -it --rm \
+docker run -t --rm \
     --group-add $(stat -c '%g' "$docker_socket_path") \
     -v "$docker_socket_path:"$docker_socket_path \
     -v "$repo_path:$workdir_path" \
@@ -56,7 +56,7 @@ docker run -it --rm \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build client
 
 # 3. build node image
-docker run -it --rm \
+docker run -t --rm \
     --group-add $(stat -c '%g' "$docker_socket_path") \
     -v "$docker_socket_path:"$docker_socket_path \
     -v "$repo_path:$workdir_path" \
