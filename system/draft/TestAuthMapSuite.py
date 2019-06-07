@@ -8,6 +8,10 @@ from datetime import datetime, timedelta, timezone
 from indy import payment
 
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestAuthMapSuite:
 
@@ -1021,3 +1025,39 @@ class TestAuthMapSuite:
             res1 = json.loads(await ledger.submit_request(pool_handler, req))
             print(res1)
             assert res1['op'] == 'REPLY'
+
+    # TODO might make sense to move to separate module since other tests here
+    # organized per txn type
+    @pytest.mark.asyncio
+    async def test_case_forbidden(self, pool_handler, wallet_handler, get_default_trustee):
+
+        trustee_did, _ = get_default_trustee
+        trustee_role, trustee_role_num = 'TRUSTEE', '0'
+
+        logger.info("1 Adding new trustee to ledger")
+        new_trustee_did, new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, trustee_did, new_trustee_did, new_trustee_vk, None, trustee_role
+        )
+        assert res['op'] == 'REPLY'
+
+        logger.info("2 Setting forbidden auth rule for adding trustees")
+        req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', trustee_role_num,
+                                                   json.dumps({
+                                                       'constraint_id': 'FORBIDDEN',
+                                                   }))
+        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        assert res['op'] == 'REPLY'
+
+        logger.info("3 Getting newly set forbidden constraint")
+        req = await ledger.build_get_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', trustee_role_num)
+        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        assert res['op'] == 'REPLY'
+        assert res['result']['data'][0]['constraint']['constraint_id'] == 'FORBIDDEN'
+
+        logger.info("4 Trying to add one more trustee")
+        one_more_new_trustee_did, one_more_new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, trustee_did, one_more_new_trustee_did, one_more_new_trustee_vk, None, trustee_role
+        )
+        assert res['op'] == 'REJECT'

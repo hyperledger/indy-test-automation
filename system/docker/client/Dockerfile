@@ -31,21 +31,25 @@ RUN python3 -m pip install -U \
         pipenv \
     && pip3 list
 
-# libindy && libsovtoken
+# libindy
 ARG LIBINDY_REPO_COMPONENT
 ARG LIBINDY_VERSION
 ENV LIBINDY_REPO_COMPONENT=${LIBINDY_REPO_COMPONENT:-master}
-ENV LIBINDY_VERSION=${LIBINDY_VERSION:-1.8.3~1099}
+ENV LIBINDY_VERSION=${LIBINDY_VERSION:-1.9.0~1122}
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88 \
     && add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial ${LIBINDY_REPO_COMPONENT}" \
     && apt-get update && apt-get install -y \
         libindy=${LIBINDY_VERSION} \
     && rm -rf /var/lib/apt/lists/*
 
+# libsovtoken
+# FIXME
+#   - for now it's tricky to set proper version for master artifacs
+#   - defaults are for stable
 ARG LIBSOVTOKEN_INSTALL
 ARG LIBSOVTOKEN_VERSION
 ENV LIBSOVTOKEN_INSTALL=$LIBSOVTOKEN_INSTALL
-ENV LIBSOVTOKEN_VERSION=${LIBSOVTOKEN_VERSION:-0.9.7~66}
+ENV LIBSOVTOKEN_VERSION=${LIBSOVTOKEN_VERSION:-0.10.0}
 RUN if [ "$LIBSOVTOKEN_INSTALL" = "yes" ]; then \
         set -ex; \
         apt-get update && apt-get install -y \
