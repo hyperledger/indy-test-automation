@@ -40,7 +40,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88 \
 
 # sovrin & token plugins
 # FIXME
-#   - for now it's tricky to set proper versions for master artifacs
+#   - for now it's tricky to set proper versions for master artifacts
 #   - defaults are for stable
 ARG TOKEN_PLUGINS_INSTALL
 ARG SOVRIN_VERSION

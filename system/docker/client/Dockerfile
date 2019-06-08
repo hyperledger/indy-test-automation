@@ -44,7 +44,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88 \
 
 # libsovtoken
 # FIXME
-#   - for now it's tricky to set proper version for master artifacs
+#   - for now it's tricky to set proper version for master artifacts
 #   - defaults are for stable
 ARG LIBSOVTOKEN_INSTALL
 ARG LIBSOVTOKEN_VERSION
