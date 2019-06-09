@@ -790,9 +790,8 @@ class TestFeesSuite:
     @pytest.mark.parametrize('schema_adder_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
     @pytest.mark.parametrize('cred_def_adder_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
     @pytest.mark.asyncio
-    async def test_case_schema_cred_def_rrd_rre(self, pool_handler, wallet_handler, get_default_trustee,
+    async def test_case_schema_cred_def_rrd_rre(self, payment_init, pool_handler, wallet_handler, get_default_trustee,
                                                 initial_token_minting, schema_adder_role, cred_def_adder_role):
-        await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         address = initial_token_minting

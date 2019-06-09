@@ -104,9 +104,8 @@ class TestTAASuite:
         assert res2['op'] == 'REJECT'
 
     @pytest.mark.asyncio
-    async def test_case_taa_with_xfer(self, pool_handler, wallet_handler, get_default_trustee,
+    async def test_case_taa_with_xfer(self, payment_init, pool_handler, wallet_handler, get_default_trustee,
                                       initial_token_minting):
-        await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         address1 = initial_token_minting

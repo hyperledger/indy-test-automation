@@ -11,6 +11,7 @@ import os
 
 
 # TODO dynamic install of old version to upgrade from
+@pytest.mark.skip(reason='INDY-2132, INDY-2125')
 @pytest.mark.asyncio
 async def test_pool_upgrade_positive():
     await pool.set_protocol_version(2)

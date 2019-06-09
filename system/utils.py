@@ -85,6 +85,7 @@ async def default_trustee(wallet_handle):
     return trustee_did, trustee_vk
 
 
+# TODO why we need that async ???
 async def payment_initializer(library_name, initializer_name):
     library = CDLL(library_name)
     init = getattr(library, initializer_name)

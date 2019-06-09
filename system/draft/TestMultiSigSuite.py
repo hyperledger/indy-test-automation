@@ -8,8 +8,7 @@ from indy import payment
 class TestMultiSigSuite:
 
     @pytest.mark.asyncio
-    async def test_case_double_mint(self, pool_handler, wallet_handler, get_default_trustee):
-        await payment_initializer('libsovtoken.so', 'sovtoken_init')
+    async def test_case_double_mint(self, payment_init, pool_handler, wallet_handler, get_default_trustee):
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         trustee_did2, trustee_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps(
@@ -38,6 +37,7 @@ class TestMultiSigSuite:
         print('\n{}'.format(res2))
         assert res2['op'] == 'REQNACK'
 
+    @pytest.mark.skip(reason='INDY-2132')
     @pytest.mark.asyncio
     async def test_case_sign_and_multisign(self, pool_handler, wallet_handler, get_default_trustee):
         trustee_did, _ = get_default_trustee

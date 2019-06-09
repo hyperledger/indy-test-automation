@@ -14,6 +14,14 @@ from .utils import (
 from .docker_setup import setup_and_teardown
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--payments", action='store_true', default=None,
+        help="run libsovtoken based tests as well"
+    )
+
+
+# TODO seems not the best name for that functionality
 @pytest.fixture(scope='session')
 def event_loop():
     loop = asyncio.get_event_loop()
@@ -43,10 +51,22 @@ async def get_default_trustee(wallet_handler):
     await yield_((trustee_did, trustee_vk))
 
 
+# TODO diferent payment plugins (libsovtoken, libnullpay, ...)
+@pytest.fixture(scope="session")
+def payment_init_session(request):
+    if request.config.getoption("payments"):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(payment_initializer('libsovtoken.so', 'sovtoken_init'))
+
+
+@pytest.fixture
+def payment_init(request, payment_init_session):
+    aaa = request.config.getoption("payments", skip=True)
+
+
 @pytest.fixture()
 @async_generator
-async def initial_token_minting(pool_handler, wallet_handler, get_default_trustee):
-    await payment_initializer('libsovtoken.so', 'sovtoken_init')
+async def initial_token_minting(payment_init, pool_handler, wallet_handler, get_default_trustee):
     libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee
     address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps(
@@ -68,7 +88,6 @@ async def initial_token_minting(pool_handler, wallet_handler, get_default_truste
 @pytest.fixture()
 @async_generator
 async def initial_fees_setting(pool_handler, wallet_handler, get_default_trustee):
-    await payment_initializer('libsovtoken.so', 'sovtoken_init')
     libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee
     trustee_did_second, trustee_vk_second = await did.create_and_store_my_did(wallet_handler, json.dumps({}))

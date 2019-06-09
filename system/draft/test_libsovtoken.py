@@ -4,6 +4,7 @@ import pytest
 import asyncio
 
 
+@pytest.mark.skip(reason='ST-580')
 @pytest.mark.asyncio
 async def test_libsovtoken_acceptance(docker_setup_and_teardown):
     await pool.set_protocol_version(2)

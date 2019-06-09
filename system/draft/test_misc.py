@@ -799,9 +799,8 @@ async def test_misc_nym_alias(docker_setup_and_teardown, pool_handler, wallet_ha
 
 
 @pytest.mark.asyncio
-async def test_misc_mint_to_aws():
+async def test_misc_mint_to_aws(payment_init):
     await pool.set_protocol_version(2)
-    await payment_initializer('libsovtoken.so', 'sovtoken_init')
     libsovtoken_payment_method = 'sov'
     pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis_test')
     wallet_handle, _, _ = await wallet_helper()

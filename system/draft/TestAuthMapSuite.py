@@ -806,9 +806,8 @@ class TestAuthMapSuite:
     ])
     @pytest.mark.parametrize('sig_count', [0, 1, 3])
     @pytest.mark.asyncio
-    async def test_case_mint(self, pool_handler, wallet_handler, get_default_trustee,
+    async def test_case_mint(self, payment_init, pool_handler, wallet_handler, get_default_trustee,
                              adder_role, adder_role_num, sig_count):
-        await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps(
@@ -873,9 +872,8 @@ class TestAuthMapSuite:
     ])
     @pytest.mark.parametrize('sig_count', [0, 1, 3])
     @pytest.mark.asyncio
-    async def test_case_set_fees(self, pool_handler, wallet_handler, get_default_trustee,
+    async def test_case_set_fees(self, payment_init, pool_handler, wallet_handler, get_default_trustee,
                                  editor_role, editor_role_num, sig_count):
-        await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         fees = {'1': 1, '100': 1, '101': 1, '102': 1, '113': 1, '114': 1, '10001': 1}
         trustee_did, _ = get_default_trustee
@@ -939,9 +937,8 @@ class TestAuthMapSuite:
     ])
     @pytest.mark.parametrize('sig_count', [0, 1, 3])
     @pytest.mark.asyncio
-    async def test_case_payment(self, pool_handler, wallet_handler, get_default_trustee,
+    async def test_case_payment(self, payment_init, pool_handler, wallet_handler, get_default_trustee,
                                 adder_role, adder_role_num, sig_count):
-        await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         address1 = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps(

@@ -10,9 +10,8 @@ import logging
 
 
 @pytest.mark.asyncio
-async def test_misc_freshness(docker_setup_and_teardown):
+async def test_misc_freshness(payment_init, docker_setup_and_teardown):
     await pool.set_protocol_version(2)
-    await payment_initializer('libsovtoken.so', 'sovtoken_init')
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     method = 'sov'
