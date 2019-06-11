@@ -33,7 +33,7 @@ async def test_vc_by_restart(pool_handler, wallet_handler, get_default_trustee):
     assert primary_before != primary_after
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
     p1.start_service()
-    await eventually_positive(check_ledger_sync)
+    await eventually_positive(check_pool_is_in_sync)
 
 
 @pytest.mark.asyncio
@@ -50,7 +50,7 @@ async def test_vc_by_demotion(pool_handler, wallet_handler, get_default_trustee)
     assert primary_before != primary_after
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
     await eventually_positive(promote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
-    await eventually_positive(check_ledger_sync)
+    await eventually_positive(check_pool_is_in_sync)
 
 
 @pytest.mark.nodes_num(8)

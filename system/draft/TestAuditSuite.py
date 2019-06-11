@@ -15,7 +15,7 @@ class TestAuditSuite:
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
         test_nodes[5].restart_service()
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync)
+        await eventually_positive(check_pool_is_in_sync)
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         p1 = NodeHost(primary1)
         p1.stop_service()
@@ -34,7 +34,7 @@ class TestAuditSuite:
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
         test_nodes[5].start_service()
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync)
+        await eventually_positive(check_pool_is_in_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
@@ -52,7 +52,7 @@ class TestAuditSuite:
         next_node = NodeHost(int(primary2) + node_num_shift)
         next_node.restart_service()
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync)
+        await eventually_positive(check_pool_is_in_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
@@ -104,7 +104,7 @@ class TestAuditSuite:
             node.restart_service()
         await asyncio.sleep(30)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync)
+        await eventually_positive(check_pool_is_in_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
@@ -122,7 +122,7 @@ class TestAuditSuite:
             node.restart_service()
         await asyncio.sleep(30)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync)
+        await eventually_positive(check_pool_is_in_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
@@ -140,7 +140,7 @@ class TestAuditSuite:
             node.restart_service()
             await asyncio.sleep(10)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_ledger_sync)
+        await eventually_positive(check_pool_is_in_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
@@ -170,5 +170,5 @@ class TestAuditSuite:
         primary4 = await wait_until_vc_is_done(primary3, pool_handler, wallet_handler, trustee_did)
         assert primary4 != primary3
         # await asyncio.sleep(60)
-        await eventually_positive(check_ledger_sync)
+        await eventually_positive(check_pool_is_in_sync)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])

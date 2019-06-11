@@ -279,24 +279,6 @@ def check_no_failures(hosts):
             "Node service on host{} failed:\n{}".format(host.id, result)
         )
 
-# TODO make that async
-async def check_ledger_sync(node_ids=None, nodes_num=7):
-    if node_ids is None:
-        node_ids = [(i + 1) for i in range(nodes_num)]
-    hosts = [NodeHost(i) for i in node_ids]
-
-    pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
-    print('\nPOOL LEDGER SYNC: {}'.format([result for result in pool_results]))
-    config_results = [host.run('read_ledger --type=config --count') for host in hosts]
-    print('\nCONFIG LEDGER SYNC: {}'.format([result for result in config_results]))
-    domain_results = [host.run('read_ledger --type=domain --count') for host in hosts]
-    print('\nDOMAIN LEDGER SYNC: {}'.format([result for result in domain_results]))
-    audit_results = [host.run('read_ledger --type=audit --count') for host in hosts]
-    print('\nAUDIT LEDGER SYNC: {}'.format([result for result in audit_results]))
-
-    for res in (pool_results, config_results, domain_results, audit_results):
-        assert len(set(res)) == 1
-
 
 async def check_pool_performs_write_read(pool_handle, wallet_handle, trustee_did, nyms_count=1):
     for _ in range(nyms_count):
@@ -321,7 +303,22 @@ async def ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did, nym
 
 
 async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
-    await check_ledger_sync(node_ids=node_ids, nodes_num=nodes_num)
+    if node_ids is None:
+        node_ids = [(i + 1) for i in range(nodes_num)]
+    hosts = [NodeHost(i) for i in node_ids]
+
+    # TODO make that async
+    pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
+    print('\nPOOL LEDGER SYNC: {}'.format([result for result in pool_results]))
+    config_results = [host.run('read_ledger --type=config --count') for host in hosts]
+    print('\nCONFIG LEDGER SYNC: {}'.format([result for result in config_results]))
+    domain_results = [host.run('read_ledger --type=domain --count') for host in hosts]
+    print('\nDOMAIN LEDGER SYNC: {}'.format([result for result in domain_results]))
+    audit_results = [host.run('read_ledger --type=audit --count') for host in hosts]
+    print('\nAUDIT LEDGER SYNC: {}'.format([result for result in audit_results]))
+
+    for res in (pool_results, config_results, domain_results, audit_results):
+        assert len(set(res)) == 1
 
 
 async def ensure_pool_is_in_sync(node_ids=None, nodes_num=7):
@@ -699,8 +696,9 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     assert promote_res['op'] == 'REPLY'
 
 
+# TODO replace with eventually
 async def eventually_positive(func, *args, cycles_limit=15, sleep=30, **kwargs):
-    # this is for check_ledger_sync, promote_node, demote_node and other self-asserted functions
+    # this is for check_pool_is_in_sync, promote_node, demote_node and other self-asserted functions
     cycles = 0
     while True:
         try:
@@ -718,6 +716,7 @@ async def eventually_positive(func, *args, cycles_limit=15, sleep=30, **kwargs):
     return res
 
 
+# TODO replace with eventually
 async def write_eventually_positive(func, *args, cycles_limit=40):
     cycles = 0
     res = dict()
@@ -736,6 +735,7 @@ async def write_eventually_positive(func, *args, cycles_limit=40):
     return res
 
 
+# TODO replace with eventually
 async def read_eventually_positive(func, *args, cycles_limit=30):
     cycles = 0
     res = await func(*args)
@@ -749,6 +749,7 @@ async def read_eventually_positive(func, *args, cycles_limit=30):
     return res
 
 
+# TODO replace with eventually
 async def eventually_negative(func, *args, cycles_limit=15):
     cycles = 0
     is_exception_raised = False

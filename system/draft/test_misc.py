@@ -471,7 +471,7 @@ async def test_misc_audit_ledger(pool_handler, wallet_handler, get_default_trust
     output = host.check_output('systemctl start indy-node')
     print(output)
     await asyncio.sleep(60)
-    await check_ledger_sync()
+    await check_pool_is_in_sync()
 
 
 # @pytest.mark.parametrize('txn_type, action, field, old, new, constraint', [
@@ -661,7 +661,7 @@ async def test_misc_indy_2022(pool_handler, wallet_handler, get_default_trustee)
         results2.append(res)
     assert all([res['op'] == 'REPLY' for res in results2])
     await asyncio.sleep(15)
-    await check_ledger_sync()
+    await check_pool_is_in_sync()
 
 
 @settings(verbosity=Verbosity.debug, deadline=2000.0, max_examples=100)
@@ -738,7 +738,7 @@ async def test_misc_indy_1720(pool_handler, wallet_handler, get_default_trustee)
         await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0], None, None, None)
     output = testinfra.get_host('ssh://node{}'.format(primary3)).check_output('systemctl start indy-node')
     print(output)
-    await check_ledger_sync()
+    await check_pool_is_in_sync()
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
 
