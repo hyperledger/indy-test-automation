@@ -61,7 +61,10 @@ def payment_init_session(request):
 
 @pytest.fixture
 def payment_init(request, payment_init_session):
-    aaa = request.config.getoption("payments", skip=True)
+    # it will skips any test that depends on payment plugins
+    # if pytest is run without '--payments' option
+    # (more details: https://docs.pytest.org/en/latest/reference.html#_pytest.config.Config.getoption)
+    request.config.getoption("payments", skip=True)
 
 
 @pytest.fixture()
