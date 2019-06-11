@@ -71,7 +71,7 @@ class TestAuditSuite:
         primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
 
         logger.info("3: Ensure pool works")
-        await check_pool_is_workable(pool_handler, wallet_handler, trustee_did, nyms_count=15)
+        await check_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=15)
         p1.start_service()
 
         logger.info("4: Restarting the pool")
@@ -85,7 +85,7 @@ class TestAuditSuite:
         assert primary_after_restart == primary2
 
         logger.info("7: Ensure pool works")
-        await ensure_pool_is_workable(
+        await ensure_pool_is_functional(
             pool_handler, wallet_handler, trustee_did, nyms_count=30
         )
 

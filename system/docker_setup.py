@@ -7,7 +7,7 @@ import asyncio
 from async_generator import yield_
 
 from .utils import (
-    pool_helper, wallet_helper, default_trustee, ensure_pool_is_workable
+    pool_helper, wallet_helper, default_trustee, ensure_pool_is_functional
 )
 
 import logging
@@ -133,7 +133,7 @@ async def wait_until_pool_is_ready():
     wallet_handle, _, _ = await wallet_helper()
     trustee_did, _ = await default_trustee(wallet_handle)
     pool_handle, _ = await pool_helper()
-    await ensure_pool_is_workable(pool_handle, wallet_handle, trustee_did)
+    await ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did)
 
 
 async def setup_and_teardown(nodes_num):

@@ -294,14 +294,12 @@ async def check_ledger_sync(node_ids=None, nodes_num=7):
     audit_results = [host.run('read_ledger --type=audit --count') for host in hosts]
     print('\nAUDIT LEDGER SYNC: {}'.format([result for result in audit_results]))
 
-    assert all([pool_results[i] == pool_results[i + 1] for i in range(-1, len(pool_results) - 1)])
-    assert all([config_results[i] == config_results[i + 1] for i in range(-1, len(config_results) - 1)])
-    assert all([domain_results[i] == domain_results[i + 1] for i in range(-1, len(domain_results) - 1)])
-    assert all([audit_results[i] == audit_results[i + 1] for i in range(-1, len(audit_results) - 1)])
+    for res in (pool_results, config_results, domain_results, audit_results):
+        assert len(set(res)) == 1
 
 
 async def check_pool_performs_write_read(pool_handle, wallet_handle, trustee_did, nyms_count=1):
-    for i in range(nyms_count):
+    for _ in range(nyms_count):
         some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
         add = await send_nym(pool_handle, wallet_handle, trustee_did, some_did)
         assert add['op'] == 'REPLY'
@@ -309,15 +307,15 @@ async def check_pool_performs_write_read(pool_handle, wallet_handle, trustee_did
         assert get['result']['seqNo'] is not None
 
 
-async def check_pool_is_workable(pool_handle, wallet_handle, trustee_did, nyms_count=3):
+async def check_pool_is_functional(pool_handle, wallet_handle, trustee_did, nyms_count=3):
     await check_pool_performs_write_read(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
     )
 
 
-async def ensure_pool_is_workable(pool_handle, wallet_handle, trustee_did, nyms_count=3, timeout=30):
+async def ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did, nyms_count=3, timeout=30):
     await eventually(
-        check_pool_is_workable, pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count,
+        check_pool_is_functional, pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count,
         retry_wait=1, timeout=timeout
     )
 

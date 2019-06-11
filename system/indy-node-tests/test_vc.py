@@ -87,7 +87,7 @@ async def test_demotion_of_backup_primary_with_restart_with_vc(
     logger.info('Primary after: {}'.format(primary_after))
 
     logger.info("4 Order 1 more txn")
-    await ensure_pool_is_workable(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     logger.info("5 Restart the whole pool")
     restart_pool(hosts)
@@ -99,7 +99,7 @@ async def test_demotion_of_backup_primary_with_restart_with_vc(
     await ensure_pool_is_in_sync(node_ids=[h.id for h in hosts if h.id != R2_PRIMARY_ID])
 
     logger.info("6.2 ensure that pool orders requests")
-    await ensure_pool_is_workable(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
 
 @pytest.mark.nodes_num(8)
@@ -140,4 +140,4 @@ async def test_demotion_of_backup_primary_with_restart_without_vc(
     await ensure_pool_is_in_sync(node_ids=[h.id for h in hosts if h.id != R2_PRIMARY_ID])
 
     logger.info("5.2 ensure that pool orders requests")
-    await ensure_pool_is_workable(pool_handler, wallet_handler, trustee_did, timeout=60)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, timeout=60)
