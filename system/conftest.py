@@ -90,7 +90,7 @@ async def initial_token_minting(payment_init, pool_handler, wallet_handler, get_
 
 @pytest.fixture()
 @async_generator
-async def initial_fees_setting(pool_handler, wallet_handler, get_default_trustee):
+async def initial_fees_setting(payment_init, pool_handler, wallet_handler, get_default_trustee):
     libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee
     trustee_did_second, trustee_vk_second = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
@@ -134,13 +134,16 @@ async def ssh_config(nodes_num):
         return
 
     config_entry = (
-        "Host node{}\n"
-        "\tHostName 10.0.0.{}\n"
-        "\tUser root\n"
-        "\tIdentityFile ~/.ssh/test_key\n"
-        "\tStrictHostKeyChecking no"
+        "Host node{node_id}\n"
+        "    HostName 10.0.0.{node_ip_part}\n"
+        "    User root\n"
+        "    IdentityFile ~/.ssh/test_key\n"
+        "    StrictHostKeyChecking no"
     )
-    config = '\n'.join([config_entry.format(i + 1, i + 2) for i in range(nodes_num)])
+    config = '\n'.join([
+        config_entry.format(node_id=(i + 1), node_ip_part=(i + 2))
+        for i in range(nodes_num)
+    ])
     with open(os.path.expanduser('~/.ssh/config'), 'w') as f:
         f.write(config)
 
