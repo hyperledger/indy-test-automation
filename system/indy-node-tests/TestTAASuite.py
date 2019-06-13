@@ -1,7 +1,7 @@
 import pytest
 from system.utils import *
 from indy import payment
-from hypothesis import strategies, settings, given
+#from hypothesis import strategies, settings, given
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
@@ -15,16 +15,16 @@ class TestTAASuite:
     async def test_case_send_and_get_aml(self, pool_handler, wallet_handler, get_default_trustee,
                                          aml, version_set, context, timestamp, version_get):
         trustee_did, _ = get_default_trustee
-        req = await ledger.build_acceptance_mechanism_request(trustee_did, json.dumps(aml), version_set, context)
+        req = await ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version_set, context)
         res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res1)
         assert res1['op'] == 'REPLY'
         # aml with the same version should be rejected
-        req = await ledger.build_acceptance_mechanism_request(trustee_did, json.dumps(aml), version_set, context)
+        req = await ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version_set, context)
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res2)
         assert res2['op'] == 'REJECT'
-        req = await ledger.build_get_acceptance_mechanism_request(None, timestamp, version_get)
+        req = await ledger.build_get_acceptance_mechanisms_request(None, timestamp, version_get)
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
         print(res3)
         assert res3['op'] == 'REPLY'
@@ -42,7 +42,7 @@ class TestTAASuite:
         print(res1)
         assert res1['op'] == 'REJECT'
         aml_key = 'aml_key'
-        req = await ledger.build_acceptance_mechanism_request(trustee_did,
+        req = await ledger.build_acceptance_mechanisms_request(trustee_did,
                                                               json.dumps({aml_key: random_string(5)}),
                                                               random_string(10), None)
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
@@ -104,9 +104,8 @@ class TestTAASuite:
         assert res2['op'] == 'REJECT'
 
     @pytest.mark.asyncio
-    async def test_case_taa_with_xfer(self, pool_handler, wallet_handler, get_default_trustee,
+    async def test_case_taa_with_xfer(self, payment_init, pool_handler, wallet_handler, get_default_trustee,
                                       initial_token_minting):
-        await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         address1 = initial_token_minting
@@ -128,7 +127,7 @@ class TestTAASuite:
         res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res1)
         assert res1['op'] == 'REJECT'
-        req = await ledger.build_acceptance_mechanism_request(trustee_did,
+        req = await ledger.build_acceptance_mechanisms_request(trustee_did,
                                                               json.dumps({aml_key: random_string(5)}),
                                                               random_string(10), None)
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))

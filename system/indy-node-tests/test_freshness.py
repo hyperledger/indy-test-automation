@@ -1,5 +1,6 @@
 import pytest
 import time
+import asyncio
 from indy import did, payment
 from system.utils import *
 import logging
@@ -9,9 +10,8 @@ import logging
 
 
 @pytest.mark.asyncio
-async def test_misc_freshness():
+async def test_misc_freshness(payment_init, docker_setup_and_teardown):
     await pool.set_protocol_version(2)
-    await payment_initializer('libsovtoken.so', 'sovtoken_init')
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     method = 'sov'
@@ -71,7 +71,7 @@ async def test_misc_freshness():
                                None)
     schema_id, schema = await send_schema(pool_handle, wallet_handle, trustee_did, random_string(10), '1.0',
                                           json.dumps(["age", "sex", "height", "name"]))
-    time.sleep(3)
+    await asyncio.sleep(3)
     temp = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(temp))
     cred_def_id, _, cred_def =\
@@ -119,7 +119,7 @@ async def test_misc_freshness():
     fees = json.loads(await ledger.submit_request(pool_handle, fees_req))
     assert fees['op'] == 'REPLY'
 
-    time.sleep(330)
+    await asyncio.sleep(330)
 
     # # read config ledger txn - KeyError: 'state_proof'
     # req = await ledger.build_get_txn_request(None, 'CONFIG', config_ledger['result']['txnMetadata']['seqNo'])

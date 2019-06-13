@@ -3,7 +3,7 @@ from system.utils import *
 
 
 @pytest.mark.asyncio
-async def test_roles(pool_handler, wallet_handler, get_default_trustee):
+async def test_roles(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
     trustee1_did, trustee1_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     steward1_did, steward1_vk = await did.create_and_store_my_did(wallet_handler, '{}')

@@ -3,8 +3,15 @@ import time
 import subprocess
 from subprocess import CalledProcessError
 import docker
+import asyncio
 from async_generator import yield_
 
+from .utils import (
+    pool_helper, wallet_helper, default_trustee, ensure_pool_is_functional
+)
+
+import logging
+logger = logging.getLogger(__name__)
 
 DOCKER_BUILD_CTX_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 'docker', 'node'
@@ -14,7 +21,7 @@ NETWORK_NAME = os.environ.get('INDY_SYSTEM_TESTS_NETWORK', 'indy-test-automation
 # TODO limit subnet range to reduce risk of overlapping with system resources
 NETWORK_SUBNET = os.environ.get('INDY_SYSTEM_TESTS_SUBNET', '10.0.0.0/24')
 NODE_NAME_BASE = 'node'
-NODES_NUM = 7
+NODES_NUM = int(os.environ.get('INDY_SYSTEM_NODES_NUM', 7))
 
 
 client = docker.from_env()
@@ -109,7 +116,8 @@ def pool_stop():
     #     pass
 
 
-def main():
+def main(nodes_num=None):
+    nodes_num = NODES_NUM if nodes_num is None else nodes_num
     print(pool_initializer(
             pool_starter(
                 pool_builder(
@@ -118,20 +126,27 @@ def main():
                     NODE_NAME_BASE,
                     network_builder(NETWORK_SUBNET,
                                     NETWORK_NAME),
-                    NODES_NUM))))
+                    nodes_num))))
 
 
-async def setup_and_teardown():
+async def wait_until_pool_is_ready():
+    wallet_handle, _, _ = await wallet_helper()
+    trustee_did, _ = await default_trustee(wallet_handle)
+    pool_handle, _ = await pool_helper()
+    await ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did)
+
+
+async def setup_and_teardown(nodes_num):
 
     pool_stop()
 
-    main()
-    time.sleep(30)
-    print('\nDOCKER SETUP HAS BEEN FINISHED!\n')
+    main(nodes_num=nodes_num)
+    await wait_until_pool_is_ready()
+    logger.info('DOCKER SETUP HAS BEEN FINISHED!')
     await yield_()
 
     pool_stop()
-    print('\nDOCKER TEARDOWN HAS BEEN FINISHED!\n')
+    logger.info('DOCKER TEARDOWN HAS BEEN FINISHED!\n')
 
 
 if __name__ == '__main__':

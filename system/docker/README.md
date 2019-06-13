@@ -6,11 +6,11 @@
 
 The [Dockerfile](client/Dockerfile) describes system tests environment.
 
-#### Environment variables
+#### Arguments
 
 - `PYTHON3_VERSION`: version of the python3 to install.
 - `LIBINDY_REPO_COMPONENT`: Indy SDK debian repo component.
-- `LIBINDY_VERISION`: version of the libindy library.
+- `LIBINDY_VERSION`: version of the libindy library.
 - `LIBSOVTOKEN_INSTALL`: should be set to `yes` to trigger `libsovtoken` installation.
 - `LIBSOVTOKEN_VERSION`: version of the libsovtoken library to install.
 
@@ -18,14 +18,15 @@ The [Dockerfile](client/Dockerfile) describes system tests environment.
 
 The [Dockerfile](node/Dockerfile) describes environment of nodes inside a pool as a counterpart for system tests.
 
-#### Environment variables
+#### Arguments
 
 - `INDY_NODE_REPO_COMPONENT`: Indy Node debian repo component.
 - `LIBINDY_CRYPTO_VERSION`: version of the Indy Node debian package.
 - `PYTHON3_LIBINDY_CRYPTO_VERSION`: version of the Indy Node debian package.
 - `INDY_PLENUM_VERSION`: version of the Indy Node debian package.
 - `INDY_NODE_VERSION`: version of the Indy Node debian package.
-- `TOKEN_PLUGINS_INSTALL`: should be set to `yes` to trigger `sovtoken` and `sovtokenfees` installation.
+- `TOKEN_PLUGINS_INSTALL`: should be set to `yes` to trigger installation of `sovrin` with `sovtoken` and `sovtokenfees`.
+- `SOVRIN_VERSION`: version of the `sovtoken` plugin.
 - `SOVTOKEN_VERSION`: version of the `sovtoken` plugin.
 - `SOVTOKENFEES_VERSION`: version of the `sovtokenfees` plugin.
 
@@ -43,7 +44,7 @@ Each script provides a short help, use `--help` for the details.
 
 ### [prepare.sh](prepare.sh)
 
-- Builds docker images for client and node passing env variables expected by them.
+- Builds docker images for client and node passing arguments expected by them as enviroment variables.
 - Creates user-defined docker bridge network for system tests.
 
 ### [run.sh](run.sh)
@@ -64,6 +65,18 @@ Prepare docker environment
 
 ```bash
 ./prepare.sh
+```
+
+Prepare docker environment for specific versions of packages
+
+```bash
+INDY_NODE_REPO_COMPONENT=stable INDY_NODE_VERSION=1.8.1 INDY_PLENUM_VERSION=1.8.1 LIBINDY_REPO_COMPONENT=stable LIBINDY_VERSION=1.9.0 ./prepare.sh
+```
+
+Prepare docker environment with plugins installed
+
+```bash
+LIBSOVTOKEN_INSTALL=yes TOKEN_PLUGINS_INSTALL=yes ./prepare.sh
 ```
 
 Collect tests for some test target

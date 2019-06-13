@@ -1,18 +1,24 @@
-import json
-from json import JSONDecodeError
+import time
+import os
 import string
 import base58
-from ctypes import CDLL
-import functools
 import asyncio
-import testinfra
-import random
 from random import sample, shuffle
-import time
 from collections import Counter
-import os
+from collections.abc import Iterable
+from inspect import isawaitable
+import random
+import functools
+from ctypes import CDLL
+import testinfra
+import json
+from json import JSONDecodeError
 
 from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError
+
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 MODULE_PATH = os.path.abspath(os.path.dirname(__file__))
@@ -79,10 +85,61 @@ async def default_trustee(wallet_handle):
     return trustee_did, trustee_vk
 
 
+# TODO why we need that async ???
 async def payment_initializer(library_name, initializer_name):
     library = CDLL(library_name)
     init = getattr(library, initializer_name)
     init()
+
+
+async def eventually(awaited_func,
+                     *args,
+                     retry_wait: float=0.1,
+                     timeout: float=5,
+                     acceptableExceptions=None,
+                     verbose=True,
+                     **kwargs):
+    if not timeout > 0:
+        raise ValueError("'timeout' is {}".format(timeout))
+    if acceptableExceptions and not isinstance(acceptableExceptions, Iterable):
+        acceptableExceptions = [acceptableExceptions]
+
+    start = time.perf_counter()
+
+    fname = awaited_func.__name__
+    while True:
+        remain = 0
+        try:
+            remain = start + timeout - time.perf_counter()
+            if remain < 0:
+                # this provides a convenient breakpoint for a debugger
+                logger.debug("{} last try...".format(fname))
+            # noinspection PyCallingNonCallable
+            res = awaited_func(*args, **kwargs)
+
+            if isawaitable(res):
+                result = await res
+            else:
+                result = res
+
+            if verbose:
+                logger.debug("{} succeeded with {:.2f} seconds to spare".
+                             format(fname, remain))
+            return result
+        except Exception as ex:
+            if acceptableExceptions and type(ex) not in acceptableExceptions:
+                raise
+            if remain >= 0:
+                sleep_dur = retry_wait
+                if verbose:
+                    logger.debug("{} not succeeded yet, {:.2f} seconds "
+                                 "remaining..., will sleep for {}".format(fname, remain, sleep_dur))
+                await asyncio.sleep(sleep_dur)
+            else:
+                logger.error("{} failed; not trying any more because {} "
+                             "seconds have passed; args were {}".
+                             format(fname, timeout, args))
+                raise ex
 
 
 async def send_nym(pool_handle, wallet_handle, submitter_did, target_did,
@@ -205,28 +262,94 @@ def run_in_event_loop(async_func):
     return wrapped
 
 
-async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did):
+async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did=None):
+    if some_did is None:
+        some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
     add = await write_eventually_positive(send_nym, pool_handle, wallet_handle, trustee_did, some_did)
     assert add['op'] == 'REPLY'
     get = await read_eventually_positive(get_nym, pool_handle, wallet_handle, trustee_did, some_did)
     assert get['result']['seqNo'] is not None
 
 
-async def check_ledger_sync():
-    hosts = [testinfra.get_host('ssh://node{}'.format(i)) for i in range(1, 8)]
-    pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
-    print('\nPOOL LEDGER SYNC: {}'.format([result.stdout for result in pool_results]))
-    config_results = [host.run('read_ledger --type=config --count') for host in hosts]
-    print('\nCONFIG LEDGER SYNC: {}'.format([result.stdout for result in config_results]))
-    domain_results = [host.run('read_ledger --type=domain --count') for host in hosts]
-    print('\nDOMAIN LEDGER SYNC: {}'.format([result.stdout for result in domain_results]))
-    audit_results = [host.run('read_ledger --type=audit --count') for host in hosts]
-    print('\nAUDIT LEDGER SYNC: {}'.format([result.stdout for result in audit_results]))
+# TODO make that async
+def check_no_failures(hosts):
+    for host in hosts:
+        result = host.run('journalctl -u indy-node.service -b -p info')
+        assert result.find("indy-node.service: Failed") == -1, (
+            "Node service on host{} failed:\n{}".format(host.id, result)
+        )
 
-    assert all([pool_results[i].stdout == pool_results[i + 1].stdout for i in range(-1, len(pool_results) - 1)])
-    assert all([config_results[i].stdout == config_results[i + 1].stdout for i in range(-1, len(config_results) - 1)])
-    assert all([domain_results[i].stdout == domain_results[i + 1].stdout for i in range(-1, len(domain_results) - 1)])
-    assert all([audit_results[i].stdout == audit_results[i + 1].stdout for i in range(-1, len(audit_results) - 1)])
+
+async def check_pool_performs_write_read(pool_handle, wallet_handle, trustee_did, nyms_count=1):
+    for _ in range(nyms_count):
+        some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
+        add = await send_nym(pool_handle, wallet_handle, trustee_did, some_did)
+        assert add['op'] == 'REPLY'
+        get = await get_nym(pool_handle, wallet_handle, trustee_did, some_did)
+        assert get['result']['seqNo'] is not None
+
+
+async def check_pool_is_functional(pool_handle, wallet_handle, trustee_did, nyms_count=3):
+    await check_pool_performs_write_read(
+        pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
+    )
+
+
+async def ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did, nyms_count=3, timeout=30):
+    await eventually(
+        check_pool_is_functional, pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count,
+        retry_wait=1, timeout=timeout
+    )
+
+
+async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
+    if node_ids is None:
+        node_ids = [(i + 1) for i in range(nodes_num)]
+    hosts = [NodeHost(i) for i in node_ids]
+
+    # TODO make that async
+    pool_results = [host.run('read_ledger --type=pool --count') for host in hosts]
+    print('\nPOOL LEDGER SYNC: {}'.format([result for result in pool_results]))
+    config_results = [host.run('read_ledger --type=config --count') for host in hosts]
+    print('\nCONFIG LEDGER SYNC: {}'.format([result for result in config_results]))
+    domain_results = [host.run('read_ledger --type=domain --count') for host in hosts]
+    print('\nDOMAIN LEDGER SYNC: {}'.format([result for result in domain_results]))
+    audit_results = [host.run('read_ledger --type=audit --count') for host in hosts]
+    print('\nAUDIT LEDGER SYNC: {}'.format([result for result in audit_results]))
+
+    for res in (pool_results, config_results, domain_results, audit_results):
+        assert len(set(res)) == 1
+
+
+async def ensure_pool_is_in_sync(node_ids=None, nodes_num=7):
+    await eventually(
+        check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num,
+        retry_wait=1, timeout=30
+    )
+
+
+async def check_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
+    primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+    assert primary_after != primary_before
+    return primary_after
+
+
+async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
+    return await eventually(
+        check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before,
+        retry_wait=1, timeout=30
+    )
+
+
+# TODO use threads to make that concurrent/async
+def restart_pool(hosts):
+    # restart all nodes using stop/start just to avoid
+    # the case when some node is already restarted while
+    # some others are still running
+    for host in hosts:
+        host.stop_service()
+    for host in hosts:
+        host.start_service()
 
 
 async def stop_primary(pool_handle, wallet_handle, trustee_did):
@@ -248,7 +371,7 @@ async def stop_primary(pool_handle, wallet_handle, trustee_did):
                                                                                                   -len(':0')]
     except TypeError:
         try:
-            time.sleep(120)
+            await asyncio.sleep(120)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -265,7 +388,7 @@ async def stop_primary(pool_handle, wallet_handle, trustee_did):
                 result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
                                                                                                         -len(':0')]
         except TypeError:
-            time.sleep(240)
+            await asyncio.sleep(240)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -308,7 +431,7 @@ async def start_primary(pool_handle, wallet_handle, trustee_did, primary_before)
             result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
     except TypeError:
         try:
-            time.sleep(120)
+            await asyncio.sleep(120)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -325,7 +448,7 @@ async def start_primary(pool_handle, wallet_handle, trustee_did, primary_before)
                 result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][len('Node'):
                                                                                                        -len(':0')]
         except TypeError:
-            time.sleep(240)
+            await asyncio.sleep(240)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -366,7 +489,7 @@ async def demote_primary(pool_handle, wallet_handle, trustee_did):
                                                                                                   -len(':0')]
     except TypeError:
         try:
-            time.sleep(120)
+            await asyncio.sleep(120)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -383,7 +506,7 @@ async def demote_primary(pool_handle, wallet_handle, trustee_did):
                 result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
                                                                                                         -len(':0')]
         except TypeError:
-            time.sleep(240)
+            await asyncio.sleep(240)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -416,7 +539,7 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
     promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
     promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
     if promote_res['op'] != 'REPLY':
-        time.sleep(60)
+        await asyncio.sleep(60)
         promote_res = json.loads(
             await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
     print(promote_res)
@@ -442,7 +565,7 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
             result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
     except TypeError:
         try:
-            time.sleep(120)
+            await asyncio.sleep(120)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -459,7 +582,7 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
                 result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][len('Node'):
                                                                                                        -len(':0')]
         except TypeError:
-            time.sleep(240)
+            await asyncio.sleep(240)
             req = await ledger.build_get_validator_info_request(trustee_did)
             results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
             try:
@@ -480,31 +603,27 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
     return primary_after
 
 
+def get_pool_info(primary: str) -> dict:
+    host = testinfra.get_host('ssh://node{}'.format(primary))
+    pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
+    pool_info = [json.loads(item) for item in pool_info]
+    pool_info = {item['txn']['data']['data']['alias']: item['txn']['data']['dest'] for item in pool_info}
+    return pool_info
+
+
+def get_node_alias(node_num):
+    return 'Node{}'.format(node_num)
+
+
+def get_node_did(node_alias, pool_info=None):
+    if pool_info is None:
+        pool_info = get_pool_info('1')
+    return pool_info[node_alias]
+
+
 async def get_primary(pool_handle, wallet_handle, trustee_did):
-    req = await ledger.build_get_validator_info_request(trustee_did)
-    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-    # remove all timeout entries
-    try:
-        for i in range(len(results)):
-            results.pop(list(results.keys())[list(results.values()).index('timeout')])
-    except ValueError:
-        pass
-    # remove all not REPLY and empty (not selected) primaries entries
-    results = {key: json.loads(results[key]) for key in results if
-               (json.loads(results[key])['op'] == 'REPLY')
-               & (json.loads(results[key])['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
-                  is not None)}
-    # get primaries numbers from all nodes
-    primaries = [results[key]['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
-                 [len('Node'):-len(':0')] for key in results]
-    # count the same entries
-    primaries = Counter(primaries)
-    # find actual primary
-    try:
-        primary = max(primaries, key=primaries.get)
-    except ValueError:
-        # primary is not selected so wait and try again
-        time.sleep(60)
+
+    async def _get_primary():
         req = await ledger.build_get_validator_info_request(trustee_did)
         results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
         # remove all timeout entries
@@ -523,27 +642,11 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
                      [len('Node'):-len(':0')] for key in results]
         # count the same entries
         primaries = Counter(primaries)
-        # find actual primary
-        try:
-            primary = max(primaries, key=primaries.get)
-        except ValueError:
-            primary = '1'
-    alias = 'Node{}'.format(primary)
-    host = testinfra.get_host('ssh://node{}'.format(primary))
-    pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
-    pool_info = [json.loads(item) for item in pool_info]
-    pool_info = {item['txn']['data']['data']['alias']: item['txn']['data']['dest'] for item in pool_info}
-    target_did = pool_info[alias]
+        return max(primaries, key=primaries.get)
 
-    return primary, alias, target_did
-
-
-def get_pool_info(primary: str) -> dict:
-    host = testinfra.get_host('ssh://node{}'.format(primary))
-    pool_info = host.run('read_ledger --type=pool').stdout.split('\n')[:-1]
-    pool_info = [json.loads(item) for item in pool_info]
-    pool_info = {item['txn']['data']['data']['alias']: item['txn']['data']['dest'] for item in pool_info}
-    return pool_info
+    primary = await eventually(_get_primary, retry_wait=1, timeout=30)
+    alias = get_node_alias(primary)
+    return primary, alias, get_node_did(alias)
 
 
 async def demote_random_node(pool_handle, wallet_handle, trustee_did):
@@ -593,14 +696,15 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     assert promote_res['op'] == 'REPLY'
 
 
-async def eventually_positive(func, *args, cycles_limit=15):
-    # this is for check_ledger_sync, promote_node, demote_node and other self-asserted functions
+# TODO replace with eventually
+async def eventually_positive(func, *args, cycles_limit=15, sleep=30, **kwargs):
+    # this is for check_pool_is_in_sync, promote_node, demote_node and other self-asserted functions
     cycles = 0
     while True:
         try:
-            time.sleep(30)
+            await asyncio.sleep(sleep)
             cycles += 1
-            res = await func(*args)
+            res = await func(*args, **kwargs)
             print('NO ERRORS HERE SO BREAK THE LOOP!')
             break
         except AssertionError or IndyError:
@@ -612,6 +716,7 @@ async def eventually_positive(func, *args, cycles_limit=15):
     return res
 
 
+# TODO replace with eventually
 async def write_eventually_positive(func, *args, cycles_limit=40):
     cycles = 0
     res = dict()
@@ -623,13 +728,14 @@ async def write_eventually_positive(func, *args, cycles_limit=40):
                 print('CYCLES LIMIT IS EXCEEDED!')
                 break
             res = await func(*args)
-            time.sleep(10)
+            await asyncio.sleep(10)
         except IndyError:
-            time.sleep(10)
+            await asyncio.sleep(10)
             pass
     return res
 
 
+# TODO replace with eventually
 async def read_eventually_positive(func, *args, cycles_limit=30):
     cycles = 0
     res = await func(*args)
@@ -639,17 +745,18 @@ async def read_eventually_positive(func, *args, cycles_limit=30):
             print('CYCLES LIMIT IS EXCEEDED!')
             break
         res = await func(*args)
-        time.sleep(5)
+        await asyncio.sleep(5)
     return res
 
 
+# TODO replace with eventually
 async def eventually_negative(func, *args, cycles_limit=15):
     cycles = 0
     is_exception_raised = False
 
     while True:
         try:
-            time.sleep(15)
+            await asyncio.sleep(15)
             await func(*args)
             cycles += 1
             if cycles >= cycles_limit:
@@ -663,7 +770,7 @@ async def eventually_negative(func, *args, cycles_limit=15):
     return is_exception_raised
 
 
-async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=15):
+async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=15, sleep=30):
     cycles = 0
     primary_after = primary_before
 
@@ -671,29 +778,40 @@ async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, tr
         cycles += 1
         if cycles >= cycles_limit:
             print('CYCLES LIMIT IS EXCEEDED BUT PRIMARY HAS NOT BEEN CHANGED!')
-            break
+            raise AssertionError
         primary_after, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
-        time.sleep(30)
+        await asyncio.sleep(sleep)
 
     return primary_after
 
 
 class NodeHost:
     def __init__(self, node_id):
+        self._id = node_id
         self._host = testinfra.get_host('ssh://node{}'.format(node_id))
 
-    def run(self, command: str):
+    @property
+    def host(self):
+        return self._host
+
+    @property
+    def id(self):
+        return self._id
+
+    def run(self, command: str, print_res=False):
         output = self._host.check_output(command)
-        print(output)
+        if print_res:
+            print(output)
+        return output
 
     def start_service(self):
-        self.run('systemctl start indy-node')
+        return self.run('systemctl start indy-node')
 
     def stop_service(self):
-        self.run('systemctl stop indy-node')
+        return self.run('systemctl stop indy-node')
 
     def restart_service(self):
-        self.run('systemctl restart indy-node')
+        return self.run('systemctl restart indy-node')
 
 
 async def send_random_nyms(pool_handle, wallet_handle, submitter_did, count):
