@@ -14,6 +14,12 @@ from .utils import (
 from .docker_setup import setup_and_teardown
 
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "nodes_num(int): mark test to run specific number of nodes in pool, default: 7"
+    )
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--payments", action='store_true', default=None,
