@@ -280,25 +280,53 @@ def check_no_failures(hosts):
         )
 
 
-async def check_pool_performs_write_read(pool_handle, wallet_handle, trustee_did, nyms_count=1):
+async def check_pool_performs_write(pool_handle, wallet_handle, submitter_did, nyms_count=1):
+    res = []
     for _ in range(nyms_count):
         some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
-        add = await send_nym(pool_handle, wallet_handle, trustee_did, some_did)
-        assert add['op'] == 'REPLY'
-        get = await get_nym(pool_handle, wallet_handle, trustee_did, some_did)
-        assert get['result']['seqNo'] is not None
+        resp = await send_nym(pool_handle, wallet_handle, submitter_did, some_did)
+        assert resp['op'] == 'REPLY'
+        res.append(resp)
+    return res
 
 
-async def check_pool_is_functional(pool_handle, wallet_handle, trustee_did, nyms_count=3):
-    await check_pool_performs_write_read(
+async def check_pool_performs_read(pool_handle, wallet_handle, submitter_did, dids):
+    res = []
+    for did in dids:
+        resp = await get_nym(pool_handle, wallet_handle, submitter_did, did)
+        assert resp['result']['seqNo'] is not None
+        res.append(resp)
+    return res
+
+
+async def ensure_pool_performs_write_read(
+    pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
+):
+    start = time.perf_counter()
+    writes = await eventually(
+        check_pool_performs_write, pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
+    )
+    timeout -= time.perf_counter() - start
+    assert timeout > 0
+
+    dids = [resp['result']['txn']['data']['dest'] for resp in writes]
+    await eventually(
+        check_pool_performs_read, pool_handle, wallet_handle, trustee_did, dids,
+        timeout=timeout
+    )
+
+async def check_pool_is_functional(
+    pool_handle, wallet_handle, trustee_did, nyms_count=3
+):
+    await ensure_pool_performs_write_read(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
     )
 
 
 async def ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did, nyms_count=3, timeout=30):
     await eventually(
-        check_pool_is_functional, pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count,
-        retry_wait=1, timeout=timeout
+        ensure_pool_performs_write_read, pool_handle, wallet_handle, trustee_did,
+        nyms_count=nyms_count, timeout=timeout
     )
 
 
