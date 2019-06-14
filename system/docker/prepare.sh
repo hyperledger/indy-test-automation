@@ -33,9 +33,31 @@ workdir_path="/tmp/indy-test-automation"
 image_repository="hyperledger/indy-test-automation"
 docker_compose_image_name="${image_repository}:docker-compose"
 
+node_env_variables=" \
+    PYTHON3_VERSION \
+    LIBINDY_REPO_COMPONENT \
+    LIBINDY_VERSION \
+    LIBSOVTOKEN_INSTALL \
+    LIBSOVTOKEN_VERSION \
+"
+client_env_variables=" \
+    INDY_NODE_REPO_COMPONENT \
+    LIBINDY_CRYPTO_VERSION \
+    PYTHON3_LIBINDY_CRYPTO_VERSION \
+    INDY_PLENUM_VERSION \
+    INDY_NODE_VERSION \
+"
+
+echo "Docker version..."
 docker version
 
-env
+set +x
+echo "Environment env variables..."
+for i in $node_env_variables $client_env_variables
+do
+    echo "$i=${!i}"
+done
+set -x
 
 # 1. build docker-compose image
 # TODO pass optional docker composer version

@@ -47,7 +47,6 @@ docker run -t --rm --name "$client_container_name" \
     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
     "$client_image_name" /bin/bash -c "
         set -ex
-        env
         pipenv --three
         pipenv run pip install -r system/requirements.txt
         pipenv run python -m pytest $pytest_args $test_target
