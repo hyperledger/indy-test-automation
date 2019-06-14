@@ -35,6 +35,8 @@ docker_compose_image_name="${image_repository}:docker-compose"
 
 docker version
 
+env
+
 # 1. build docker-compose image
 # TODO pass optional docker composer version
 docker build -t "$docker_compose_image_name" "$docker_routine_path/docker-compose"
