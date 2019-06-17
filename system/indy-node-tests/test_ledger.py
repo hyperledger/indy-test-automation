@@ -1,14 +1,23 @@
-from system.utils import *
 import pytest
 import json
-from indy import pool, did, ledger, IndyError
 import hashlib
 import time
 import logging
+import asyncio
+from async_generator import async_generator
 
+from indy import pool, did, ledger, IndyError
+
+from system.utils import *
+from system.docker_setup import setup_and_teardown
 
 # logger = logging.getLogger(__name__)
 # logging.basicConfig(level=0, format='%(asctime)s %(message)s')
+
+@pytest.fixture(scope='module', autouse=True)
+@async_generator
+async def docker_setup_and_teardown():
+    await setup_and_teardown(7)
 
 
 @pytest.mark.parametrize('writer_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
@@ -208,7 +217,7 @@ async def test_send_and_get_cred_def_positive(writer_role, reader_role):
     await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     schema_id, _ = await send_schema(pool_handle, wallet_handle, writer_did,
                                        'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
-    time.sleep(1)
+    await asyncio.sleep(1)
     res = await get_schema(pool_handle, wallet_handle, reader_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res1 = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'TAG',
@@ -276,7 +285,7 @@ async def test_send_and_get_revoc_reg_def_positive(writer_role, reader_role):
     await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     schema_id, _ = await send_schema(pool_handle, wallet_handle, writer_did,
                                      'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
-    time.sleep(1)
+    await asyncio.sleep(1)
     res = await get_schema(pool_handle, wallet_handle, reader_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'cred_def_tag',
@@ -317,7 +326,7 @@ async def test_send_and_get_revoc_reg_entry_positive(writer_role, reader_role):
     await send_nym(pool_handle, wallet_handle, trustee_did, reader_did, reader_vk, None, reader_role)
     schema_id, _ = await send_schema(pool_handle, wallet_handle, writer_did,
                                      'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
-    time.sleep(1)
+    await asyncio.sleep(1)
     res = await get_schema(pool_handle, wallet_handle, reader_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res = await send_cred_def(pool_handle, wallet_handle, writer_did, schema_json, 'cred_def_tag',

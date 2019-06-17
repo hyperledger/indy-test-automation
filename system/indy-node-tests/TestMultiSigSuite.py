@@ -1,4 +1,5 @@
 import pytest
+import asyncio
 from system.utils import *
 from indy import payment
 
@@ -7,8 +8,7 @@ from indy import payment
 class TestMultiSigSuite:
 
     @pytest.mark.asyncio
-    async def test_case_double_mint(self, pool_handler, wallet_handler, get_default_trustee):
-        await payment_initializer('libsovtoken.so', 'sovtoken_init')
+    async def test_case_double_mint(self, payment_init, pool_handler, wallet_handler, get_default_trustee):
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         trustee_did2, trustee_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps(
@@ -31,12 +31,13 @@ class TestMultiSigSuite:
         res1 = json.loads(await ledger.submit_request(pool_handler, req))
         print('\n{}'.format(res1))
         assert res1['op'] == 'REPLY'
-        time.sleep(5)
+        await asyncio.sleep(5)
         req = await ledger.multi_sign_request(wallet_handler, trustee_did4, req)
         res2 = json.loads(await ledger.submit_request(pool_handler, req))
         print('\n{}'.format(res2))
         assert res2['op'] == 'REQNACK'
 
+    @pytest.mark.skip(reason='INDY-2132')
     @pytest.mark.asyncio
     async def test_case_sign_and_multisign(self, pool_handler, wallet_handler, get_default_trustee):
         trustee_did, _ = get_default_trustee
@@ -77,7 +78,7 @@ class TestMultiSigSuite:
                                                    }))
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         assert res2['op'] == 'REPLY'
-        time.sleep(5)
+        await asyncio.sleep(5)
         req = await ledger.build_nym_request(new_did, random_did_and_json()[0], None, None, None)
         req = await ledger.multi_sign_request(wallet_handler, new_did, req)
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
@@ -114,7 +115,7 @@ class TestMultiSigSuite:
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res2)
         assert res2['op'] == 'REPLY'
-        time.sleep(5)
+        await asyncio.sleep(5)
         req = await ledger.build_nym_request(new_did, random_did_and_json()[0], None, None, None)
         req = await ledger.multi_sign_request(wallet_handler, new_did, req)
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
@@ -167,7 +168,7 @@ class TestMultiSigSuite:
                                                    }))
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         assert res2['op'] == 'REPLY'
-        time.sleep(5)
+        await asyncio.sleep(5)
         _req1 = await ledger.build_nym_request(s1_did, random_did_and_json()[0], None, None, None)
         _req2 = await ledger.multi_sign_request(wallet_handler, s1_did, _req1)
         _req3 = await ledger.multi_sign_request(wallet_handler, s2_did, _req2)

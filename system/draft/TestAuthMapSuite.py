@@ -1,10 +1,15 @@
 import pytest
+import asyncio
 from system.utils import *
 from random import randrange as rr
 import hashlib
 import time
 from datetime import datetime, timedelta, timezone
 from indy import payment
+
+
+import logging
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
@@ -210,7 +215,7 @@ class TestAuthMapSuite:
         assert res['op'] == 'REPLY'
         schema_id, _ = await send_schema(pool_handler, wallet_handler, trustee_did,
                                          'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
-        time.sleep(1)
+        await asyncio.sleep(1)
         res = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id)
         schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
         # set rule for adding
@@ -299,7 +304,7 @@ class TestAuthMapSuite:
         assert res['op'] == 'REPLY'
         schema_id, _ = await send_schema(pool_handler, wallet_handler, trustee_did,
                                          'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
-        time.sleep(1)
+        await asyncio.sleep(1)
         res = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id)
         schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
         cred_def_id, _, res = await send_cred_def(pool_handler, wallet_handler, trustee_did, schema_json,
@@ -397,7 +402,7 @@ class TestAuthMapSuite:
         assert res['op'] == 'REPLY'
         schema_id, _ = await send_schema(pool_handler, wallet_handler, trustee_did,
                                          'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name']))
-        time.sleep(1)
+        await asyncio.sleep(1)
         res = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id)
         schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
         cred_def_id, _, res = await send_cred_def(pool_handler, wallet_handler, trustee_did, schema_json,
@@ -668,7 +673,7 @@ class TestAuthMapSuite:
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
         assert res['op'] == 'REPLY'
-        time.sleep(15)
+        await asyncio.sleep(15)
         # set rule for adding
         req = await ledger.build_auth_rule_request(trustee_did, '118', 'ADD', 'action', '*', '*',
                                                    json.dumps({
@@ -704,7 +709,7 @@ class TestAuthMapSuite:
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
         assert res['op'] == 'REPLY'
-        time.sleep(15)
+        await asyncio.sleep(15)
         # set rule for adding
         req = await ledger.build_auth_rule_request(trustee_did, '119', 'ADD', '*', '*', '*',
                                                    json.dumps({
@@ -780,7 +785,7 @@ class TestAuthMapSuite:
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res2)
         assert res2['op'] == 'REPLY'
-        time.sleep(15)
+        await asyncio.sleep(15)
         req = await ledger.build_auth_rule_request(editor_did, '111', 'EDIT', 'action', '*', '*',
                                                    json.dumps({
                                                        'constraint_id': 'ROLE',
@@ -801,9 +806,8 @@ class TestAuthMapSuite:
     ])
     @pytest.mark.parametrize('sig_count', [0, 1, 3])
     @pytest.mark.asyncio
-    async def test_case_mint(self, pool_handler, wallet_handler, get_default_trustee,
+    async def test_case_mint(self, payment_init, pool_handler, wallet_handler, get_default_trustee,
                              adder_role, adder_role_num, sig_count):
-        await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps(
@@ -868,9 +872,8 @@ class TestAuthMapSuite:
     ])
     @pytest.mark.parametrize('sig_count', [0, 1, 3])
     @pytest.mark.asyncio
-    async def test_case_set_fees(self, pool_handler, wallet_handler, get_default_trustee,
+    async def test_case_set_fees(self, payment_init, pool_handler, wallet_handler, get_default_trustee,
                                  editor_role, editor_role_num, sig_count):
-        await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         fees = {'1': 1, '100': 1, '101': 1, '102': 1, '113': 1, '114': 1, '10001': 1}
         trustee_did, _ = get_default_trustee
@@ -934,9 +937,8 @@ class TestAuthMapSuite:
     ])
     @pytest.mark.parametrize('sig_count', [0, 1, 3])
     @pytest.mark.asyncio
-    async def test_case_payment(self, pool_handler, wallet_handler, get_default_trustee,
+    async def test_case_payment(self, payment_init, pool_handler, wallet_handler, get_default_trustee,
                                 adder_role, adder_role_num, sig_count):
-        await payment_initializer('libsovtoken.so', 'sovtoken_init')
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         address1 = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps(
@@ -1020,3 +1022,133 @@ class TestAuthMapSuite:
             res1 = json.loads(await ledger.submit_request(pool_handler, req))
             print(res1)
             assert res1['op'] == 'REPLY'
+
+    # TODO might make sense to move to separate module since other tests here
+    # organized per txn type
+    @pytest.mark.asyncio
+    async def test_case_forbidden(self, pool_handler, wallet_handler, get_default_trustee):
+
+        trustee_did, _ = get_default_trustee
+        trustee_role, trustee_role_num = 'TRUSTEE', '0'
+
+        logger.info("1 Adding new trustee to ledger")
+        new_trustee_did, new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, trustee_did, new_trustee_did, new_trustee_vk, None, trustee_role
+        )
+        assert res['op'] == 'REPLY'
+
+        logger.info("2 Setting forbidden auth rule for adding trustees")
+        req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', trustee_role_num,
+                                                   json.dumps({
+                                                       'constraint_id': 'FORBIDDEN',
+                                                   }))
+        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        assert res['op'] == 'REPLY'
+
+        logger.info("3 Getting newly set forbidden constraint")
+        req = await ledger.build_get_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', trustee_role_num)
+        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        assert res['op'] == 'REPLY'
+        assert res['result']['data'][0]['constraint']['constraint_id'] == 'FORBIDDEN'
+
+        logger.info("4 Trying to add one more trustee")
+        one_more_new_trustee_did, one_more_new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, trustee_did, one_more_new_trustee_did, one_more_new_trustee_vk, None, trustee_role
+        )
+        assert res['op'] == 'REJECT'
+
+    # TODO might make sense to move to separate module since other tests here
+    # organized per txn type
+    @pytest.mark.asyncio
+    async def test_case_auth_rules(self, pool_handler, wallet_handler, get_default_trustee):
+
+        trustee_did, _ = get_default_trustee
+        trustee_role, trustee_role_num = 'TRUSTEE', '0'
+        steward_role, steward_role_num = 'STEWARD', '2'
+
+        logger.info("1 Creating new steward")
+        steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, steward_role)
+        assert res['op'] == 'REPLY'
+
+        logger.info("2 Creating some new trustee")
+        _new_trustee_did, _new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, _new_trustee_did, _new_trustee_vk, None, trustee_role)
+        assert res['op'] == 'REPLY'
+
+        logger.info("3 Trying to add new trustee using steward as submitter")
+        new_trustee_did, new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, steward_did, new_trustee_did, new_trustee_vk, None, trustee_role
+        )
+        assert res['op'] == 'REJECT'
+
+        logger.info("4 Trying to add new steward using steward as submitter")
+        new_steward_did, new_steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, steward_did, new_steward_did, new_steward_vk, None, trustee_role
+        )
+        assert res['op'] == 'REJECT'
+
+        logger.info("5 Send auth rules txn to allow stewards to add new trustees and stewrds")
+        one_steward_constraint = {
+           'constraint_id': 'ROLE',
+           'role': steward_role_num,
+           'sig_count': 1,
+           'need_to_be_owner': False,
+           'metadata': {}
+        }
+        req = await ledger.build_auth_rules_request(trustee_did, json.dumps([
+            {
+                'auth_type': '1',
+                'auth_action': 'ADD',
+                'field': 'role',
+                'old_value': '*',
+                'new_value': trustee_role_num,
+                'constraint': one_steward_constraint
+            }, {
+                'auth_type': '1',
+                'auth_action': 'ADD',
+                'field': 'role',
+                'old_value': '*',
+                'new_value': steward_role_num,
+                'constraint': one_steward_constraint
+            },
+        ]))
+        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        assert res['op'] == 'REPLY'
+
+        logger.info("6 Getting recently set auth rules")
+        for role_num in (trustee_role_num, steward_role_num):
+            req = await ledger.build_get_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', role_num)
+            res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+            assert res['op'] == 'REPLY'
+            assert res['result']['data'][0]['constraint'] == one_steward_constraint
+
+        logger.info("7 Trying to add new trustee using trustee as submitter")
+        res = await send_nym(
+            pool_handler, wallet_handler, trustee_did, new_trustee_did, new_trustee_vk, None, trustee_role
+        )
+        assert res['op'] == 'REJECT'
+
+        logger.info("8 Trying to add new steward using trustee as submitter")
+        res = await send_nym(
+            pool_handler, wallet_handler, trustee_did, new_trustee_did, new_steward_vk, None, trustee_role
+        )
+        assert res['op'] == 'REJECT'
+
+        logger.info("9 Adding new trustee using steward as submitter")
+        new_trustee_did, new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, steward_did, new_trustee_did, new_trustee_vk, None, trustee_role
+        )
+        assert res['op'] == 'REPLY'
+
+        logger.info("10 Adding new steward using steward as submitter")
+        new_steward_did, new_steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(
+            pool_handler, wallet_handler, steward_did, new_steward_did, new_steward_vk, None, trustee_role
+        )
+        assert res['op'] == 'REPLY'
