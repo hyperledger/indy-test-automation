@@ -299,33 +299,41 @@ async def check_pool_performs_read(pool_handle, wallet_handle, submitter_did, di
     return res
 
 
+async def check_pool_performs_write_read(
+    pool_handle, wallet_handle, trustee_did, nyms_count=1
+):
+    writes = await check_pool_performs_write(
+        pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
+    )
+
+    dids = [resp['result']['txn']['data']['dest'] for resp in writes]
+    return await eventually(
+        check_pool_performs_read, pool_handle, wallet_handle, trustee_did, dids
+    )
+
+
 async def ensure_pool_performs_write_read(
     pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
-    start = time.perf_counter()
-    writes = await eventually(
-        check_pool_performs_write, pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
-    )
-    timeout -= time.perf_counter() - start
-    assert timeout > 0
-
-    dids = [resp['result']['txn']['data']['dest'] for resp in writes]
     await eventually(
-        check_pool_performs_read, pool_handle, wallet_handle, trustee_did, dids,
-        timeout=timeout
+        check_pool_performs_write_read, pool_handle, wallet_handle, trustee_did,
+        nyms_count=nyms_count, timeout=timeout
     )
+
 
 async def check_pool_is_functional(
     pool_handle, wallet_handle, trustee_did, nyms_count=3
 ):
-    await ensure_pool_performs_write_read(
+    await check_pool_performs_write_read(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
     )
 
 
-async def ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did, nyms_count=3, timeout=30):
-    await eventually(
-        ensure_pool_performs_write_read, pool_handle, wallet_handle, trustee_did,
+async def ensure_pool_is_functional(
+    pool_handle, wallet_handle, trustee_did, nyms_count=3, timeout=30
+):
+    await ensure_pool_performs_write_read(
+        pool_handle, wallet_handle, trustee_did,
         nyms_count=nyms_count, timeout=timeout
     )
 
