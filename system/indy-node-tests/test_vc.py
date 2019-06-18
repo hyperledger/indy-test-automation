@@ -66,7 +66,7 @@ async def test_demotion_of_backup_primary_with_restart_with_vc(
     trustee_did, _ = get_default_trustee
 
     logger.info("1 Have 8 nodes in the pool, so that primaries are [Node1, Node2, Node3]")
-    await check_pool_performs_write_read(pool_handler, wallet_handler, trustee_did)
+    await check_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     pool_info = get_pool_info(str(R0_PRIMARY_ID))
 
@@ -115,7 +115,7 @@ async def test_demotion_of_backup_primary_with_restart_without_vc(
     trustee_did, _ = get_default_trustee
 
     logger.info("1 Have 8 nodes in the pool, so that primaries are [Node1, Node2, Node3]")
-    await check_pool_performs_write_read(pool_handler, wallet_handler, trustee_did)
+    await check_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     logger.info("2 Stop Node2 to delay the view change to viewNo=1")
     pool_info = get_pool_info(str(R0_PRIMARY_ID))
