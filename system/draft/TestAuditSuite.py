@@ -5,6 +5,7 @@ from system.utils import *
 import logging
 logger = logging.getLogger(__name__)
 
+
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestAuditSuite:
 
@@ -15,7 +16,7 @@ class TestAuditSuite:
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
         test_nodes[5].restart_service()
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_pool_is_in_sync)
+        await eventually(check_pool_is_in_sync, timeout=60)
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         p1 = NodeHost(primary1)
         p1.stop_service()
@@ -34,7 +35,7 @@ class TestAuditSuite:
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
         test_nodes[5].start_service()
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_pool_is_in_sync)
+        await eventually(check_pool_is_in_sync, timeout=60)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
@@ -52,7 +53,7 @@ class TestAuditSuite:
         next_node = NodeHost(int(primary2) + node_num_shift)
         next_node.restart_service()
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_pool_is_in_sync)
+        await eventually(check_pool_is_in_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
@@ -104,7 +105,7 @@ class TestAuditSuite:
             node.restart_service()
         await asyncio.sleep(30)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_pool_is_in_sync)
+        await eventually(check_pool_is_in_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
@@ -122,7 +123,7 @@ class TestAuditSuite:
             node.restart_service()
         await asyncio.sleep(30)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_pool_is_in_sync)
+        await eventually(check_pool_is_in_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.asyncio
@@ -140,7 +141,7 @@ class TestAuditSuite:
             node.restart_service()
             await asyncio.sleep(10)
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(check_pool_is_in_sync)
+        await eventually(check_pool_is_in_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
     @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
@@ -160,15 +161,14 @@ class TestAuditSuite:
         print(alias_for_demotion)
         target_did_for_demotion = get_pool_info(primary2)[alias_for_demotion]
         print(target_did_for_demotion)
-        await eventually_positive(demote_node, pool_handler, wallet_handler, trustee_did, alias_for_demotion,
-                                  target_did_for_demotion)
+        await eventually(demote_node, pool_handler, wallet_handler, trustee_did, alias_for_demotion,
+                         target_did_for_demotion, is_self_asserted=True)
         primary3 = await wait_until_vc_is_done(primary2, pool_handler, wallet_handler, trustee_did)
         assert primary3 != primary2
         await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
-        await eventually_positive(promote_node, pool_handler, wallet_handler, trustee_did, alias_for_demotion,
-                                  target_did_for_demotion)
+        await eventually(promote_node, pool_handler, wallet_handler, trustee_did, alias_for_demotion,
+                         target_did_for_demotion, is_self_asserted=True)
         primary4 = await wait_until_vc_is_done(primary3, pool_handler, wallet_handler, trustee_did)
         assert primary4 != primary3
-        # await asyncio.sleep(60)
-        await eventually_positive(check_pool_is_in_sync)
+        await eventually(check_pool_is_in_sync, is_self_asserted=True)
         await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])

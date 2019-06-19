@@ -94,8 +94,8 @@ async def payment_initializer(library_name, initializer_name):
 
 async def eventually(awaited_func,
                      *args,
-                     retry_wait: float=0.1,
-                     timeout: float=5,
+                     retry_wait: float = 0.1,
+                     timeout: float = 5,
                      acceptableExceptions=None,
                      verbose=True,
                      **kwargs):
@@ -305,7 +305,6 @@ async def check_pool_performs_write_read(
     writes = await check_pool_performs_write(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
     )
-
     dids = [resp['result']['txn']['data']['dest'] for resp in writes]
     return await eventually(
         check_pool_performs_read, pool_handle, wallet_handle, trustee_did, dids
@@ -806,6 +805,81 @@ async def eventually_negative(func, *args, cycles_limit=15):
     return is_exception_raised
 
 
+async def __eventually(func,
+                       *args,
+                       cycles_limit=20,
+                       sleep_time_between_cycles=3,
+                       is_reading=False,
+                       is_expecting_exception=False,
+                       is_self_asserted=False,
+                       **kwargs):
+    cycles = 0
+    is_exception_raised = False
+
+    # for requests where we expect IndyError raised
+    if is_expecting_exception:
+        while True:
+            try:
+                await asyncio.sleep(sleep_time_between_cycles)
+                await func(*args, **kwargs)
+                cycles += 1
+                if cycles >= cycles_limit:
+                    print('CYCLES LIMIT IS EXCEEDED BUT EXCEPTION HAS NOT BEEN RAISED!')
+                    break
+            except IndyError:
+                print('EXPECTED INDY ERROR HAS BEEN RAISED!')
+                is_exception_raised = True
+                break
+        return is_exception_raised
+
+    # for positive reading requests
+    elif is_reading:
+        res = await func(*args, **kwargs)
+        while res['result']['seqNo'] is None:
+            cycles += 1
+            if cycles >= cycles_limit:
+                print('CYCLES LIMIT IS EXCEEDED!')
+                break
+            res = await func(*args, **kwargs)
+            await asyncio.sleep(sleep_time_between_cycles)
+        return res
+
+    # for check_pool_is_in_sync, promote_node, demote_node and other self-asserted functions
+    elif is_self_asserted:
+        cycles = 0
+        while True:
+            try:
+                await asyncio.sleep(sleep_time_between_cycles)
+                cycles += 1
+                res = await func(*args, **kwargs)
+                print('NO ERRORS HERE SO BREAK THE LOOP!')
+                break
+            except AssertionError or IndyError:
+                if cycles >= cycles_limit:
+                    print('CYCLES LIMIT IS EXCEEDED!')
+                    raise AssertionError
+                else:
+                    pass
+        return res
+
+    # for positive writing requests
+    else:
+        res = dict()
+        res['op'] = ''
+        while res['op'] != 'REPLY':
+            try:
+                cycles += 1
+                if cycles >= cycles_limit:
+                    print('CYCLES LIMIT IS EXCEEDED!')
+                    break
+                res = await func(*args, **kwargs)
+                await asyncio.sleep(sleep_time_between_cycles)
+            except IndyError:
+                await asyncio.sleep(sleep_time_between_cycles)
+                pass
+        return res
+
+
 async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=15, sleep=30):
     cycles = 0
     primary_after = primary_before
@@ -853,32 +927,3 @@ class NodeHost:
 async def send_random_nyms(pool_handle, wallet_handle, submitter_did, count):
     for i in range(count):
         await send_nym(pool_handle, wallet_handle, submitter_did, random_did_and_json()[0], None, None, None)
-
-
-class Color:
-    INFOBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'  # Normal default color.
-
-
-def print_with_color(message, color):
-    import sys
-    print('\n' + color + str(message) + Color.ENDC, file=sys.stderr)
-
-
-def print_info(message):
-    print_with_color(message, Color.INFOBLUE)
-
-
-def print_ok(message):
-    print_with_color(message, Color.OKGREEN)
-
-
-def print_warning(message):
-    print_with_color(message, Color.WARNING)
-
-
-def print_fail(message):
-    print_with_color(message, Color.FAIL)

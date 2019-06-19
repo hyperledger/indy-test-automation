@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 # logger = logging.getLogger(__name__)
 # logging.basicConfig(level=0, format='%(asctime)s %(message)s')
 
+
 @pytest.fixture(scope='function', autouse=True)
 @async_generator
 async def docker_setup_and_teardown(nodes_num):
