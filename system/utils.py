@@ -94,7 +94,7 @@ async def payment_initializer(library_name, initializer_name):
 
 async def eventually(awaited_func,
                      *args,
-                     retry_wait: float = 0.1,
+                     retry_wait: float = 1,
                      timeout: float = 5,
                      acceptableExceptions=None,
                      verbose=True,
@@ -136,6 +136,9 @@ async def eventually(awaited_func,
                                  "remaining..., will sleep for {}".format(fname, remain, sleep_dur))
                 await asyncio.sleep(sleep_dur)
             else:
+                print("\n{} failed; not trying any more because {} "
+                      "seconds have passed; args were {}".
+                      format(fname, timeout, args))
                 logger.error("{} failed; not trying any more because {} "
                              "seconds have passed; args were {}".
                              format(fname, timeout, args))
@@ -805,6 +808,7 @@ async def eventually_negative(func, *args, cycles_limit=15):
     return is_exception_raised
 
 
+# TODO remove this eventually and all custom eventuallies above later
 async def __eventually(func,
                        *args,
                        cycles_limit=20,

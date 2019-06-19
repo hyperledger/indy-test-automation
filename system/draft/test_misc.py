@@ -831,3 +831,9 @@ async def test_misc_mint_to_aws(payment_init):
     res1 = json.loads(await ledger.submit_request(pool_handle, req))
     print(res1)
     assert res1['op'] == 'REPLY'
+
+    @pytest.mark.asyncio
+    async def test_misc_mint_manually(
+            pool_handler, wallet_handler, get_default_trustee
+    ):
+        pass

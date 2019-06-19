@@ -124,7 +124,6 @@ async def initial_fees_setting(payment_init, pool_handler, wallet_handler, get_d
     await yield_(fees)
 
 
-
 @pytest.fixture(scope='function')
 async def nodes_num(request):
     marker = request.node.get_closest_marker('nodes_num')
