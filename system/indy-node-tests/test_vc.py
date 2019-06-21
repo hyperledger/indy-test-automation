@@ -20,38 +20,34 @@ async def docker_setup_and_teardown(nodes_num):
 
 
 @pytest.mark.asyncio
-async def test_vc_by_restart(pool_handler, wallet_handler, get_default_trustee):
+async def test_vc_by_restart(
+        pool_handler, wallet_handler, get_default_trustee, nodes_num
+):
     trustee_did, _ = get_default_trustee
-    did1, _ = await did.create_and_store_my_did(wallet_handler, '{}')
-    did2, _ = await did.create_and_store_my_did(wallet_handler, '{}')
-    await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
     primary_before, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
-    print('\nPrimary before: {}'.format(primary_before))
     p1 = NodeHost(primary_before)
     p1.stop_service()
-    primary_after = await wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did)
-    print('\nPrimary after: {}'.format(primary_after))
-    assert primary_before != primary_after
-    await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
+    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
     p1.start_service()
-    await eventually_positive(check_pool_is_in_sync)
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
 
 @pytest.mark.asyncio
-async def test_vc_by_demotion(pool_handler, wallet_handler, get_default_trustee):
+async def test_vc_by_demotion(
+        pool_handler, wallet_handler, get_default_trustee, nodes_num
+):
     trustee_did, _ = get_default_trustee
-    did1, _ = await did.create_and_store_my_did(wallet_handler, '{}')
-    did2, _ = await did.create_and_store_my_did(wallet_handler, '{}')
-    await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
     primary_before, primary_alias, primary_did = await get_primary(pool_handler, wallet_handler, trustee_did)
-    print('\nPrimary before: {}'.format(primary_before))
-    await eventually_positive(demote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
-    primary_after = await wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did)
-    print('\nPrimary after: {}'.format(primary_after))
-    assert primary_before != primary_after
-    await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did2)
-    await eventually_positive(promote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
-    await eventually_positive(check_pool_is_in_sync)
+    await eventually(demote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
+    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+    await eventually(promote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, timeout=360)
 
 
 @pytest.mark.nodes_num(8)
@@ -75,7 +71,7 @@ async def test_demotion_of_backup_primary_with_restart_with_vc(
 
     primary_r2_alias = get_node_alias(R2_PRIMARY_ID)
     primary_r2_did = get_node_did(primary_r2_alias, pool_info=pool_info)
-    await eventually_positive(
+    await eventually(
         demote_node, pool_handler, wallet_handler, trustee_did, primary_r2_alias, primary_r2_did
     )
 
@@ -100,7 +96,7 @@ async def test_demotion_of_backup_primary_with_restart_with_vc(
     await ensure_pool_is_in_sync(node_ids=[h.id for h in hosts if h.id != R2_PRIMARY_ID])
 
     logger.info("6.2 ensure that pool orders requests")
-    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, timeout=60)
 
 
 @pytest.mark.nodes_num(8)
@@ -128,7 +124,7 @@ async def test_demotion_of_backup_primary_with_restart_without_vc(
     # has been stopped
     primary_r2_alias = get_node_alias(R2_PRIMARY_ID)
     primary_r2_did = get_node_did(primary_r2_alias, pool_info=pool_info)
-    await eventually_positive(
+    await eventually(
         demote_node, pool_handler, wallet_handler, trustee_did, primary_r2_alias, primary_r2_did
     )
 
