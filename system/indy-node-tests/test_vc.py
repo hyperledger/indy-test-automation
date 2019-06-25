@@ -21,7 +21,7 @@ async def docker_setup_and_teardown(nodes_num):
 
 @pytest.mark.asyncio
 async def test_vc_by_restart(
-        pool_handler, wallet_handler, get_default_trustee, nodes_num
+        pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
 ):
     trustee_did, _ = get_default_trustee
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
@@ -37,7 +37,7 @@ async def test_vc_by_restart(
 
 @pytest.mark.asyncio
 async def test_vc_by_demotion(
-        pool_handler, wallet_handler, get_default_trustee, nodes_num
+        pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
 ):
     trustee_did, _ = get_default_trustee
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)

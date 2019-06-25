@@ -1,7 +1,7 @@
 import pytest
 from system.utils import *
 from indy import payment
-#from hypothesis import strategies, settings, given
+# from hypothesis import strategies, settings, given
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')

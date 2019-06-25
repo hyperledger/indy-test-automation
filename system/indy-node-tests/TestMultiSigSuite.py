@@ -37,7 +37,6 @@ class TestMultiSigSuite:
         print('\n{}'.format(res2))
         assert res2['op'] == 'REQNACK'
 
-    @pytest.mark.skip(reason='INDY-2132')
     @pytest.mark.asyncio
     async def test_case_sign_and_multisign(self, pool_handler, wallet_handler, get_default_trustee):
         trustee_did, _ = get_default_trustee

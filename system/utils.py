@@ -136,9 +136,6 @@ async def eventually(awaited_func,
                                  "remaining..., will sleep for {}".format(fname, remain, sleep_dur))
                 await asyncio.sleep(sleep_dur)
             else:
-                print("\n{} failed; not trying any more because {} "
-                      "seconds have passed; args were {}".
-                      format(fname, timeout, args))
                 logger.error("{} failed; not trying any more because {} "
                              "seconds have passed; args were {}".
                              format(fname, timeout, args))
@@ -375,7 +372,7 @@ async def check_primary_changed(pool_handler, wallet_handler, trustee_did, prima
 async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
     return await eventually(
         check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before,
-        retry_wait=1, timeout=60
+        retry_wait=1, timeout=120
     )
 
 
@@ -806,82 +803,6 @@ async def eventually_negative(func, *args, cycles_limit=15):
             break
 
     return is_exception_raised
-
-
-# TODO remove this eventually and all custom eventuallies above later
-async def __eventually(func,
-                       *args,
-                       cycles_limit=20,
-                       sleep_time_between_cycles=3,
-                       is_reading=False,
-                       is_expecting_exception=False,
-                       is_self_asserted=False,
-                       **kwargs):
-    cycles = 0
-    is_exception_raised = False
-
-    # for requests where we expect IndyError raised
-    if is_expecting_exception:
-        while True:
-            try:
-                await asyncio.sleep(sleep_time_between_cycles)
-                await func(*args, **kwargs)
-                cycles += 1
-                if cycles >= cycles_limit:
-                    print('CYCLES LIMIT IS EXCEEDED BUT EXCEPTION HAS NOT BEEN RAISED!')
-                    break
-            except IndyError:
-                print('EXPECTED INDY ERROR HAS BEEN RAISED!')
-                is_exception_raised = True
-                break
-        return is_exception_raised
-
-    # for positive reading requests
-    elif is_reading:
-        res = await func(*args, **kwargs)
-        while res['result']['seqNo'] is None:
-            cycles += 1
-            if cycles >= cycles_limit:
-                print('CYCLES LIMIT IS EXCEEDED!')
-                break
-            res = await func(*args, **kwargs)
-            await asyncio.sleep(sleep_time_between_cycles)
-        return res
-
-    # for check_pool_is_in_sync, promote_node, demote_node and other self-asserted functions
-    elif is_self_asserted:
-        cycles = 0
-        while True:
-            try:
-                await asyncio.sleep(sleep_time_between_cycles)
-                cycles += 1
-                res = await func(*args, **kwargs)
-                print('NO ERRORS HERE SO BREAK THE LOOP!')
-                break
-            except AssertionError or IndyError:
-                if cycles >= cycles_limit:
-                    print('CYCLES LIMIT IS EXCEEDED!')
-                    raise AssertionError
-                else:
-                    pass
-        return res
-
-    # for positive writing requests
-    else:
-        res = dict()
-        res['op'] = ''
-        while res['op'] != 'REPLY':
-            try:
-                cycles += 1
-                if cycles >= cycles_limit:
-                    print('CYCLES LIMIT IS EXCEEDED!')
-                    break
-                res = await func(*args, **kwargs)
-                await asyncio.sleep(sleep_time_between_cycles)
-            except IndyError:
-                await asyncio.sleep(sleep_time_between_cycles)
-                pass
-        return res
 
 
 async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, trustee_did, cycles_limit=15, sleep=30):
