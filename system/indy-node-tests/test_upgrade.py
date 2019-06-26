@@ -11,7 +11,7 @@ import os
 
 
 # TODO dynamic install of old version to upgrade from
-@pytest.mark.skip(reason='INDY-2132, INDY-2125')
+# @pytest.mark.skip(reason='INDY-2132, INDY-2125')
 @pytest.mark.asyncio
 async def test_pool_upgrade_positive():
     await pool.set_protocol_version(2)
@@ -44,7 +44,7 @@ async def test_pool_upgrade_positive():
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
     init_time = 1
-    version = '1.1.45'
+    version = '1.9.0.dev1008'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -60,9 +60,9 @@ async def test_pool_upgrade_positive():
     #         datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*0), '%Y-%m-%dT%H:%M:%S%z')
     #      for dest, i in zip(persistent_dests, range(len(persistent_dests)))}
     # ))
-    reinstall = False
+    reinstall = True
     force = True
-    package = 'sovrin'
+    package = 'indy-node'
     # pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
@@ -123,7 +123,7 @@ async def test_pool_upgrade_positive():
     status_outputs = [host.run('systemctl status indy-node') for host in docker_7_hosts]
     print(status_outputs)
     # os.chdir('/home/indy/PycharmProjects/tests')
-    version_checks = [output.stdout.find(version) for output in version_outputs]
+    version_checks = [output.stdout.find(version.split('.')[-1]) for output in version_outputs]
     print(version_checks)
     status_checks = [output.stdout.find(status) for output in status_outputs]
     print(status_checks)

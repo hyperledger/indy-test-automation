@@ -868,3 +868,22 @@ async def test_misc_mint_manually(
     print('\n{}:\n{}'.format(amount, res))
     assert res['op'] == 'REQNACK'
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.asyncio
+async def test_misc_plug_req_handlers_regression(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    trustee_did, _ = get_default_trustee
+
+    req1 = await ledger.build_get_validator_info_request(trustee_did)
+    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
+    print(res1)
+    res1 = {k: json.loads(v) for k, v in res1.items()}
+    assert all([v['op'] == 'REPLY' for k, v in res1.items()])
+
+    req2 = await ledger.build_pool_restart_request(trustee_did, 'start', '0')
+    res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
+    print(res2)
+    res2 = {k: json.loads(v) for k, v in res2.items()}
+    assert all([v['op'] == 'REPLY' for k, v in res2.items()])
