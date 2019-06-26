@@ -15,32 +15,26 @@ class TestAuditSuite:
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         test_nodes[5].restart_service()
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         p1 = NodeHost(primary1)
         p1.stop_service()
         primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
         p2 = NodeHost(primary2)
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         test_nodes[5].restart_service()
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         p1.start_service()
         p2.stop_service()
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
         test_nodes[5].stop_service()
         p2.start_service()
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         test_nodes[5].start_service()
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
@@ -54,13 +48,11 @@ class TestAuditSuite:
         p1 = NodeHost(primary1)
         p1.stop_service()
         primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         p1.start_service()
         next_node = NodeHost(int(primary2) + node_num_shift)
         next_node.restart_service()
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
@@ -107,14 +99,12 @@ class TestAuditSuite:
         p1 = NodeHost(primary1)
         p1.stop_service()
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         p1.start_service()
         for node in test_nodes[5:]:
             node.restart_service()
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
@@ -127,14 +117,12 @@ class TestAuditSuite:
         p1 = NodeHost(primary1)
         p1.stop_service()
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         p1.start_service()
         for node in test_nodes[3:]:
             node.restart_service()
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
@@ -147,15 +135,13 @@ class TestAuditSuite:
         p1 = NodeHost(primary1)
         p1.stop_service()
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         p1.start_service()
         for node in test_nodes:
             node.restart_service()
             # do not remove/change with eventually - it is sequential node stopping
             await asyncio.sleep(10)
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
@@ -168,8 +154,7 @@ class TestAuditSuite:
         p1 = NodeHost(primary1)
         p1.stop_service()
         primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 15)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         p1.start_service()
         # demote master primary / backup primary / non primary here
         alias_for_demotion = 'Node{}'.format(int(primary2)+node_num_shift)
@@ -180,8 +165,7 @@ class TestAuditSuite:
             demote_node, pool_handler, wallet_handler, trustee_did, alias_for_demotion, target_did_for_demotion
         )
         primary3 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
-        # ensure?
-        await send_random_nyms(pool_handler, wallet_handler, trustee_did, 30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
         await eventually(
             promote_node, pool_handler, wallet_handler, trustee_did, alias_for_demotion, target_did_for_demotion
         )
