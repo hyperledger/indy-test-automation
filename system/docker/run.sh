@@ -49,5 +49,8 @@ docker run -t --rm --name "$client_container_name" \
         set -ex
         pipenv --three
         pipenv run pip install -r system/requirements.txt
+        ulimit -n
+        ulimit -n 64000
+        ulimit -n
         pipenv run python -m pytest $pytest_args $test_target
     "
