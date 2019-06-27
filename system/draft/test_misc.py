@@ -865,7 +865,7 @@ async def test_misc_mint_manually(
     req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
     req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
     res = json.loads(await ledger.submit_request(pool_handler, req))
-    print('\n{}:\n{}'.format(amount, res))
+    print('\n{}:{}'.format(amount, res))
     assert res['op'] == 'REQNACK'
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
