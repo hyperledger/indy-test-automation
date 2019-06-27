@@ -101,6 +101,7 @@ def pool_initializer(node_containers):
     assert all([res.exit_code == 0 for res in start_res])
     return init_res, start_res
 
+
 def pool_stop():
     containers = subprocess.check_output([
         'docker', 'ps', '-a', '-q', '-f', "name={}*".format(NODE_NAME_BASE)

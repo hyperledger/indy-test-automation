@@ -4,11 +4,11 @@ import testinfra
 
 
 def test_libindy():
-    indy_plenum_ver = '1.7.1'
-    indy_node_ver = '1.6.85'
+    indy_plenum_ver = '1.8.0'
+    indy_node_ver = '1.8.0~rc2'
     indy_sdk_deb_path = 'https://repo.sovrin.org/sdk/lib/apt/xenial/rc/'
-    indy_sdk_deb_ver = 'libindy_1.8.3~68_amd64.deb'
-    indy_sdk_ver = '1.8.3-rc-68'
+    indy_sdk_deb_ver = 'libindy_1.9.0~75_amd64.deb'
+    indy_sdk_ver = '1.9.0-rc-75'
     os.chdir('/home/indy/indy-sdk')
     subprocess.check_call(['git', 'stash'])
     subprocess.check_call(['git', 'fetch'])
@@ -57,4 +57,4 @@ def test_libindy():
     host.run('rm -rf /home/indy/.indy_client')
 
     # test node.js
-    # TO DO
+    # TODO

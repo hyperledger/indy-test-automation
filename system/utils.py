@@ -94,8 +94,8 @@ async def payment_initializer(library_name, initializer_name):
 
 async def eventually(awaited_func,
                      *args,
-                     retry_wait: float=0.1,
-                     timeout: float=5,
+                     retry_wait: float = 1,
+                     timeout: float = 15,
                      acceptableExceptions=None,
                      verbose=True,
                      **kwargs):
@@ -305,7 +305,6 @@ async def check_pool_performs_write_read(
     writes = await check_pool_performs_write(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
     )
-
     dids = [resp['result']['txn']['data']['dest'] for resp in writes]
     return await eventually(
         check_pool_performs_read, pool_handle, wallet_handle, trustee_did, dids
@@ -360,7 +359,7 @@ async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
 async def ensure_pool_is_in_sync(node_ids=None, nodes_num=7):
     await eventually(
         check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num,
-        retry_wait=1, timeout=30
+        retry_wait=1, timeout=60
     )
 
 
@@ -373,7 +372,7 @@ async def check_primary_changed(pool_handler, wallet_handler, trustee_did, prima
 async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
     return await eventually(
         check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before,
-        retry_wait=1, timeout=30
+        retry_wait=1, timeout=120
     )
 
 
@@ -680,7 +679,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         primaries = Counter(primaries)
         return max(primaries, key=primaries.get)
 
-    primary = await eventually(_get_primary, retry_wait=1, timeout=30)
+    primary = await eventually(_get_primary, retry_wait=1, timeout=60)
     alias = get_node_alias(primary)
     return primary, alias, get_node_did(alias)
 
@@ -853,32 +852,3 @@ class NodeHost:
 async def send_random_nyms(pool_handle, wallet_handle, submitter_did, count):
     for i in range(count):
         await send_nym(pool_handle, wallet_handle, submitter_did, random_did_and_json()[0], None, None, None)
-
-
-class Color:
-    INFOBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'  # Normal default color.
-
-
-def print_with_color(message, color):
-    import sys
-    print('\n' + color + str(message) + Color.ENDC, file=sys.stderr)
-
-
-def print_info(message):
-    print_with_color(message, Color.INFOBLUE)
-
-
-def print_ok(message):
-    print_with_color(message, Color.OKGREEN)
-
-
-def print_warning(message):
-    print_with_color(message, Color.WARNING)
-
-
-def print_fail(message):
-    print_with_color(message, Color.FAIL)

@@ -44,7 +44,7 @@ async def test_pool_upgrade_positive():
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
     init_time = 1
-    version = '1.1.41'
+    version = '1.1.45'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -106,7 +106,7 @@ async def test_pool_upgrade_positive():
 
     # # cancel pool upgrade - optional
     # req = await ledger.build_pool_upgrade_request(trustee_did, name, version, 'cancel', _sha256, _timeout,
-    #                                               docker_7_schedule, None, reinstall, force, package)
+    #                                               aws_25_schedule, None, reinstall, force, package)
     # res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     # print(res)
     # assert res['op'] == 'REPLY'
