@@ -679,7 +679,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         primaries = Counter(primaries)
         return max(primaries, key=primaries.get)
 
-    primary = await eventually(_get_primary, retry_wait=1, timeout=60)
+    primary = await eventually(_get_primary, retry_wait=1, timeout=360)
     alias = get_node_alias(primary)
     return primary, alias, get_node_did(alias)
 
