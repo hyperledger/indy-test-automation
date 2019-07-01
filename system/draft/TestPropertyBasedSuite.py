@@ -1,11 +1,26 @@
 import pytest
 from system.utils import *
 from hypothesis import settings, given, strategies, Phase, Verbosity
+from hypothesis.strategies import composite
 from string import printable, ascii_letters
 import hashlib
 import copy
 import os
 import sys
+
+
+@composite
+def strategy_for_req_data(draw, integers=strategies.integers()):
+    reqid = draw(integers.filter(lambda x: x > 0))
+    reqtype = draw(integers.filter(lambda x: x not in [6, 7, 119, 20001]))
+    data = draw(
+        strategies.recursive(
+            strategies.dictionaries(
+                strategies.text(printable, min_size=1), strategies.text(printable, min_size=1), min_size=1, max_size=5
+            ), lambda x: strategies.dictionaries(strategies.text(printable, min_size=1), x, min_size=1, max_size=3)
+        )
+    )
+    return reqid, reqtype, data
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
@@ -33,7 +48,7 @@ class TestPropertyBasedSuite:
         print(var_dt_lists)
         print('-'*25)
 
-    @settings(deadline=None, max_examples=500, verbosity=Verbosity.verbose, phases=[Phase.generate])
+    @settings(deadline=None, max_examples=500, verbosity=Verbosity.verbose)
     @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
            dest=strategies.text(ascii_letters, min_size=16, max_size=16),
            # verkey=strategies.text(ascii_letters, min_size=32, max_size=32),
@@ -199,24 +214,27 @@ class TestPropertyBasedSuite:
         with pytest.raises(IndyError):
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
 
-    @settings(deadline=None, max_examples=10000, verbosity=Verbosity.verbose)
-    @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
-           _type=strategies.integers().filter(lambda x: x not in [6, 7, 119, 20001]),
-           # TODO fine-tune data structure
-           data=strategies.recursive(strategies.dictionaries(
-                   strategies.text(printable, min_size=1), strategies.text(printable, min_size=1),
-                   min_size=1, max_size=5),
-               lambda x: strategies.dictionaries(strategies.text(printable, min_size=1), x, min_size=1, max_size=3)))
+    @settings(deadline=None, max_examples=100, verbosity=Verbosity.verbose)
+    # @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
+    #        _type=strategies.integers().filter(lambda x: x not in [6, 7, 119, 20001]),
+    #        # TODO fine-tune data structure
+    #        data=strategies.recursive(strategies.dictionaries(
+    #                strategies.text(printable, min_size=1), strategies.text(printable, min_size=1),
+    #                min_size=1, max_size=5),
+    #            lambda x: strategies.dictionaries(strategies.text(printable, min_size=1), x, min_size=1, max_size=3)))
+    @given(values=strategy_for_req_data())
     @pytest.mark.asyncio
-    async def test_case_random_req_data(self, pool_handler, wallet_handler, get_default_trustee, reqid, _type, data):
+    async def test_case_random_req_data(
+            self, pool_handler, wallet_handler, get_default_trustee, values
+    ):
         trustee_did, trustee_vk = get_default_trustee
         req = {
             'protocolVersion': 2,
-            'reqId': reqid,
+            'reqId': values[0],
             'identifier': trustee_did,
             'operation': {
-                'type': str(_type),
-                'data': data
+                'type': str(values[1]),
+                'data': values[2]
             }
         }
         print(req)
