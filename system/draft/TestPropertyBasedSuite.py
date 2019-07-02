@@ -11,7 +11,7 @@ import sys
 
 @composite
 def strategy_for_req_data(draw, integers=strategies.integers()):
-    reqid = draw(integers.filter(lambda x: x > 0))
+    reqid = draw(integers.filter(lambda x: 0 < x < 999999999999999))
     reqtype = draw(integers.filter(lambda x: x not in [6, 7, 119, 20001]))
     data = draw(
         strategies.recursive(
@@ -48,7 +48,7 @@ class TestPropertyBasedSuite:
         print(var_dt_lists)
         print('-'*25)
 
-    @settings(deadline=None, max_examples=500, verbosity=Verbosity.verbose)
+    @settings(deadline=None, max_examples=1000, verbosity=Verbosity.verbose)
     @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
            dest=strategies.text(ascii_letters, min_size=16, max_size=16),
            # verkey=strategies.text(ascii_letters, min_size=32, max_size=32),
@@ -69,8 +69,9 @@ class TestPropertyBasedSuite:
                              'alias': alias
                             }
                 }
-        res = json.loads\
-            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req)))
+        res = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
+        )
         print(req)
         print(res)
         assert res['op'] == 'REPLY'
@@ -99,8 +100,9 @@ class TestPropertyBasedSuite:
         req1 = copy.deepcopy(req_base)
         req1['reqId'] = reqid + 1
         req1['operation']['hash'] = xhash
-        res1 = json.loads\
-            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, json.dumps(req1)))
+        res1 = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, json.dumps(req1))
+        )
         print(req1)
         print(res1)
         assert res1['op'] == 'REPLY'
@@ -108,8 +110,9 @@ class TestPropertyBasedSuite:
         req2 = copy.deepcopy(req_base)
         req2['reqId'] = reqid + 2
         req2['operation']['raw'] = json.dumps({key: value})
-        res2 = json.loads\
-            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, json.dumps(req2)))
+        res2 = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, json.dumps(req2))
+        )
         print(req2)
         print(res2)
         assert res2['op'] == 'REPLY'
@@ -117,13 +120,14 @@ class TestPropertyBasedSuite:
         req3 = copy.deepcopy(req_base)
         req3['reqId'] = reqid + 3
         req3['operation']['enc'] = enc
-        res3 = json.loads\
-            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, json.dumps(req3)))
+        res3 = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, json.dumps(req3))
+        )
         print(req3)
         print(res3)
         assert res3['op'] == 'REPLY'
 
-    @settings(deadline=None, max_examples=500)
+    @settings(deadline=None, max_examples=250)
     @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
            version=strategies.floats(min_value=0.1, max_value=999.999),
            name=strategies.text(min_size=1),
@@ -147,13 +151,14 @@ class TestPropertyBasedSuite:
                                      }
                     }
                }
-        res = json.loads\
-            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, creator_did, json.dumps(req)))
+        res = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, creator_did, json.dumps(req))
+        )
         print(req)
         print(res)
         assert res['op'] == 'REPLY'
 
-    @settings(deadline=None, max_examples=500, verbosity=Verbosity.verbose)
+    @settings(deadline=None, max_examples=250, verbosity=Verbosity.verbose)
     @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
            tag=strategies.text(printable, min_size=1),
            primary=strategies.recursive(
@@ -189,12 +194,13 @@ class TestPropertyBasedSuite:
                                      }
                             }
                 }
-        res = json.loads\
-            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, creator_did, json.dumps(req)))
+        res = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, creator_did, json.dumps(req))
+        )
         print(res)
         assert res['op'] == 'REPLY'
 
-    @settings(deadline=None, max_examples=1000, verbosity=Verbosity.verbose)
+    @settings(deadline=None, max_examples=10000, verbosity=Verbosity.verbose)
     @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
            # TODO fine-tune operation structure
            operation=strategies.recursive(strategies.dictionaries(
@@ -214,7 +220,7 @@ class TestPropertyBasedSuite:
         with pytest.raises(IndyError):
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
 
-    @settings(deadline=None, max_examples=100, verbosity=Verbosity.verbose)
+    @settings(deadline=None, max_examples=10000, verbosity=Verbosity.verbose)
     # @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
     #        _type=strategies.integers().filter(lambda x: x not in [6, 7, 119, 20001]),
     #        # TODO fine-tune data structure
@@ -238,8 +244,9 @@ class TestPropertyBasedSuite:
             }
         }
         print(req)
-        res = json.loads\
-            (await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req)))
+        res = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
+        )
         print(res)
         # server-side static validation
         try:
