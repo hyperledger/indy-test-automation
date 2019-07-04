@@ -29,7 +29,7 @@ ENV LIBINDY_CRYPTO_VERSION=${LIBINDY_CRYPTO_VERSION:-0.4.5}
 ENV PYTHON3_LIBINDY_CRYPTO_VERSION=${PYTHON3_LIBINDY_CRYPTO_VERSION:-0.4.5}
 ENV INDY_PLENUM_VERSION=${INDY_PLENUM_VERSION:-1.9.0~dev808}
 ENV INDY_NODE_VERSION=${INDY_NODE_VERSION:-1.9.0~dev987}
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88 \
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
     && echo "deb https://repo.sovrin.org/deb xenial ${INDY_NODE_REPO_COMPONENT}" >> /etc/apt/sources.list \
     && apt-get update -y && apt-get install -y \
         libindy-crypto=${LIBINDY_CRYPTO_VERSION} \
