@@ -50,21 +50,21 @@ async def test_pool_upgrade_positive():
     action = 'start'
     _sha256 = hashlib.sha256().hexdigest()
     _timeout = 5
-    docker_7_schedule = json.dumps(dict(
-        {dest:
-            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*0), '%Y-%m-%dT%H:%M:%S%z')
-         for dest, i in zip(dests[:7], range(len(dests[:7])))}
-    ))
-    # aws_25_schedule = json.dumps(dict(
+    # docker_7_schedule = json.dumps(dict(
     #     {dest:
     #         datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*0), '%Y-%m-%dT%H:%M:%S%z')
-    #      for dest, i in zip(persistent_dests, range(len(persistent_dests)))}
+    #      for dest, i in zip(dests[:7], range(len(dests[:7])))}
     # ))
-    reinstall = True
-    force = True
+    aws_25_schedule = json.dumps(dict(
+        {dest:
+            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
+         for dest, i in zip(persistent_dests, range(len(persistent_dests)))}
+    ))
+    reinstall = False
+    force = False
     package = 'sovrin'
-    # pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
-    pool_handle, _ = await pool_helper()
+    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
+    # pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     random_did = random_did_and_json()[0]
     another_random_did = random_did_and_json()[0]
@@ -99,7 +99,7 @@ async def test_pool_upgrade_positive():
 
     # schedule pool upgrade
     req = await ledger.build_pool_upgrade_request(trustee_did, name, version, action, _sha256, _timeout,
-                                                  docker_7_schedule, None, reinstall, force, package)
+                                                  aws_25_schedule, None, reinstall, force, package)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     print(res)
     assert res['op'] == 'REPLY'
@@ -111,16 +111,16 @@ async def test_pool_upgrade_positive():
     # print(res)
     # assert res['op'] == 'REPLY'
 
-    await asyncio.sleep(35*60)
+    await asyncio.sleep(25*5*60)
 
-    docker_7_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
-    # aws_25_hosts = [testinfra.get_host('ssh://persistent_node'+str(i),
-    #                                    ssh_config='/home/indy/.ssh/config')
-    #                 for i in range(1, 26)]
-    # os.chdir('/home/indy/indy-node/pool_automation/auto/.ssh/')
-    version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in docker_7_hosts]
+    # docker_7_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
+    aws_25_hosts = [testinfra.get_host('ssh://persistent_node'+str(i),
+                                       ssh_config='/home/indy/.ssh/config')
+                    for i in range(1, 26)]
+    os.chdir('/home/indy/indy-node/pool_automation/auto/.ssh/')
+    version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in aws_25_hosts]
     print(version_outputs)
-    status_outputs = [host.run('systemctl status indy-node') for host in docker_7_hosts]
+    status_outputs = [host.run('systemctl status indy-node') for host in aws_25_hosts]
     print(status_outputs)
     # os.chdir('/home/indy/PycharmProjects/tests')
     version_checks = [output.stdout.find(version.split('.')[-1]) for output in version_outputs]
