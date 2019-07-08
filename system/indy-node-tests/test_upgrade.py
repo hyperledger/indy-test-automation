@@ -44,27 +44,27 @@ async def test_pool_upgrade_positive():
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
     init_time = 1
-    version = '1.1.49'
+    version = '1.1.50'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
     _sha256 = hashlib.sha256().hexdigest()
     _timeout = 5
-    # docker_7_schedule = json.dumps(dict(
-    #     {dest:
-    #         datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*0), '%Y-%m-%dT%H:%M:%S%z')
-    #      for dest, i in zip(dests[:7], range(len(dests[:7])))}
-    # ))
-    aws_25_schedule = json.dumps(dict(
+    docker_7_schedule = json.dumps(dict(
         {dest:
             datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
-         for dest, i in zip(persistent_dests, range(len(persistent_dests)))}
+         for dest, i in zip(dests[:7], range(len(dests[:7])))}
     ))
+    # aws_25_schedule = json.dumps(dict(
+    #     {dest:
+    #         datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
+    #      for dest, i in zip(persistent_dests, range(len(persistent_dests)))}
+    # ))
     reinstall = False
     force = False
     package = 'sovrin'
-    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
-    # pool_handle, _ = await pool_helper()
+    # pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
+    pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     random_did = random_did_and_json()[0]
     another_random_did = random_did_and_json()[0]
@@ -73,33 +73,34 @@ async def test_pool_upgrade_positive():
 
     # write all txns before the upgrade
     nym_before_res = await send_nym(pool_handle, wallet_handle, trustee_did, random_did)
-    attrib_before_res = await send_attrib(pool_handle, wallet_handle, trustee_did, random_did, None,
-                                          json.dumps({'key': 'value'}), None)
-    schema_id, schema_before_res = await send_schema(pool_handle, wallet_handle, trustee_did,
-                                                     random_string(10), '1.0',
-                                                     json.dumps(["age", "sex", "height", "name"]))
+    attrib_before_res = await send_attrib(
+        pool_handle, wallet_handle, trustee_did, random_did, None, json.dumps({'key': 'value'}), None
+    )
+    schema_id, schema_before_res = await send_schema(
+        pool_handle, wallet_handle, trustee_did, random_string(10), '1.0', json.dumps(["age", "sex", "height", "name"])
+    )
     await asyncio.sleep(5)
     temp = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(temp))
 
-    cred_def_id, _, cred_def_before_res =\
-        await send_cred_def(pool_handle, wallet_handle, trustee_did, schema_json, random_string(5), 'CL',
-                            json.dumps({'support_revocation': True}))
+    cred_def_id, _, cred_def_before_res = await send_cred_def(
+        pool_handle, wallet_handle, trustee_did, schema_json, random_string(5), 'CL',
+        json.dumps({'support_revocation': True})
+    )
 
-    revoc_reg_def_id1, _, _, revoc_reg_def_before_res =\
-        await send_revoc_reg_def(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5),
-                                 cred_def_id,
-                                 json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+    revoc_reg_def_id1, _, _, revoc_reg_def_before_res = await send_revoc_reg_def(
+        pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5), cred_def_id,
+        json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
 
-    revoc_reg_def_id2, _, _, revoc_reg_entry_before_res =\
-        await send_revoc_reg_entry(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5),
-                                   cred_def_id,
-                                   json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+    revoc_reg_def_id2, _, _, revoc_reg_entry_before_res = await send_revoc_reg_entry(
+        pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5), cred_def_id,
+        json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
     timestamp1 = int(time.time())
 
     # schedule pool upgrade
-    req = await ledger.build_pool_upgrade_request(trustee_did, name, version, action, _sha256, _timeout,
-                                                  aws_25_schedule, None, reinstall, force, package)
+    req = await ledger.build_pool_upgrade_request(
+        trustee_did, name, version, action, _sha256, _timeout, docker_7_schedule, None, reinstall, force, package
+    )
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     print(res)
     assert res['op'] == 'REPLY'
@@ -111,18 +112,16 @@ async def test_pool_upgrade_positive():
     # print(res)
     # assert res['op'] == 'REPLY'
 
-    await asyncio.sleep(25*5*60)
+    await asyncio.sleep(7*5*60)
 
-    # docker_7_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
-    aws_25_hosts = [testinfra.get_host('ssh://persistent_node'+str(i),
-                                       ssh_config='/home/indy/.ssh/config')
-                    for i in range(1, 26)]
-    os.chdir('/home/indy/indy-node/pool_automation/auto/.ssh/')
-    version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in aws_25_hosts]
+    docker_7_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
+    # aws_25_hosts = [testinfra.get_host('ssh://persistent_node'+str(i),
+    #                                    ssh_config='/home/indy/.ssh/config')
+    #                 for i in range(1, 26)]
+    version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in docker_7_hosts]
     print(version_outputs)
-    status_outputs = [host.run('systemctl status indy-node') for host in aws_25_hosts]
+    status_outputs = [host.run('systemctl status indy-node') for host in docker_7_hosts]
     print(status_outputs)
-    # os.chdir('/home/indy/PycharmProjects/tests')
     version_checks = [output.stdout.find(version.split('.')[-1]) for output in version_outputs]
     print(version_checks)
     status_checks = [output.stdout.find(status) for output in status_outputs]

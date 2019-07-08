@@ -803,6 +803,7 @@ async def test_misc_mint_to_aws(payment_init):
     await pool.set_protocol_version(2)
     libsovtoken_payment_method = 'sov'
     pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
+    # pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': str('000000000000000000000000Trustee1')}))
@@ -814,7 +815,7 @@ async def test_misc_mint_to_aws(payment_init):
     await send_nym(pool_handle, wallet_handle, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
 
     addresses = []
-    for i in range(100):
+    for i in range(10):
         address = await payment.create_payment_address(wallet_handle, libsovtoken_payment_method, json.dumps({}))
         addresses.append(address)
 
@@ -887,3 +888,69 @@ async def test_misc_plug_req_handlers_regression(
     print(res2)
     res2 = {k: json.loads(v) for k, v in res2.items()}
     assert all([v['op'] == 'REPLY' for k, v in res2.items()])
+
+
+@pytest.mark.asyncio
+async def test_misc_utxo_st_600(
+        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee
+):
+    libsovtoken_payment_method = 'sov'
+    trustee_did, _ = get_default_trustee
+    address0 = await payment.create_payment_address(
+        wallet_handler, libsovtoken_payment_method, json.dumps({"seed": str('0000000000000000000000000Wallet0')})
+    )
+    try:
+        trustee_did2, trustee_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps(
+            {"seed": str('000000000000000000000000Trustee2')}))
+        trustee_did3, trustee_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps(
+            {"seed": str('000000000000000000000000Trustee3')}))
+        await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
+        await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
+    except IndyError:
+        trustee_did2, trustee_vk2 = 'LnXR1rPnncTPZvRdmJKhJQ', 'BnSWTUQmdYCewSGFrRUhT6LmKdcCcSzRGqWXMPnEP168'
+        trustee_did3, trustee_vk3 = 'PNQm3CwyXbN5e39Rw3dXYx', 'DC8gEkb1cb4T9n3FcZghTkSp1cGJaZjhsPdxitcu6LUj'
+
+    addresses = []
+    for i in range(1500):
+        address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps({}))
+        addresses.append(address)
+
+    outputs = []
+    for address in addresses:
+        output = {"recipient": address, "amount": 1}
+        outputs.append(output)
+
+    req, _ = await payment.build_mint_req(wallet_handler, trustee_did, json.dumps(outputs), None)
+    req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+    req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+    req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+    res = json.loads(await ledger.submit_request(pool_handler, req))
+    print(res)
+    assert res['op'] == 'REPLY'
+
+    sources = []
+    for address in addresses:
+        req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address)
+        res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        source = json.loads(
+            await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res)
+        )[0]['source']
+        sources.append(source)
+
+    for source in sources:
+        req, _ = await payment.build_payment_req(
+            wallet_handler, trustee_did, json.dumps([source]), json.dumps([{"recipient": address0, "amount": 1}]), None
+        )
+        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        assert res['op'] == 'REPLY'
+
+    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address0)
+    res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res)
+    assert json.loads(res)['op'] == 'REPLY'
+    source = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res)
+    )[0]['source']
+    print(source)
+
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
