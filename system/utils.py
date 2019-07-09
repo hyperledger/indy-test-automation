@@ -372,7 +372,7 @@ async def check_primary_changed(pool_handler, wallet_handler, trustee_did, prima
 async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
     return await eventually(
         check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before,
-        retry_wait=1, timeout=120
+        retry_wait=1, timeout=180
     )
 
 
