@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from system.utils import *
 from indy import payment
@@ -64,7 +66,7 @@ class TestTAASuite:
         # add taa to nym
         req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
         req = await ledger.append_txn_author_agreement_acceptance_to_request\
-            (req, taa_text, taa_ver, None, aml_key, int(time.time()))
+            (req, taa_text, taa_ver, None, aml_key, int(time.mktime(datetime.now().date().timetuple())))
         res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res6)
         assert res6['op'] == 'REPLY'
@@ -73,7 +75,7 @@ class TestTAASuite:
                                                                       json.dumps([random_string(10)]))
         req = await ledger.build_schema_request(trustee_did, schema_json)
         req = await ledger.append_txn_author_agreement_acceptance_to_request\
-            (req, taa_text, taa_ver, None, aml_key, int(time.time()))
+            (req, taa_text, taa_ver, None, aml_key, int(time.mktime(datetime.now().date().timetuple())))
         res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res7)
         assert res7['op'] == 'REPLY'
