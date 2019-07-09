@@ -10,9 +10,9 @@ import sys
 
 
 @composite
-def strategy_for_req_data(draw, integers=strategies.integers()):
-    reqid = draw(integers.filter(lambda x: 0 < x < 999999999999999))
-    reqtype = draw(integers.filter(lambda x: x not in [6, 7, 119, 20001]))
+def strategy_for_req_data(draw):
+    reqid = draw(strategies.integers().filter(lambda x: 0 < x < 999999999999999))
+    reqtype = draw(strategies.integers().filter(lambda x: x not in [6, 7, 119, 20001]))
     data = draw(
         strategies.recursive(
             strategies.dictionaries(

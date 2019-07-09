@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 from hypothesis import errors, settings, Verbosity, given, strategies
 import pprint
+import itertools
 
 
 # logger = logging.getLogger(__name__)
@@ -910,26 +911,30 @@ async def test_misc_utxo_st_600(
         trustee_did2, trustee_vk2 = 'LnXR1rPnncTPZvRdmJKhJQ', 'BnSWTUQmdYCewSGFrRUhT6LmKdcCcSzRGqWXMPnEP168'
         trustee_did3, trustee_vk3 = 'PNQm3CwyXbN5e39Rw3dXYx', 'DC8gEkb1cb4T9n3FcZghTkSp1cGJaZjhsPdxitcu6LUj'
 
-    addresses = []
-    for i in range(1500):
-        address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps({}))
-        addresses.append(address)
+    addresses = [[]]
+    outputs = [[]]
 
-    outputs = []
-    for address in addresses:
-        output = {"recipient": address, "amount": 1}
-        outputs.append(output)
+    for i in range(5):
+        if i != 0:
+            addresses.append([])
+            outputs.append([])
+        for j in range(1500):
+            address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps({}))
+            addresses[i].append(address)
+            output = {"recipient": address, "amount": 1}
+            outputs[i].append(output)
 
-    req, _ = await payment.build_mint_req(wallet_handler, trustee_did, json.dumps(outputs), None)
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
-    res = json.loads(await ledger.submit_request(pool_handler, req))
-    print(res)
-    assert res['op'] == 'REPLY'
+    for output in outputs:
+        req, _ = await payment.build_mint_req(wallet_handler, trustee_did, json.dumps(output), None)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+        res1 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res1)
+        assert res1['op'] == 'REPLY'
 
     sources = []
-    for address in addresses:
+    for address in itertools.chain(*addresses):
         req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address)
         res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         source = json.loads(
