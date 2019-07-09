@@ -4,6 +4,7 @@ import pytest
 from system.utils import *
 from indy import payment
 # from hypothesis import strategies, settings, given
+SEC_PER_DAY = 24 * 60 * 60
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
@@ -11,7 +12,11 @@ class TestTAASuite:
 
     @pytest.mark.parametrize('aml, version_set, context, timestamp, version_get',
                              [({random_string(10): random_string(10)}, '0', random_string(25), None, '0'),
-                              ({random_string(100): random_string(100)}, random_string(5), None, int(time.time()), None)
+                              ({random_string(100): random_string(100)},
+                               random_string(5),
+                               None,
+                               int(time.time()) // SEC_PER_DAY * SEC_PER_DAY,
+                               None)
                               ])
     @pytest.mark.asyncio
     async def test_case_send_and_get_aml(self, pool_handler, wallet_handler, get_default_trustee,
@@ -66,7 +71,7 @@ class TestTAASuite:
         # add taa to nym
         req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
         req = await ledger.append_txn_author_agreement_acceptance_to_request\
-            (req, taa_text, taa_ver, None, aml_key, int(time.mktime(datetime.now().date().timetuple())))
+            (req, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY)
         res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res6)
         assert res6['op'] == 'REPLY'
@@ -75,7 +80,7 @@ class TestTAASuite:
                                                                       json.dumps([random_string(10)]))
         req = await ledger.build_schema_request(trustee_did, schema_json)
         req = await ledger.append_txn_author_agreement_acceptance_to_request\
-            (req, taa_text, taa_ver, None, aml_key, int(time.mktime(datetime.now().date().timetuple())))
+            (req, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY)
         res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res7)
         assert res7['op'] == 'REPLY'
@@ -121,7 +126,7 @@ class TestTAASuite:
         taa_ver = 'some TAA version'
         # try to send xfer with taa without aml and taa in ledger - should be failed
         extra = await payment.prepare_payment_extra_with_acceptance_data(
-            None, taa_text, taa_ver, None, aml_key, int(time.time()))
+            None, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY)
         req, _ = await payment.build_payment_req(wallet_handler, trustee_did,
                                                  json.dumps([source1]),
                                                  json.dumps([{"recipient": address2, "amount": 100*100000},
@@ -140,7 +145,7 @@ class TestTAASuite:
         print(res3)
         assert res3['op'] == 'REPLY'
         extra = await payment.prepare_payment_extra_with_acceptance_data(
-            None, taa_text, taa_ver, None, aml_key, int(time.time()))
+            None, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY)
         req, _ = await payment.build_payment_req(wallet_handler, trustee_did,
                                                  json.dumps([source1]),
                                                  json.dumps([{"recipient": address2, "amount": 100*100000},
