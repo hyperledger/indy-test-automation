@@ -1,5 +1,3 @@
-from datetime import datetime
-
 import pytest
 from system.utils import *
 from indy import payment
