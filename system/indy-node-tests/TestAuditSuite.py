@@ -92,7 +92,8 @@ class TestAuditSuite:
 
     @pytest.mark.asyncio
     async def test_case_restart_f_nodes(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num):
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+    ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
@@ -110,7 +111,8 @@ class TestAuditSuite:
 
     @pytest.mark.asyncio
     async def test_case_restart_n_minus_f_minus_one_nodes(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num):
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+    ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
@@ -128,7 +130,8 @@ class TestAuditSuite:
 
     @pytest.mark.asyncio
     async def test_case_restart_all_nodes_one_by_one(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num):
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+    ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
@@ -148,7 +151,8 @@ class TestAuditSuite:
     @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
     @pytest.mark.asyncio
     async def test_case_demote_master_backup_non_primary(
-            self, pool_handler, wallet_handler, get_default_trustee, node_num_shift, nodes_num):
+            self, pool_handler, wallet_handler, get_default_trustee, node_num_shift, nodes_num
+    ):
         trustee_did, _ = get_default_trustee
         primary1, alias1, target_did1 = await get_primary(pool_handler, wallet_handler, trustee_did)
         p1 = NodeHost(primary1)
