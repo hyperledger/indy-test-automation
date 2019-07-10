@@ -911,13 +911,12 @@ async def test_misc_utxo_st_600(
         trustee_did2, trustee_vk2 = 'LnXR1rPnncTPZvRdmJKhJQ', 'BnSWTUQmdYCewSGFrRUhT6LmKdcCcSzRGqWXMPnEP168'
         trustee_did3, trustee_vk3 = 'PNQm3CwyXbN5e39Rw3dXYx', 'DC8gEkb1cb4T9n3FcZghTkSp1cGJaZjhsPdxitcu6LUj'
 
-    addresses = [[]]
-    outputs = [[]]
+    addresses = []
+    outputs = []
 
-    for i in range(5):
-        if i != 0:
-            addresses.append([])
-            outputs.append([])
+    for i in range(2):
+        addresses.append([])
+        outputs.append([])
         for j in range(1500):
             address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps({}))
             addresses[i].append(address)
