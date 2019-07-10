@@ -28,7 +28,7 @@ def pytest_addoption(parser):
 
 
 # TODO seems not the best name for that functionality
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='session', autouse=True)
 def event_loop():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(pool.set_protocol_version(2))
@@ -57,7 +57,7 @@ async def get_default_trustee(wallet_handler):
     await yield_((trustee_did, trustee_vk))
 
 
-# TODO diferent payment plugins (libsovtoken, libnullpay, ...)
+# TODO different payment plugins (libsovtoken, libnullpay, ...)
 @pytest.fixture(scope="session")
 def payment_init_session(request):
     if request.config.getoption("payments"):
@@ -168,6 +168,7 @@ def check_no_failures_fixture(request, docker_setup_and_teardown, nodes_num):
     hosts = [NodeHost(node_id + 1) for node_id in range(nodes_num)]
 
     stop = False
+
     def check():
         try:
             if not stop:
