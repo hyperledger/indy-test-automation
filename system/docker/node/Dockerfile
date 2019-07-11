@@ -50,11 +50,11 @@ ENV TOKEN_PLUGINS_INSTALL=$TOKEN_PLUGINS_INSTALL
 ENV SOVRIN_VERSION=${SOVRIN_VERSION:-1.1.50}
 ENV SOVTOKEN_VERSION=${SOVTOKEN_VERSION:-1.0.0~dev62}
 ENV SOVTOKENFEES_VERSION=${SOVTOKENFEES_VERSION:-${SOVTOKEN_VERSION}}
-# RUN if [ "$TOKEN_PLUGINS_INSTALL" = "yes" ]; then \
-RUN \
+RUN if [ "$TOKEN_PLUGINS_INSTALL" = "yes" ]; then \
+# RUN \
         set -ex; \
         apt-get update && apt-get install -y \
-#            sovrin=${SOVRIN_VERSION} \
+            sovrin=${SOVRIN_VERSION} \
             sovtoken=${SOVTOKEN_VERSION} \
             sovtokenfees=${SOVTOKENFEES_VERSION}; \
         rm -rf /var/lib/apt/lists/*; \

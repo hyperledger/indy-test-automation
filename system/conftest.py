@@ -60,17 +60,17 @@ async def get_default_trustee(wallet_handler):
 # TODO different payment plugins (libsovtoken, libnullpay, ...)
 @pytest.fixture(scope="session")
 def payment_init_session(request):
-    if True or request.config.getoption("payments"):
+    if request.config.getoption("payments"):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(payment_initializer('libsovtoken.so', 'sovtoken_init'))
 
 
-@pytest.fixture
+@pytest.fixture()
 def payment_init(request, payment_init_session):
     # it will skips any test that depends on payment plugins
     # if pytest is run without '--payments' option
     # (more details: https://docs.pytest.org/en/latest/reference.html#_pytest.config.Config.getoption)
-    request.config.getoption("payments", skip=False)
+    request.config.getoption("payments", skip=True)
 
 
 @pytest.fixture()

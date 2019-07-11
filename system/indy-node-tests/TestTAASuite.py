@@ -2,7 +2,12 @@ import pytest
 from system.utils import *
 from indy import payment
 # from hypothesis import strategies, settings, given
+import logging
 SEC_PER_DAY = 24 * 60 * 60
+
+
+# logger = logging.getLogger(__name__)
+# logging.basicConfig(level=0, format='%(asctime)s %(message)s')
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
@@ -132,12 +137,16 @@ class TestTAASuite:
         res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res4)
         assert res4['op'] == 'REPLY'
-        # send txn with taa with precise timestamp
+        # send txn with taa with precise timestamp - it doesn't work with libindy fixes so fix time manually
         req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
         req = await ledger.append_txn_author_agreement_acceptance_to_request(
             req, taa_text, taa_ver, None, aml_key, int(time.time())
         )
-        res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        req = json.loads(req)
+        req['taaAcceptance']['time'] += 999
+        res6 = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
+        )
         print(res6)
         assert res6['op'] == 'REJECT'
         # send txn with taa with timestamp from yesterday
