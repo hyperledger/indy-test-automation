@@ -66,11 +66,11 @@ class TestTAASuite:
         print(res5)
         assert res5['op'] == 'REJECT'
         # add taa to nym
-        req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
-        req = await ledger.append_txn_author_agreement_acceptance_to_request(
-            req, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY
+        req6 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+        req6 = await ledger.append_txn_author_agreement_acceptance_to_request(
+            req6, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY
         )
-        res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req6))
         print(res6)
         assert res6['op'] == 'REPLY'
         # add taa to schema
@@ -84,10 +84,21 @@ class TestTAASuite:
         res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         print(res7)
         assert res7['op'] == 'REPLY'
+        # special positive case
+        req8 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+        req8 = await ledger.append_txn_author_agreement_acceptance_to_request(
+            req8, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY
+        )
+        await asyncio.sleep(181)
+        res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req8))
+        print(res8)
+        assert res8['op'] == 'REPLY'
 
     @pytest.mark.asyncio
-    async def test_aml_special_case(self, pool_handler, wallet_handler, get_default_trustee):
+    async def test_aml_taa_negative_cases(self, pool_handler, wallet_handler, get_default_trustee):
         aml = {}
+        aml_key = aml_ver = taa_ver = random_string(5)
+        aml_val = taa_text = random_string(25)
         trustee_did, _ = get_default_trustee
         req = {
             'protocolVersion': 2,
@@ -111,6 +122,40 @@ class TestTAASuite:
         )
         print(res2)
         assert res2['op'] == 'REJECT'
+        req = await ledger.build_acceptance_mechanisms_request(
+            trustee_did, json.dumps({aml_key: aml_val}), aml_ver, None
+        )
+        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res3)
+        assert res3['op'] == 'REPLY'
+        req = await ledger.build_txn_author_agreement_request(trustee_did, taa_text, taa_ver)
+        res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res4)
+        assert res4['op'] == 'REPLY'
+        # send txn with taa with precise timestamp
+        req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+        req = await ledger.append_txn_author_agreement_acceptance_to_request(
+            req, taa_text, taa_ver, None, aml_key, int(time.time())
+        )
+        res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res6)
+        assert res6['op'] == 'REJECT'
+        # send txn with taa with timestamp from yesterday
+        req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+        req = await ledger.append_txn_author_agreement_acceptance_to_request(
+            req, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY - SEC_PER_DAY
+        )
+        res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res7)
+        assert res7['op'] == 'REJECT'
+        # send txn with taa with timestamp from tomorrow
+        req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+        req = await ledger.append_txn_author_agreement_acceptance_to_request(
+            req, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY + SEC_PER_DAY
+        )
+        res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        print(res8)
+        assert res8['op'] == 'REJECT'
 
     @pytest.mark.asyncio
     async def test_case_taa_with_xfer(
