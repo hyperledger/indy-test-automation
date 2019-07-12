@@ -65,7 +65,7 @@ def payment_init_session(request):
         loop.run_until_complete(payment_initializer('libsovtoken.so', 'sovtoken_init'))
 
 
-@pytest.fixture
+@pytest.fixture()
 def payment_init(request, payment_init_session):
     # it will skips any test that depends on payment plugins
     # if pytest is run without '--payments' option

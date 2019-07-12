@@ -914,7 +914,7 @@ async def test_misc_utxo_st_600(
     addresses = []
     outputs = []
 
-    for i in range(2):
+    for i in range(5):
         addresses.append([])
         outputs.append([])
         for j in range(1500):
