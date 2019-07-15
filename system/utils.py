@@ -372,7 +372,7 @@ async def check_primary_changed(pool_handler, wallet_handler, trustee_did, prima
 async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
     return await eventually(
         check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before,
-        retry_wait=10, timeout=180
+        retry_wait=10, timeout=360
     )
 
 
@@ -679,7 +679,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         primaries = Counter(primaries)
         return max(primaries, key=primaries.get)
 
-    primary = await eventually(_get_primary, retry_wait=5, timeout=360)
+    primary = await eventually(_get_primary, retry_wait=10, timeout=360)
     alias = get_node_alias(primary)
     return primary, alias, get_node_did(alias)
 
