@@ -162,7 +162,7 @@ async def docker_setup_and_teardown(nodes_num):
 @pytest.fixture
 def check_no_failures_fixture(request, docker_setup_and_teardown, nodes_num):
     marker = request.node.get_closest_marker('check_no_failures_interval')
-    check_interval = 10 if marker is None else marker.args[0]
+    check_interval = 20 if marker is None else marker.args[0]
 
     loop = asyncio.get_event_loop()
     hosts = [NodeHost(node_id + 1) for node_id in range(nodes_num)]
