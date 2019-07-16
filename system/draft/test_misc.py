@@ -84,7 +84,7 @@ async def test_misc_get_txn_by_seqno():
 
 
 @pytest.mark.asyncio
-async def test_misc_state_proof():
+async def test_misc_state_proof(docker_setup_and_teardown):
     await pool.set_protocol_version(2)
     timestamp0 = int(time.time())
     pool_handle, _ = await pool_helper()
@@ -134,8 +134,11 @@ async def test_misc_state_proof():
         req6 = await ledger.build_get_revoc_reg_request(None, revoc_reg_def_id, timestamp1)
         res6 = json.loads(await ledger.submit_request(pool_handle, req6))
 
+        req66 = await ledger.build_get_revoc_reg_request(None, revoc_reg_def_id, timestamp0)
+        res66 = json.loads(await ledger.submit_request(pool_handle, req66))
+
         # consensus is impossible with (timestamp0, timestamp1) here! IS-1264
-        req7 = await ledger.build_get_revoc_reg_delta_request(None, revoc_reg_def_id, None, timestamp1)
+        req7 = await ledger.build_get_revoc_reg_delta_request(None, revoc_reg_def_id, timestamp0, timestamp1)
         res7 = json.loads(await ledger.submit_request(pool_handle, req7))
     finally:
         outputs1 = [host.run('systemctl start indy-node') for host in hosts[:-1]]
@@ -147,15 +150,8 @@ async def test_misc_state_proof():
     assert res4['result']['seqNo'] is not None
     assert res5['result']['seqNo'] is not None
     assert res6['result']['seqNo'] is not None
+    assert res66['result']['seqNo'] is None
     assert res7['result']['seqNo'] is not None
-
-    print(res1)
-    print(res2)
-    print(res3)
-    print(res4)
-    print(res5)
-    print(res6)
-    print(res7)
 
 
 @pytest.mark.asyncio

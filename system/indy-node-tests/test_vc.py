@@ -35,7 +35,6 @@ async def test_vc_by_restart(
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
 
-@pytest.mark.skip('investigate pipeline failures of this test')
 @pytest.mark.asyncio
 async def test_vc_by_demotion(
         pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture

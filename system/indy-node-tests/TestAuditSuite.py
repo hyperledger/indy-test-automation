@@ -151,7 +151,8 @@ class TestAuditSuite:
     @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
     @pytest.mark.asyncio
     async def test_case_demote_master_backup_non_primary(
-            self, pool_handler, wallet_handler, get_default_trustee, node_num_shift, nodes_num
+            self, pool_handler, wallet_handler, get_default_trustee, node_num_shift, nodes_num,
+            check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         primary1, alias1, target_did1 = await get_primary(pool_handler, wallet_handler, trustee_did)
