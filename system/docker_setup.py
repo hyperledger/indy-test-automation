@@ -146,13 +146,14 @@ async def setup_and_teardown(nodes_num, request):
     logger.info('DOCKER SETUP HAS BEEN FINISHED!')
     await yield_()
 
+    os.mkdir('/tmp/logs')
     testname = request.node.name
-    f = open('/tmp/{}.tar'.format(testname), 'wb')
-    node1 = client.containers.get('node1')
-    bits, stat = node1.get_archive('/var/log/indy/sandbox/Node1.log')
-    for chunk in bits:
-        f.write(chunk)
-    f.close()
+    for node in client.containers.list():
+        f = open('/tmp/logs/{}_{}.tar'.format(testname, node.name), 'wb')
+        bits, stat = node.get_archive('/var/log/indy/sandbox')
+        for chunk in bits:
+            f.write(chunk)
+        f.close()
 
     pool_stop()
     logger.info('DOCKER TEARDOWN HAS BEEN FINISHED!\n')
