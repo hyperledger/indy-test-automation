@@ -7,11 +7,12 @@ import hashlib
 import copy
 import os
 import sys
+from indy import payment
 
 
 @composite
-def strategy_for_req_data(draw):
-    reqid = draw(strategies.integers().filter(lambda x: 0 < x < 999999999999999))
+def strategy_for_op_and_data_cases(draw):
+    reqid = draw(strategies.integers(min_value=1, max_value=999999999999999))
     reqtype = draw(strategies.integers().filter(lambda x: x not in [6, 7, 119, 20001]))
     data = draw(
         strategies.recursive(
@@ -201,34 +202,24 @@ class TestPropertyBasedSuite:
         assert res['op'] == 'REPLY'
 
     @settings(deadline=None, max_examples=10000, verbosity=Verbosity.verbose)
-    @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
-           # TODO fine-tune operation structure
-           operation=strategies.recursive(strategies.dictionaries(
-                   strategies.text(printable, min_size=1), strategies.text(printable, min_size=1),
-                   min_size=1, max_size=5),
-               lambda x: strategies.dictionaries(strategies.text(printable, min_size=1), x, min_size=1, max_size=3)))
+    @given(values=strategy_for_op_and_data_cases())
     @pytest.mark.asyncio
-    async def test_case_random_req_op(self, pool_handler, wallet_handler, get_default_trustee, reqid, operation):
+    async def test_case_random_req_op(
+            self, pool_handler, wallet_handler, get_default_trustee, values
+    ):
         trustee_did, trustee_vk = get_default_trustee
         req = {
             'protocolVersion': 2,
-            'reqId': reqid,
+            'reqId': values[0],
             'identifier': trustee_did,
-            'operation': operation
+            'operation': values[2]
         }
         # client-side validation
         with pytest.raises(IndyError):
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
 
     @settings(deadline=None, max_examples=10000, verbosity=Verbosity.verbose)
-    # @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
-    #        _type=strategies.integers().filter(lambda x: x not in [6, 7, 119, 20001]),
-    #        # TODO fine-tune data structure
-    #        data=strategies.recursive(strategies.dictionaries(
-    #                strategies.text(printable, min_size=1), strategies.text(printable, min_size=1),
-    #                min_size=1, max_size=5),
-    #            lambda x: strategies.dictionaries(strategies.text(printable, min_size=1), x, min_size=1, max_size=3)))
-    @given(values=strategy_for_req_data())
+    @given(values=strategy_for_op_and_data_cases())
     @pytest.mark.asyncio
     async def test_case_random_req_data(
             self, pool_handler, wallet_handler, get_default_trustee, values
@@ -254,3 +245,49 @@ class TestPropertyBasedSuite:
         except KeyError:
             res = {k: json.loads(v) for k, v in res.items()}
             assert all([v['op'] == 'REQNACK' for k, v in res.items()])
+
+    @settings(deadline=None, max_examples=1000, verbosity=Verbosity.verbose)
+    @given(amount=strategies.integers(min_value=0, max_value=999999999999999999),
+           seqno=strategies.integers(min_value=0, max_value=999999999999999999),
+           signatures=strategies.text(ascii_letters, min_size=0, max_size=10000),
+           reqid=strategies.integers(min_value=1, max_value=999999999999999999))
+    @pytest.mark.asyncio
+    async def test_case_invalid_payment(
+            self, payment_init, pool_handler, wallet_handler, get_default_trustee, amount, seqno, signatures, reqid
+    ):
+        libsovtoken_payment_method = 'sov'
+        trustee_did, _ = get_default_trustee
+        try:
+            address1 = await payment.create_payment_address(
+                wallet_handler, libsovtoken_payment_method, json.dumps({'seed': '0000000000000000000000000Wallet1'})
+            )
+            address2 = await payment.create_payment_address(
+                wallet_handler, libsovtoken_payment_method, json.dumps({'seed': '0000000000000000000000000Wallet2'})
+            )
+        except IndyError:
+            address1 = 'pay:sov:aRczGoccsHV7mNJgpBVYwCveytvyL8JBa1X28GFSwD44m76eE'
+            address2 = 'pay:sov:H8v7bJwwKEnEUjd5dGec3oTbLMwgFLUVHL7kDKtVqBtLaQ2JG'
+        req = {
+            'operation':
+                {'type': '10001',
+                 'outputs': [
+                     {'address': address2.split(':')[-1],
+                      'amount': amount}
+                 ],
+                 'inputs': [
+                     {'address': address1.split(':')[-1],
+                      'seqNo': seqno}
+                 ],
+                 'signatures':
+                     [signatures]},
+            # 4gs3Yv7ZM2P26pPuzZXr8auqzWK7xzGyTkCoQvuuHumBGm4jBczH78VTVnU29eKjFiCEPh7Fmfe8QAXkE5nxMQ7y
+            'reqId': reqid,
+            'protocolVersion': 2,
+            'identifier': trustee_did
+        }
+        print(req)
+        res = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
+        )
+        print(res)
+        assert res['op'] == 'REQNACK'

@@ -954,3 +954,10 @@ async def test_misc_utxo_st_600(
     print(source)
 
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.asyncio
+async def test_misc_utxo_st_602(
+        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee
+):
+    pass
