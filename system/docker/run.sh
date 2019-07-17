@@ -42,6 +42,7 @@ docker run -t --rm --name "$client_container_name" \
     --group-add $(stat -c '%g' "$docker_socket_path") \
     -v "$docker_socket_path:"$docker_socket_path \
     -v "$repo_path:$workdir_path" \
+    -v "/tmp:/tmp" \
     -u "$user_id:$group_id" \
     -w "$workdir_path" \
     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
