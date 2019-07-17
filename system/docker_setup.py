@@ -146,7 +146,10 @@ async def setup_and_teardown(nodes_num, request):
     logger.info('DOCKER SETUP HAS BEEN FINISHED!')
     await yield_()
 
-    os.mkdir('/tmp/logs')
+    try:
+        os.mkdir('/tmp/logs')
+    except FileExistsError:
+        pass
     testname = request.node.name
     for node in client.containers.list():
         f = open('/tmp/logs/{}_{}.tar'.format(testname, node.name), 'wb')
