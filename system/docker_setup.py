@@ -137,7 +137,7 @@ async def wait_until_pool_is_ready():
     await ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did)
 
 
-async def setup_and_teardown(nodes_num):
+async def setup_and_teardown(nodes_num, request):
 
     pool_stop()
 
@@ -145,6 +145,14 @@ async def setup_and_teardown(nodes_num):
     await wait_until_pool_is_ready()
     logger.info('DOCKER SETUP HAS BEEN FINISHED!')
     await yield_()
+
+    testname = request.node.name
+    f = open('/tmp/{}.tar'.format(testname), 'wb')
+    node1 = client.containers.get('node1')
+    bits, stat = node1.get_archive('/var/log/indy/sandbox/Node1.log')
+    for chunk in bits:
+        f.write(chunk)
+    f.close()
 
     pool_stop()
     logger.info('DOCKER TEARDOWN HAS BEEN FINISHED!\n')
