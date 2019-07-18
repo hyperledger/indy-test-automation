@@ -2,6 +2,7 @@ import pytest
 import json
 import asyncio
 import os
+from datetime import datetime
 from async_generator import async_generator, yield_
 
 from indy import pool, payment, did, ledger
@@ -11,7 +12,7 @@ from .utils import (
     check_no_failures, NodeHost, payment_initializer,
     send_nym
 )
-from .docker_setup import setup_and_teardown
+from .docker_setup import setup, teardown
 
 
 def pytest_configure(config):
@@ -25,6 +26,26 @@ def pytest_addoption(parser):
         "--payments", action='store_true', default=None,
         help="run libsovtoken based tests as well"
     )
+    parser.addoption(
+        "--logsdir", action='store', default='_build/logs',
+        help="directory name to store logs"
+    )
+    parser.addoption(
+        "--gatherlogs", action='store_true', default=None,
+        help="gather node logs for failed tests"
+    )
+
+
+# based on https://docs.pytest.org/en/latest/example/simple.html#making-test-result-information-available-in-fixtures
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    # execute all other hooks to obtain the report object
+    outcome = yield
+    rep = outcome.get_result()
+
+    # set a report attribute for each phase of a call, which can
+    # be "setup", "call", "teardown"
+    setattr(item, "rep_" + rep.when, rep)
 
 
 # TODO seems not the best name for that functionality
@@ -34,6 +55,28 @@ def event_loop():
     loop.run_until_complete(pool.set_protocol_version(2))
     yield loop
     loop.close()
+
+
+@pytest.fixture(scope='session', autouse=True)
+def session_name():
+    return "run.{}".format(datetime.now().strftime("%Y-%m-%dT%H%M%S"))
+
+
+@pytest.fixture(scope='module')
+def failed_tests(request):
+    return []
+
+
+@pytest.fixture(autouse=True)
+def failed_test(request, failed_tests):
+    yield
+
+    if request.node.rep_setup.passed and request.node.rep_call.failed:
+        # executing test failed
+        test_name = request.node.name
+        failed_tests.append(test_name)
+        return test_name
+    return None
 
 
 @pytest.fixture()
@@ -130,6 +173,11 @@ async def nodes_num(request):
     return marker.args[0] if marker else 7
 
 
+@pytest.fixture(scope='module')
+async def nodes_num_module(request):
+    return 7
+
+
 # TODO options instead:
 #   - use template
 #   - use docker connection
@@ -153,10 +201,40 @@ async def ssh_config(nodes_num):
         f.write(config)
 
 
+@pytest.fixture(scope='module')
+@async_generator
+async def docker_setup_and_teardown_module(session_name, nodes_num_module, request, failed_tests):
+    await setup(nodes_num_module)
+    await yield_()
+
+    logs_dir = None
+    if failed_tests and request.config.getoption("gatherlogs"):
+        logs_dir = os.path.join(request.config.getoption("logsdir"), session_name, request.node.nodeid)
+
+    teardown(nodes_num_module, logs_dir)
+
+
 @pytest.fixture(scope='function')
 @async_generator
-async def docker_setup_and_teardown(nodes_num, request):
-    await setup_and_teardown(nodes_num, request)
+async def docker_setup_and_teardown_function(session_name, nodes_num, request, failed_test):
+    await setup(nodes_num)
+    await yield_()
+
+    logs_dir = None
+    if (
+        request.node.rep_setup.passed
+        and request.node.rep_call.failed
+        and request.config.getoption("gatherlogs")
+    ):
+        logs_dir = os.path.join(request.config.getoption("logsdir"), session_name, request.node.nodeid)
+
+    teardown(nodes_num, logs_dir)
+
+
+@pytest.fixture(scope='function')
+@async_generator
+async def docker_setup_and_teardown(docker_setup_and_teardown_function):
+    pass
 
 
 @pytest.fixture

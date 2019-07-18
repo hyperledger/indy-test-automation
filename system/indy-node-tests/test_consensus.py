@@ -3,7 +3,6 @@ import logging
 from async_generator import async_generator
 
 from system.utils import *
-from system.docker_setup import setup_and_teardown
 
 # logger = logging.getLogger(__name__)
 # logging.basicConfig(level=0, format='%(asctime)s %(message)s')
@@ -11,8 +10,8 @@ from system.docker_setup import setup_and_teardown
 
 @pytest.fixture(scope='function', autouse=True)
 @async_generator
-async def docker_setup_and_teardown(nodes_num, request):
-    await setup_and_teardown(nodes_num, request)
+async def docker_setup_and_teardown(docker_setup_and_teardown_function):
+    pass
 
 
 @pytest.mark.asyncio
