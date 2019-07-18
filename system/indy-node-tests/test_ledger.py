@@ -28,6 +28,7 @@ async def docker_setup_and_teardown(docker_setup_and_teardown_module):
 @pytest.mark.parametrize('reader_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR', None])
 @pytest.mark.asyncio
 async def test_send_and_get_nym_positive(writer_role, reader_role):
+    assert False
     await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
