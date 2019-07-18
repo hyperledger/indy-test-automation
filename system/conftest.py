@@ -234,7 +234,7 @@ async def docker_setup_and_teardown_function(session_name, nodes_num, request, f
 @pytest.fixture(scope='function')
 @async_generator
 async def docker_setup_and_teardown(docker_setup_and_teardown_function):
-    pass
+    await yield_()
 
 
 @pytest.fixture

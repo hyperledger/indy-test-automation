@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @pytest.fixture(scope='function', autouse=True)
 @async_generator
 async def docker_setup_and_teardown(docker_setup_and_teardown_function):
-    pass
+    await yield_()
 
 
 @pytest.mark.asyncio

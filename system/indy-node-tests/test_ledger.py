@@ -21,7 +21,7 @@ async def nodes_num():
 @pytest.fixture(scope='module', autouse=True)
 @async_generator
 async def docker_setup_and_teardown(docker_setup_and_teardown_module):
-    pass
+    await yield_()
 
 
 @pytest.mark.parametrize('writer_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
