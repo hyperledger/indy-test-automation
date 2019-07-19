@@ -910,7 +910,7 @@ async def test_misc_utxo_st_600(
     addresses = []
     outputs = []
 
-    for i in range(5):
+    for i in range(1):
         addresses.append([])
         outputs.append([])
         for j in range(1500):
@@ -956,8 +956,71 @@ async def test_misc_utxo_st_600(
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
 
+@pytest.mark.nodes_num(4)
 @pytest.mark.asyncio
-async def test_misc_utxo_st_602(
-        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee
+async def test_misc_2164(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
-    pass
+    trustee_did, _ = get_default_trustee
+    target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+
+    # send valid request
+    res1 = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, target_vk)
+    assert res1['op'] == 'REPLY'
+
+    # Block traffic between Node2, Node3, Node4 and a client
+    for i in range(3, 6):
+        for t in ['INPUT', 'OUTPUT']:
+            p1 = subprocess.Popen(
+                ['echo', '123456'],
+                stdout=subprocess.PIPE
+            )
+            p2 = subprocess.Popen(
+                ['sudo', '-S', 'iptables', '-A', '{}'.format(t), '-s', '10.0.0.{}'.format(i), '-j', 'DROP'],
+                stdin=p1.stdout,
+                stdout=subprocess.PIPE
+            )
+            p1.stdout.close()
+            out, err = p2.communicate()
+            assert err is None
+
+    # Unblock traffic between Node2 and client
+    for t in ['INPUT', 'OUTPUT']:
+        # input from Node2 to client is already unblocked here (can receive), but output is still blocked (cannot send)
+        if t == 'OUTPUT':
+            # send invalid request
+            res2 = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, target_vk)
+            assert res2['op'] == 'REJECT'
+
+        p1 = subprocess.Popen(
+            ['echo', '123456'],
+            stdout=subprocess.PIPE
+        )
+        p2 = subprocess.Popen(
+            ['sudo', '-S', 'iptables', '-D', '{}'.format(t), '-s', '10.0.0.3', '-j', 'DROP'],
+            stdin=p1.stdout,
+            stdout=subprocess.PIPE
+        )
+        p1.stdout.close()
+        out, err = p2.communicate()
+        assert err is None
+
+    # send valid request
+    res3 = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, None, None, 'STEWARD')
+    assert res3['op'] == 'REPLY'
+
+    # Block traffic between Node3, Node4 and a client
+    for i in range(4, 6):
+        for t in ['INPUT', 'OUTPUT']:
+            p1 = subprocess.Popen(
+                ['echo', '123456'],
+                stdout=subprocess.PIPE
+            )
+            p2 = subprocess.Popen(
+                ['sudo', '-S', 'iptables', '-D', '{}'.format(t), '-s', '10.0.0.{}'.format(i), '-j', 'DROP'],
+                stdin=p1.stdout,
+                stdout=subprocess.PIPE
+            )
+            p1.stdout.close()
+            out, err = p2.communicate()
+            assert err is None
