@@ -4,10 +4,9 @@ import pytest
 import asyncio
 
 
-#@pytest.mark.skip(reason='ST-580')
+@pytest.mark.skip(reason='ST-580')
 @pytest.mark.asyncio
 async def test_libsovtoken_acceptance(docker_setup_and_teardown):
-    assert False
     await pool.set_protocol_version(2)
     await payment_initializer('libsovtoken.so', 'sovtoken_init')
     # await payment_initializer('libnullpay.so', 'nullpay_init')
