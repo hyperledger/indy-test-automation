@@ -142,13 +142,12 @@ async def wait_until_pool_is_ready():
 
 
 
-def gather_logs(nodes_num, target_dir):
+def gather_logs(hosts, target_dir):
     target_dir = Path(target_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
 
     tmp_tar =  target_dir / 'tmp.tar'
 
-    hosts = [NodeHost(node_id + 1) for node_id in range(nodes_num)]
 
     try:
         for host in hosts:
@@ -176,7 +175,10 @@ async def setup(nodes_num):
 def teardown(nodes_num, nodes_logs_dir=None):
     try:
         if nodes_logs_dir:
-            gather_logs(nodes_num, nodes_logs_dir)
+            hosts = [NodeHost(node_id + 1) for node_id in range(nodes_num)]
+            for host in hosts:
+                host.stop_service()
+            gather_logs(hosts, nodes_logs_dir)
     finally:
         pool_stop()
         logger.info('DOCKER TEARDOWN HAS BEEN FINISHED!\n')
