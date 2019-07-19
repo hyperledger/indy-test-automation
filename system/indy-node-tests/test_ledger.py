@@ -4,7 +4,7 @@ import hashlib
 import time
 import logging
 import asyncio
-from async_generator import async_generator
+from async_generator import async_generator, yield_
 
 from indy import pool, did, ledger, IndyError
 
