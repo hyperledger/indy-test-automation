@@ -854,6 +854,8 @@ class NodeHost:
         return self.run('systemctl restart indy-node')
 
     def generate_logs(self):
+        # TODO might fail in case of running nodes since tar complaints when
+        # files are changed during archiving
         archive_path = "/tmp/{}.{}.tgz".format(self.name, datetime.now().strftime("%Y-%m-%dT%H%M%S"))
         self.run(
             "find /var/log/indy/sandbox/ /var/lib/indy/sandbox/ -maxdepth 1 -type f -not -name data "
