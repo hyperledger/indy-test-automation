@@ -24,15 +24,15 @@ def pytest_configure(config):
 def pytest_addoption(parser):
     parser.addoption(
         "--payments", action='store_true', default=None,
-        help="run libsovtoken based tests as well"
-    )
-    parser.addoption(
-        "--logsdir", action='store', default='_build/logs',
-        help="directory name to store logs"
+        help="run payment oriented tests as well"
     )
     parser.addoption(
         "--gatherlogs", action='store_true', default=None,
         help="gather node logs for failed tests"
+    )
+    parser.addoption(
+        "--logsdir", action='store', default='_build/logs',
+        help="directory name to store logs"
     )
 
 
