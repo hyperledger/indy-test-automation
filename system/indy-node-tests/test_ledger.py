@@ -4,21 +4,24 @@ import hashlib
 import time
 import logging
 import asyncio
-from async_generator import async_generator
+from async_generator import async_generator, yield_
 
 from indy import pool, did, ledger, IndyError
 
 from system.utils import *
-from system.docker_setup import setup_and_teardown
 
 # logger = logging.getLogger(__name__)
 # logging.basicConfig(level=0, format='%(asctime)s %(message)s')
 
+@pytest.fixture
+async def nodes_num():
+    return 7
+
 
 @pytest.fixture(scope='module', autouse=True)
 @async_generator
-async def docker_setup_and_teardown():
-    await setup_and_teardown(7)
+async def docker_setup_and_teardown(docker_setup_and_teardown_module):
+    await yield_()
 
 
 @pytest.mark.parametrize('writer_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])

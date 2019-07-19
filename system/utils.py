@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 import os
 import string
 import base58
@@ -823,7 +824,11 @@ async def wait_until_vc_is_done(primary_before, pool_handler, wallet_handler, tr
 class NodeHost:
     def __init__(self, node_id):
         self._id = node_id
-        self._host = testinfra.get_host('ssh://node{}'.format(node_id))
+        self._host = testinfra.get_host('ssh://{}'.format(self.name))
+
+    @property
+    def name(self):
+        return "node{}".format(self._id)
 
     @property
     def host(self):
@@ -847,6 +852,15 @@ class NodeHost:
 
     def restart_service(self):
         return self.run('systemctl restart indy-node')
+
+    def generate_logs(self):
+        archive_path = "/tmp/{}.{}.tgz".format(self.name, datetime.now().strftime("%Y-%m-%dT%H%M%S"))
+        self.run(
+            "find /var/log/indy/sandbox/ /var/lib/indy/sandbox/ -maxdepth 1 -type f -not -name data "
+            "| tar czf {} -T -"
+            .format(archive_path)
+        )
+        return archive_path
 
 
 async def send_random_nyms(pool_handle, wallet_handle, submitter_did, count):
