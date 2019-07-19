@@ -15,6 +15,9 @@ from .utils import (
 from .docker_setup import setup, teardown
 
 
+_failed_nodes = {}
+
+
 def pytest_configure(config):
     config.addinivalue_line(
         "markers", "nodes_num(int): mark test to run specific number of nodes in pool, default: 7"
@@ -43,9 +46,10 @@ def pytest_runtest_makereport(item, call):
     outcome = yield
     rep = outcome.get_result()
 
-    # set a report attribute for each phase of a call, which can
-    # be "setup", "call", "teardown"
-    setattr(item, "rep_" + rep.when, rep)
+    if rep.when == 'call' and rep.failed:
+        _failed_nodes[item.nodeid] = item
+        # TODO ensure that parent is always points to module
+        _failed_nodes[item.parent.nodeid] = item.parent
 
 
 # TODO seems not the best name for that functionality
@@ -60,23 +64,6 @@ def event_loop():
 @pytest.fixture(scope='session', autouse=True)
 def session_name():
     return "run.{}".format(datetime.now().strftime("%Y-%m-%dT%H%M%S"))
-
-
-@pytest.fixture(scope='module')
-def failed_tests(request):
-    return []
-
-
-@pytest.fixture(autouse=True)
-def failed_test(request, failed_tests):
-    yield
-
-    if request.node.rep_setup.passed and request.node.rep_call.failed:
-        # executing test failed
-        test_name = request.node.name
-        failed_tests.append(test_name)
-        return test_name
-    return None
 
 
 @pytest.fixture()
@@ -202,33 +189,30 @@ async def ssh_config(nodes_num):
 
 
 @pytest.fixture(scope='module')
+def _docker_teardown(session_name):
+    def wrapped(nodes_num, request):
+        logs_dir = None
+        if (request.node.nodeid in _failed_nodes) and request.config.getoption("gatherlogs"):
+            logs_dir = os.path.join(request.config.getoption("logsdir"), session_name, request.node.nodeid)
+
+        teardown(nodes_num, logs_dir)
+    return wrapped
+
+
+@pytest.fixture(scope='module')
 @async_generator
-async def docker_setup_and_teardown_module(session_name, nodes_num_module, request, failed_tests):
+async def docker_setup_and_teardown_module(nodes_num_module, request, _docker_teardown):
     await setup(nodes_num_module)
     await yield_()
-
-    logs_dir = None
-    if failed_tests and request.config.getoption("gatherlogs"):
-        logs_dir = os.path.join(request.config.getoption("logsdir"), session_name, request.node.nodeid)
-
-    teardown(nodes_num_module, logs_dir)
+    _docker_teardown(nodes_num_module, request)
 
 
 @pytest.fixture(scope='function')
 @async_generator
-async def docker_setup_and_teardown_function(session_name, nodes_num, request, failed_test):
+async def docker_setup_and_teardown_function(nodes_num, request, _docker_teardown):
     await setup(nodes_num)
     await yield_()
-
-    logs_dir = None
-    if (
-        request.node.rep_setup.passed
-        and request.node.rep_call.failed
-        and request.config.getoption("gatherlogs")
-    ):
-        logs_dir = os.path.join(request.config.getoption("logsdir"), session_name, request.node.nodeid)
-
-    teardown(nodes_num, logs_dir)
+    _docker_teardown(nodes_num, request)
 
 
 @pytest.fixture(scope='function')
