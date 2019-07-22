@@ -16,6 +16,7 @@ import hashlib
 from hypothesis import errors, settings, Verbosity, given, strategies
 import pprint
 import itertools
+import docker
 
 
 # logger = logging.getLogger(__name__)
@@ -968,7 +969,7 @@ async def test_misc_2164(
     res1 = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, target_vk)
     assert res1['op'] == 'REPLY'
 
-    # Block traffic between Node2, Node3, Node4 and a client
+    # block traffic between Node2, Node3, Node4 and a client
     for i in range(3, 6):
         for t in ['INPUT', 'OUTPUT']:
             p1 = subprocess.Popen(
@@ -984,7 +985,7 @@ async def test_misc_2164(
             out, err = p2.communicate()
             assert err is None
 
-    # Unblock traffic between Node2 and client
+    # unblock traffic between Node2 and client
     for t in ['INPUT', 'OUTPUT']:
         # input from Node2 to client is already unblocked here (can receive), but output is still blocked (cannot send)
         if t == 'OUTPUT':
@@ -1009,7 +1010,7 @@ async def test_misc_2164(
     res3 = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, None, None, 'STEWARD')
     assert res3['op'] == 'REPLY'
 
-    # Block traffic between Node3, Node4 and a client
+    # block traffic between Node3, Node4 and a client
     for i in range(4, 6):
         for t in ['INPUT', 'OUTPUT']:
             p1 = subprocess.Popen(
@@ -1024,3 +1025,24 @@ async def test_misc_2164(
             p1.stdout.close()
             out, err = p2.communicate()
             assert err is None
+
+
+@pytest.mark.nodes_num(4)
+@pytest.mark.asyncio
+async def test_misc_2112(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num
+):
+    client = docker.from_env()
+    trustee_did, _ = get_default_trustee
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    client.networks.list(names=['indy-test-automation-network'])[0].disconnect('node4')
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=100)
+    for i in range(5):
+        await asyncio.sleep(15)
+        client.networks.list(names=['indy-test-automation-network'])[0].connect('node4')
+        client.networks.list(names=['indy-test-automation-network'])[0].disconnect('node4')
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=200)
+    client.networks.list(names=['indy-test-automation-network'])[0].connect('node4')
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, timeout=180)
