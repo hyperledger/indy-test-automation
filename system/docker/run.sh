@@ -35,8 +35,31 @@ image_repository="hyperledger/indy-test-automation"
 client_image_name="${image_repository}:client"
 client_container_name="indy-test-automation-client"
 
+command_setup="
+    set -ex
+    pipenv --three
+    pipenv run pip install -r system/requirements.txt
+"
+
+command_run="
+    pipenv run python -m pytest $pytest_args $test_target
+"
+
+if [ "$INDY_SYSTEM_TESTS_MODE" = "debug" ] ; then
+    docker_opts="-it"
+    run_command="
+        $command_setup
+        echo '$command_run'
+        bash"
+else
+    docker_opts="-t"
+    run_command="
+        $command_setup
+        $command_run"
+fi
+
 # TODO pass specified env variables
-docker run -t --rm --name "$client_container_name" \
+docker run $docker_opts --rm --name "$client_container_name" \
     --network "${test_network_name}" \
     --ip "10.0.0.99" \
     --group-add $(stat -c '%g' "$docker_socket_path") \
@@ -46,9 +69,4 @@ docker run -t --rm --name "$client_container_name" \
     -u "$user_id:$group_id" \
     -w "$workdir_path" \
     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
-    "$client_image_name" /bin/bash -c "
-        set -ex
-        pipenv --three
-        pipenv run pip install -r system/requirements.txt
-        pipenv run python -m pytest $pytest_args $test_target
-    "
+    "$client_image_name" /bin/bash -c "$run_command"

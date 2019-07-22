@@ -50,6 +50,7 @@ Each script provides a short help, use `--help` for the details.
 ### [run.sh](run.sh)
 
 - Runs `pytest` inside client docker container.
+- Might be run in debug mode by setting the environment variable `INDY_SYSTEM_TESTS_MODE=debug`: docker client container would be run in interactive mode with the environment ready run tests.
 
 ### [clean.sh](clean.sh)
 

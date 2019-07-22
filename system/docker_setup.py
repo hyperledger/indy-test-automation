@@ -1,13 +1,17 @@
 import os
 import time
 import subprocess
+import io
+import tarfile
+from pathlib import Path
 from subprocess import CalledProcessError
 import docker
 import asyncio
 from async_generator import yield_
 
 from .utils import (
-    pool_helper, wallet_helper, default_trustee, ensure_pool_is_functional
+    pool_helper, wallet_helper, default_trustee, ensure_pool_is_functional,
+    NodeHost
 )
 
 import logging
@@ -137,30 +141,47 @@ async def wait_until_pool_is_ready():
     await ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did)
 
 
-async def setup_and_teardown(nodes_num, request):
 
+def gather_logs(hosts, target_dir):
+    target_dir = Path(target_dir)
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    tmp_tar =  target_dir / 'tmp.tar'
+
+
+    try:
+        for host in hosts:
+            logs_path = host.generate_logs()
+            bits, stat = client.containers.get(host.name).get_archive(logs_path)
+            with open(str(tmp_tar), 'w+b') as f:
+                for chunk in bits:
+                    f.write(chunk)
+
+            with tarfile.open(str(tmp_tar)) as tar:
+                tar.extractall(str(target_dir))
+    finally:
+        if tmp_tar.exists():
+            tmp_tar.unlink()
+
+
+async def setup(nodes_num):
     pool_stop()
 
     main(nodes_num=nodes_num)
     await wait_until_pool_is_ready()
     logger.info('DOCKER SETUP HAS BEEN FINISHED!')
-    await yield_()
 
+
+def teardown(nodes_num, nodes_logs_dir=None):
     try:
-        os.mkdir('/tmp/logs')
-    except FileExistsError:
-        pass
-    testname = request.node.name
-    for node in client.containers.list():
-        f = open('/tmp/logs/{}_{}.tar'.format(testname, node.name), 'wb')
-        bits, stat = node.get_archive('/var/log/indy/sandbox')
-        for chunk in bits:
-            f.write(chunk)
-        f.close()
-
-    pool_stop()
-    logger.info('DOCKER TEARDOWN HAS BEEN FINISHED!\n')
-
+        if nodes_logs_dir:
+            hosts = [NodeHost(node_id + 1) for node_id in range(nodes_num)]
+            for host in hosts:
+                host.stop_service()
+            gather_logs(hosts, nodes_logs_dir)
+    finally:
+        pool_stop()
+        logger.info('DOCKER TEARDOWN HAS BEEN FINISHED!\n')
 
 if __name__ == '__main__':
     main()
