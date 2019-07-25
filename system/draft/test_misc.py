@@ -19,8 +19,10 @@ import itertools
 import docker
 
 
-# logger = logging.getLogger(__name__)
-# logging.basicConfig(level=0, format='%(asctime)s %(message)s')
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=0, format='%(asctime)s %(message)s', filename='client_log', filemode='a'
+)
 
 
 @pytest.mark.asyncio
@@ -800,7 +802,7 @@ async def test_misc_nym_alias(docker_setup_and_teardown, pool_handler, wallet_ha
 async def test_misc_mint_to_aws(payment_init):
     await pool.set_protocol_version(2)
     libsovtoken_payment_method = 'sov'
-    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
+    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis_test')
     # pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
@@ -892,6 +894,8 @@ async def test_misc_plug_req_handlers_regression(
 async def test_misc_utxo_st_600(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee
 ):
+    hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
+    print(hosts)
     libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee
     address0 = await payment.create_payment_address(
@@ -945,15 +949,30 @@ async def test_misc_utxo_st_600(
         res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         assert res['op'] == 'REPLY'
 
+    # default check
     req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address0)
-    res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    print(res)
-    assert json.loads(res)['op'] == 'REPLY'
-    source = json.loads(
-        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res)
+    res1 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res1)
+    assert json.loads(res1)['op'] == 'REPLY'
+    source1 = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res1)
     )[0]['source']
-    print(source)
+    print(source1)
 
+    # check state proof reading and from feature
+    outputs1 = [host.run('systemctl stop indy-node') for host in hosts[:-1]]
+    print(outputs1)
+    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address0)  # TODO add from
+    res2 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res2)
+    assert json.loads(res2)['op'] == 'REPLY'
+    source2 = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res2)
+    )[0]['source']
+    print(source2)
+
+    outputs2 = [host.run('systemctl start indy-node') for host in hosts[:-1]]
+    print(outputs2)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
 
@@ -1010,7 +1029,7 @@ async def test_misc_2164(
     res3 = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, None, None, 'STEWARD')
     assert res3['op'] == 'REPLY'
 
-    # block traffic between Node3, Node4 and a client
+    # unblock traffic between Node3, Node4 and a client
     for i in range(4, 6):
         for t in ['INPUT', 'OUTPUT']:
             p1 = subprocess.Popen(
@@ -1046,3 +1065,39 @@ async def test_misc_2112(
     client.networks.list(names=['indy-test-automation-network'])[0].connect('node4')
     await ensure_pool_is_in_sync(nodes_num=nodes_num)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, timeout=180)
+
+
+@pytest.mark.asyncio
+async def test_misc_is_1284():
+    pool_handle, _ = await pool_helper(path_to_genesis='../buildernet_genesis')
+    wallet_handle, _, _ = await wallet_helper()
+    builder_did, builder_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
+        {'seed': str('I22aXMicTRh1ILWojMVJMvvzznlFwVUj')}))
+    res = await send_nym(
+        pool_handle, wallet_handle, builder_did, 'NSNGwB2MK7WVoG7CLmHhfy', '~PRDkZn9HMSL2MUWKFJLpi9', None, 'STEWARD'
+    )
+    print(res)
+    assert res['op'] == 'REJECT'
+
+
+@pytest.mark.asyncio
+async def test_misc_2171(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    trustee_did, _ = get_default_trustee
+    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
+                                               json.dumps({
+                                                   'constraint_id': 'ROLE',
+                                                   'role': '*',
+                                                   'sig_count': 1,
+                                                   'need_to_be_owner': False,
+                                                   'need_to_be_on_ledger': False,
+                                                   'metadata': {}
+                                               }))
+    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res1)
+    assert res1['op'] == 'REPLY'
+    res2 = await send_nym(pool_handler, wallet_handler, new_did, new_did, new_vk, 'my own nym', None)
+    print(res2)
+    assert res2['op'] == 'REPLY'
