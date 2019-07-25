@@ -87,27 +87,34 @@ async def test_misc_get_txn_by_seqno():
 
 
 @pytest.mark.asyncio
-async def test_misc_state_proof(docker_setup_and_teardown):
-    await pool.set_protocol_version(2)
+async def test_misc_state_proof(
+        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
+        initial_token_minting
+):
     timestamp0 = int(time.time())
-    pool_handle, _ = await pool_helper()
-    wallet_handle, _, _ = await wallet_helper()
-    trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
-        {'seed': '000000000000000000000000Trustee1'}))
+    trustee_did, _ = get_default_trustee
     random_did = random_did_and_json()[0]
-    await send_nym(pool_handle, wallet_handle, trustee_did, random_did)
-    await send_attrib(pool_handle, wallet_handle, trustee_did, random_did, None, json.dumps({'key': 'value'}), None)
-    schema_id, _ = await send_schema(pool_handle, wallet_handle, trustee_did, random_string(10), '1.0',
-                                     json.dumps([random_string(1), random_string(2), random_string(3)]))
+    address = initial_token_minting
+    await send_nym(pool_handler, wallet_handler, trustee_did, random_did)
+    await send_attrib(pool_handler, wallet_handler, trustee_did, random_did, None, json.dumps({'key': 'value'}), None)
+    schema_id, _ = await send_schema(
+        pool_handler, wallet_handler, trustee_did, random_string(10), '1.0', json.dumps(
+            [random_string(1), random_string(2), random_string(3)]
+        )
+    )
     await asyncio.sleep(1)
-    res = json.dumps(await get_schema(pool_handle, wallet_handle, trustee_did, schema_id))
+    res = json.dumps(await get_schema(pool_handler, wallet_handler, trustee_did, schema_id))
     schema_id, schema_json = await ledger.parse_get_schema_response(res)
-    cred_def_id, _, _ = await send_cred_def(pool_handle, wallet_handle, trustee_did, schema_json, random_string(3),
-                                            None, json.dumps({'support_revocation': True}))
-    revoc_reg_def_id, _, _, res1 = await send_revoc_reg_entry(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM',
-                                                              random_string(3), cred_def_id,
-                                                              json.dumps({'max_cred_num': 1,
-                                                                          'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+    cred_def_id, _, _ = await send_cred_def(
+        pool_handler, wallet_handler, trustee_did, schema_json, random_string(3), None, json.dumps(
+            {'support_revocation': True}
+        )
+    )
+    revoc_reg_def_id, _, _, res1 = await send_revoc_reg_entry(
+        pool_handler, wallet_handler, trustee_did, 'CL_ACCUM', random_string(3), cred_def_id, json.dumps(
+            {'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}
+        )
+    )
     timestamp1 = int(time.time())
 
     # uncomment to check freshness state proof reading
@@ -119,30 +126,34 @@ async def test_misc_state_proof(docker_setup_and_teardown):
     print(outputs0)
     try:
         req1 = await ledger.build_get_nym_request(None, random_did)
-        res1 = json.loads(await ledger.submit_request(pool_handle, req1))
+        res1 = json.loads(await ledger.submit_request(pool_handler, req1))
 
         req2 = await ledger.build_get_attrib_request(None, random_did, 'key', None, None)
-        res2 = json.loads(await ledger.submit_request(pool_handle, req2))
+        res2 = json.loads(await ledger.submit_request(pool_handler, req2))
 
         req3 = await ledger.build_get_schema_request(None, schema_id)
-        res3 = json.loads(await ledger.submit_request(pool_handle, req3))
+        res3 = json.loads(await ledger.submit_request(pool_handler, req3))
 
         req4 = await ledger.build_get_cred_def_request(None, cred_def_id)
-        res4 = json.loads(await ledger.submit_request(pool_handle, req4))
+        res4 = json.loads(await ledger.submit_request(pool_handler, req4))
 
         req5 = await ledger.build_get_revoc_reg_def_request(None, revoc_reg_def_id)
-        res5 = json.loads(await ledger.submit_request(pool_handle, req5))
+        res5 = json.loads(await ledger.submit_request(pool_handler, req5))
 
         # consensus is impossible with timestamp0 here! IS-1263
         req6 = await ledger.build_get_revoc_reg_request(None, revoc_reg_def_id, timestamp1)
-        res6 = json.loads(await ledger.submit_request(pool_handle, req6))
+        res6 = json.loads(await ledger.submit_request(pool_handler, req6))
 
         req66 = await ledger.build_get_revoc_reg_request(None, revoc_reg_def_id, timestamp0)
-        res66 = json.loads(await ledger.submit_request(pool_handle, req66))
+        res66 = json.loads(await ledger.submit_request(pool_handler, req66))
 
         # consensus is impossible with (timestamp0, timestamp1) here! IS-1264
         req7 = await ledger.build_get_revoc_reg_delta_request(None, revoc_reg_def_id, timestamp0, timestamp1)
-        res7 = json.loads(await ledger.submit_request(pool_handle, req7))
+        res7 = json.loads(await ledger.submit_request(pool_handler, req7))
+
+        # tokens
+        req8, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address)
+        res8 = await json.loads(ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req8))
     finally:
         outputs1 = [host.run('systemctl start indy-node') for host in hosts[:-1]]
         print(outputs1)
@@ -155,6 +166,7 @@ async def test_misc_state_proof(docker_setup_and_teardown):
     assert res6['result']['seqNo'] is not None
     assert res66['result']['seqNo'] is None
     assert res7['result']['seqNo'] is not None
+    assert res8['op'] == 'REPLY' and res8['result']['seqNo'] is not None
 
 
 @pytest.mark.asyncio
