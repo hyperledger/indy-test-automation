@@ -34,8 +34,9 @@ async def test_vc_by_restart(
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
 
+@pytest.mark.skip('INDY-2023')
 @pytest.mark.asyncio
-async def test_vc_by_demotion(
+async def test_vc_by_demotion_primary(
         pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
 ):
     trustee_did, _ = get_default_trustee
@@ -44,7 +45,9 @@ async def test_vc_by_demotion(
     await eventually(demote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
     await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+    primary_next, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
     await eventually(promote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
+    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_next)
     await ensure_pool_is_in_sync(nodes_num=nodes_num)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, timeout=360)
 

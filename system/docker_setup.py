@@ -141,13 +141,11 @@ async def wait_until_pool_is_ready():
     await ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did)
 
 
-
 def gather_logs(hosts, target_dir):
     target_dir = Path(target_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    tmp_tar =  target_dir / 'tmp.tar'
-
+    tmp_tar = target_dir / 'tmp.tar'
 
     try:
         for host in hosts:
@@ -182,6 +180,7 @@ def teardown(nodes_num, nodes_logs_dir=None):
     finally:
         pool_stop()
         logger.info('DOCKER TEARDOWN HAS BEEN FINISHED!\n')
+
 
 if __name__ == '__main__':
     main()

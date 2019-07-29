@@ -16,10 +16,13 @@ import hashlib
 from hypothesis import errors, settings, Verbosity, given, strategies
 import pprint
 import itertools
+import docker
 
 
-# logger = logging.getLogger(__name__)
-# logging.basicConfig(level=0, format='%(asctime)s %(message)s')
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=0, format='%(asctime)s %(message)s', filename='client_log', filemode='a'
+)
 
 
 @pytest.mark.asyncio
@@ -84,27 +87,41 @@ async def test_misc_get_txn_by_seqno():
 
 
 @pytest.mark.asyncio
-async def test_misc_state_proof(docker_setup_and_teardown):
-    await pool.set_protocol_version(2)
-    timestamp0 = int(time.time())
-    pool_handle, _ = await pool_helper()
-    wallet_handle, _, _ = await wallet_helper()
-    trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
-        {'seed': '000000000000000000000000Trustee1'}))
+async def test_misc_state_proof(
+        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
+        initial_token_minting
+):
+    trustee_did, _ = get_default_trustee
     random_did = random_did_and_json()[0]
-    await send_nym(pool_handle, wallet_handle, trustee_did, random_did)
-    await send_attrib(pool_handle, wallet_handle, trustee_did, random_did, None, json.dumps({'key': 'value'}), None)
-    schema_id, _ = await send_schema(pool_handle, wallet_handle, trustee_did, random_string(10), '1.0',
-                                     json.dumps([random_string(1), random_string(2), random_string(3)]))
+    address = initial_token_minting
+    res_nym = await send_nym(pool_handler, wallet_handler, trustee_did, random_did)
+    assert res_nym['op'] == 'REPLY'
+    res_attr = await send_attrib(
+        pool_handler, wallet_handler, trustee_did, random_did, None, json.dumps({'key': 'value'}), None
+    )
+    assert res_attr['op'] == 'REPLY'
+    schema_id, res_sch = await send_schema(
+        pool_handler, wallet_handler, trustee_did, random_string(10), '1.0', json.dumps(
+            [random_string(1), random_string(2), random_string(3)]
+        )
+    )
+    assert res_sch['op'] == 'REPLY'
     await asyncio.sleep(1)
-    res = json.dumps(await get_schema(pool_handle, wallet_handle, trustee_did, schema_id))
+    timestamp0 = int(time.time())
+    res = json.dumps(await get_schema(pool_handler, wallet_handler, trustee_did, schema_id))
     schema_id, schema_json = await ledger.parse_get_schema_response(res)
-    cred_def_id, _, _ = await send_cred_def(pool_handle, wallet_handle, trustee_did, schema_json, random_string(3),
-                                            None, json.dumps({'support_revocation': True}))
-    revoc_reg_def_id, _, _, res1 = await send_revoc_reg_entry(pool_handle, wallet_handle, trustee_did, 'CL_ACCUM',
-                                                              random_string(3), cred_def_id,
-                                                              json.dumps({'max_cred_num': 1,
-                                                                          'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+    cred_def_id, _, res_cred_def = await send_cred_def(
+        pool_handler, wallet_handler, trustee_did, schema_json, random_string(3), None, json.dumps(
+            {'support_revocation': True}
+        )
+    )
+    assert res_cred_def['op'] == 'REPLY'
+    revoc_reg_def_id, _, _, res_entry = await send_revoc_reg_entry(
+        pool_handler, wallet_handler, trustee_did, 'CL_ACCUM', random_string(3), cred_def_id, json.dumps(
+            {'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}
+        )
+    )
+    assert res_entry['op'] == 'REPLY'
     timestamp1 = int(time.time())
 
     # uncomment to check freshness state proof reading
@@ -116,30 +133,34 @@ async def test_misc_state_proof(docker_setup_and_teardown):
     print(outputs0)
     try:
         req1 = await ledger.build_get_nym_request(None, random_did)
-        res1 = json.loads(await ledger.submit_request(pool_handle, req1))
+        res1 = json.loads(await ledger.submit_request(pool_handler, req1))
 
         req2 = await ledger.build_get_attrib_request(None, random_did, 'key', None, None)
-        res2 = json.loads(await ledger.submit_request(pool_handle, req2))
+        res2 = json.loads(await ledger.submit_request(pool_handler, req2))
 
         req3 = await ledger.build_get_schema_request(None, schema_id)
-        res3 = json.loads(await ledger.submit_request(pool_handle, req3))
+        res3 = json.loads(await ledger.submit_request(pool_handler, req3))
 
         req4 = await ledger.build_get_cred_def_request(None, cred_def_id)
-        res4 = json.loads(await ledger.submit_request(pool_handle, req4))
+        res4 = json.loads(await ledger.submit_request(pool_handler, req4))
 
         req5 = await ledger.build_get_revoc_reg_def_request(None, revoc_reg_def_id)
-        res5 = json.loads(await ledger.submit_request(pool_handle, req5))
+        res5 = json.loads(await ledger.submit_request(pool_handler, req5))
 
         # consensus is impossible with timestamp0 here! IS-1263
         req6 = await ledger.build_get_revoc_reg_request(None, revoc_reg_def_id, timestamp1)
-        res6 = json.loads(await ledger.submit_request(pool_handle, req6))
+        res6 = json.loads(await ledger.submit_request(pool_handler, req6))
 
         req66 = await ledger.build_get_revoc_reg_request(None, revoc_reg_def_id, timestamp0)
-        res66 = json.loads(await ledger.submit_request(pool_handle, req66))
+        res66 = json.loads(await ledger.submit_request(pool_handler, req66))
 
         # consensus is impossible with (timestamp0, timestamp1) here! IS-1264
         req7 = await ledger.build_get_revoc_reg_delta_request(None, revoc_reg_def_id, timestamp0, timestamp1)
-        res7 = json.loads(await ledger.submit_request(pool_handle, req7))
+        res7 = json.loads(await ledger.submit_request(pool_handler, req7))
+
+        # tokens
+        req8, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address)
+        res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req8))
     finally:
         outputs1 = [host.run('systemctl start indy-node') for host in hosts[:-1]]
         print(outputs1)
@@ -150,8 +171,10 @@ async def test_misc_state_proof(docker_setup_and_teardown):
     assert res4['result']['seqNo'] is not None
     assert res5['result']['seqNo'] is not None
     assert res6['result']['seqNo'] is not None
+    print(res66)
     assert res66['result']['seqNo'] is None
     assert res7['result']['seqNo'] is not None
+    assert res8['op'] == 'REPLY' and res8['result']['outputs'][0]['seqNo'] is not None
 
 
 @pytest.mark.asyncio
@@ -799,7 +822,7 @@ async def test_misc_nym_alias(docker_setup_and_teardown, pool_handler, wallet_ha
 async def test_misc_mint_to_aws(payment_init):
     await pool.set_protocol_version(2)
     libsovtoken_payment_method = 'sov'
-    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
+    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis_test')
     # pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
@@ -875,8 +898,12 @@ async def test_misc_plug_req_handlers_regression(
     trustee_did, _ = get_default_trustee
 
     req1 = await ledger.build_get_validator_info_request(trustee_did)
+    t0 = time.perf_counter()
     res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
+    t1 = time.perf_counter()
     print(res1)
+    print('\n{}\n'.format(t1 - t0))
+    assert (t1 - t0) < 1.0
     res1 = {k: json.loads(v) for k, v in res1.items()}
     assert all([v['op'] == 'REPLY' for k, v in res1.items()])
 
@@ -891,6 +918,8 @@ async def test_misc_plug_req_handlers_regression(
 async def test_misc_utxo_st_600(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee
 ):
+    hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
+    print(hosts)
     libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee
     address0 = await payment.create_payment_address(
@@ -910,7 +939,7 @@ async def test_misc_utxo_st_600(
     addresses = []
     outputs = []
 
-    for i in range(5):
+    for i in range(1):
         addresses.append([])
         outputs.append([])
         for j in range(1500):
@@ -944,20 +973,186 @@ async def test_misc_utxo_st_600(
         res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         assert res['op'] == 'REPLY'
 
+    # default check
     req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address0)
-    res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    print(res)
-    assert json.loads(res)['op'] == 'REPLY'
-    source = json.loads(
-        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res)
+    res1 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res1)
+    assert json.loads(res1)['op'] == 'REPLY'
+    source1 = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res1)
     )[0]['source']
-    print(source)
+    print(source1)
 
+    # check state proof reading and from feature
+    outputs1 = [host.run('systemctl stop indy-node') for host in hosts[:-1]]
+    print(outputs1)
+    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address0)  # TODO add from
+    res2 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res2)
+    assert json.loads(res2)['op'] == 'REPLY'
+    source2 = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res2)
+    )[0]['source']
+    print(source2)
+
+    outputs2 = [host.run('systemctl start indy-node') for host in hosts[:-1]]
+    print(outputs2)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
 
+@pytest.mark.nodes_num(4)
 @pytest.mark.asyncio
-async def test_misc_utxo_st_602(
-        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee
+async def test_misc_2164(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
-    pass
+    trustee_did, _ = get_default_trustee
+    target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+
+    # send valid request
+    res1 = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, target_vk)
+    assert res1['op'] == 'REPLY'
+
+    # block traffic between Node2, Node3, Node4 and a client
+    for i in range(3, 6):
+        for t in ['INPUT', 'OUTPUT']:
+            p1 = subprocess.Popen(
+                ['echo', '123456'],
+                stdout=subprocess.PIPE
+            )
+            p2 = subprocess.Popen(
+                ['sudo', '-S', 'iptables', '-A', '{}'.format(t), '-s', '10.0.0.{}'.format(i), '-j', 'DROP'],
+                stdin=p1.stdout,
+                stdout=subprocess.PIPE
+            )
+            p1.stdout.close()
+            out, err = p2.communicate()
+            assert err is None
+
+    # unblock traffic between Node2 and client
+    for t in ['INPUT', 'OUTPUT']:
+        # input from Node2 to client is already unblocked here (can receive), but output is still blocked (cannot send)
+        if t == 'OUTPUT':
+            # send invalid request
+            res2 = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, target_vk)
+            assert res2['op'] == 'REJECT'
+
+        p1 = subprocess.Popen(
+            ['echo', '123456'],
+            stdout=subprocess.PIPE
+        )
+        p2 = subprocess.Popen(
+            ['sudo', '-S', 'iptables', '-D', '{}'.format(t), '-s', '10.0.0.3', '-j', 'DROP'],
+            stdin=p1.stdout,
+            stdout=subprocess.PIPE
+        )
+        p1.stdout.close()
+        out, err = p2.communicate()
+        assert err is None
+
+    # send valid request
+    res3 = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, None, None, 'STEWARD')
+    assert res3['op'] == 'REPLY'
+
+    # unblock traffic between Node3, Node4 and a client
+    for i in range(4, 6):
+        for t in ['INPUT', 'OUTPUT']:
+            p1 = subprocess.Popen(
+                ['echo', '123456'],
+                stdout=subprocess.PIPE
+            )
+            p2 = subprocess.Popen(
+                ['sudo', '-S', 'iptables', '-D', '{}'.format(t), '-s', '10.0.0.{}'.format(i), '-j', 'DROP'],
+                stdin=p1.stdout,
+                stdout=subprocess.PIPE
+            )
+            p1.stdout.close()
+            out, err = p2.communicate()
+            assert err is None
+
+
+@pytest.mark.nodes_num(4)
+@pytest.mark.asyncio
+async def test_misc_2112(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num
+):
+    client = docker.from_env()
+    trustee_did, _ = get_default_trustee
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    client.networks.list(names=['indy-test-automation-network'])[0].disconnect('node4')
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=100)
+    for i in range(5):
+        await asyncio.sleep(15)
+        client.networks.list(names=['indy-test-automation-network'])[0].connect('node4')
+        client.networks.list(names=['indy-test-automation-network'])[0].disconnect('node4')
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=200)
+    client.networks.list(names=['indy-test-automation-network'])[0].connect('node4')
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, timeout=180)
+
+
+@pytest.mark.asyncio
+async def test_misc_is_1284():
+    pool_handle, _ = await pool_helper(path_to_genesis='../buildernet_genesis')
+    wallet_handle, _, _ = await wallet_helper()
+    builder_did, builder_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
+        {'seed': str('I22aXMicTRh1ILWojMVJMvvzznlFwVUj')}))
+    res = await send_nym(
+        pool_handle, wallet_handle, builder_did, 'NSNGwB2MK7WVoG7CLmHhfy', '~PRDkZn9HMSL2MUWKFJLpi9', None, 'STEWARD'
+    )
+    print(res)
+    assert res['op'] == 'REJECT'
+
+
+@pytest.mark.asyncio
+async def test_misc_2171(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    trustee_did, _ = get_default_trustee
+    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    other_did, other_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    req0 = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
+                                                json.dumps({
+                                                   'constraint_id': 'ROLE',
+                                                   'role': '*',
+                                                   'sig_count': 1,
+                                                   'need_to_be_owner': False,
+                                                   'off_ledger_signature': True,
+                                                   'metadata': {}
+                                                }))
+    res0 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req0))
+    print(res0)
+    assert res0['op'] == 'REPLY'
+    req1 = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
+                                                json.dumps({
+                                                   'constraint_id': 'ROLE',
+                                                   'role': '0',
+                                                   'sig_count': 1,
+                                                   'need_to_be_owner': False,
+                                                   'off_ledger_signature': True,
+                                                   'metadata': {}
+                                                }))
+    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
+    print(res1)
+    assert res1['op'] == 'REQNACK'
+    req2 = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
+                                                json.dumps({
+                                                   'constraint_id': 'ROLE',
+                                                   'role': '*',
+                                                   'sig_count': 1,
+                                                   'need_to_be_owner': False,
+                                                   'off_ledger_signature': True,
+                                                   'metadata': {}
+                                                }))
+    res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
+    print(res2)
+    assert res2['op'] == 'REPLY'
+    res3 = await send_nym(pool_handler, wallet_handler, new_did, other_did, other_vk, 'not my own nym', None)
+    print(res3)
+    assert res3['op'] == 'REQNACK'
+    res4 = await send_schema(pool_handler, wallet_handler, new_did, 'schema', '1.0', json.dumps(['attr']))
+    print(res4)
+    assert res4[1]['op'] == 'REQNACK'
+    res5 = await send_nym(pool_handler, wallet_handler, new_did, new_did, new_vk, 'my own nym', None)
+    print(res5)
+    assert res5['op'] == 'REPLY'
