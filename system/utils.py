@@ -143,8 +143,9 @@ async def eventually(awaited_func,
                 raise ex
 
 
-async def send_nym(pool_handle, wallet_handle, submitter_did, target_did,
-                   target_vk=None, target_alias=None, target_role=None):
+async def send_nym(
+        pool_handle, wallet_handle, submitter_did, target_did, target_vk=None, target_alias=None, target_role=None
+):
     req = await ledger.build_nym_request(submitter_did, target_did, target_vk, target_alias, target_role)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
@@ -373,7 +374,7 @@ async def check_primary_changed(pool_handler, wallet_handler, trustee_did, prima
 async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
     return await eventually(
         check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before,
-        retry_wait=10, timeout=480
+        retry_wait=20, timeout=480
     )
 
 

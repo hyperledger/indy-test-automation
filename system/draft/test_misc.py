@@ -91,30 +91,37 @@ async def test_misc_state_proof(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
         initial_token_minting
 ):
-    timestamp0 = int(time.time())
     trustee_did, _ = get_default_trustee
     random_did = random_did_and_json()[0]
     address = initial_token_minting
-    await send_nym(pool_handler, wallet_handler, trustee_did, random_did)
-    await send_attrib(pool_handler, wallet_handler, trustee_did, random_did, None, json.dumps({'key': 'value'}), None)
-    schema_id, _ = await send_schema(
+    res_nym = await send_nym(pool_handler, wallet_handler, trustee_did, random_did)
+    assert res_nym['op'] == 'REPLY'
+    res_attr = await send_attrib(
+        pool_handler, wallet_handler, trustee_did, random_did, None, json.dumps({'key': 'value'}), None
+    )
+    assert res_attr['op'] == 'REPLY'
+    schema_id, res_sch = await send_schema(
         pool_handler, wallet_handler, trustee_did, random_string(10), '1.0', json.dumps(
             [random_string(1), random_string(2), random_string(3)]
         )
     )
+    assert res_sch['op'] == 'REPLY'
     await asyncio.sleep(1)
+    timestamp0 = int(time.time())
     res = json.dumps(await get_schema(pool_handler, wallet_handler, trustee_did, schema_id))
     schema_id, schema_json = await ledger.parse_get_schema_response(res)
-    cred_def_id, _, _ = await send_cred_def(
+    cred_def_id, _, res_cred_def = await send_cred_def(
         pool_handler, wallet_handler, trustee_did, schema_json, random_string(3), None, json.dumps(
             {'support_revocation': True}
         )
     )
-    revoc_reg_def_id, _, _, res1 = await send_revoc_reg_entry(
+    assert res_cred_def['op'] == 'REPLY'
+    revoc_reg_def_id, _, _, res_entry = await send_revoc_reg_entry(
         pool_handler, wallet_handler, trustee_did, 'CL_ACCUM', random_string(3), cred_def_id, json.dumps(
             {'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}
         )
     )
+    assert res_entry['op'] == 'REPLY'
     timestamp1 = int(time.time())
 
     # uncomment to check freshness state proof reading
@@ -153,7 +160,7 @@ async def test_misc_state_proof(
 
         # tokens
         req8, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address)
-        res8 = await json.loads(ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req8))
+        res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req8))
     finally:
         outputs1 = [host.run('systemctl start indy-node') for host in hosts[:-1]]
         print(outputs1)
@@ -164,9 +171,10 @@ async def test_misc_state_proof(
     assert res4['result']['seqNo'] is not None
     assert res5['result']['seqNo'] is not None
     assert res6['result']['seqNo'] is not None
+    print(res66)
     assert res66['result']['seqNo'] is None
     assert res7['result']['seqNo'] is not None
-    assert res8['op'] == 'REPLY' and res8['result']['seqNo'] is not None
+    assert res8['op'] == 'REPLY' and res8['result']['outputs'][0]['seqNo'] is not None
 
 
 @pytest.mark.asyncio
@@ -890,8 +898,12 @@ async def test_misc_plug_req_handlers_regression(
     trustee_did, _ = get_default_trustee
 
     req1 = await ledger.build_get_validator_info_request(trustee_did)
+    t0 = time.perf_counter()
     res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
+    t1 = time.perf_counter()
     print(res1)
+    print('\n{}\n'.format(t1 - t0))
+    assert (t1 - t0) < 1.0
     res1 = {k: json.loads(v) for k, v in res1.items()}
     assert all([v['op'] == 'REPLY' for k, v in res1.items()])
 
@@ -1098,18 +1110,49 @@ async def test_misc_2171(
 ):
     trustee_did, _ = get_default_trustee
     new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-    req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
-                                               json.dumps({
+    other_did, other_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    req0 = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
+                                                json.dumps({
                                                    'constraint_id': 'ROLE',
                                                    'role': '*',
                                                    'sig_count': 1,
                                                    'need_to_be_owner': False,
-                                                   'need_to_be_on_ledger': False,
+                                                   'off_ledger_signature': True,
                                                    'metadata': {}
-                                               }))
-    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+                                                }))
+    res0 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req0))
+    print(res0)
+    assert res0['op'] == 'REPLY'
+    req1 = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
+                                                json.dumps({
+                                                   'constraint_id': 'ROLE',
+                                                   'role': '0',
+                                                   'sig_count': 1,
+                                                   'need_to_be_owner': False,
+                                                   'off_ledger_signature': True,
+                                                   'metadata': {}
+                                                }))
+    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
     print(res1)
-    assert res1['op'] == 'REPLY'
-    res2 = await send_nym(pool_handler, wallet_handler, new_did, new_did, new_vk, 'my own nym', None)
+    assert res1['op'] == 'REQNACK'
+    req2 = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
+                                                json.dumps({
+                                                   'constraint_id': 'ROLE',
+                                                   'role': '*',
+                                                   'sig_count': 1,
+                                                   'need_to_be_owner': False,
+                                                   'off_ledger_signature': True,
+                                                   'metadata': {}
+                                                }))
+    res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
     print(res2)
     assert res2['op'] == 'REPLY'
+    res3 = await send_nym(pool_handler, wallet_handler, new_did, other_did, other_vk, 'not my own nym', None)
+    print(res3)
+    assert res3['op'] == 'REQNACK'
+    res4 = await send_schema(pool_handler, wallet_handler, new_did, 'schema', '1.0', json.dumps(['attr']))
+    print(res4)
+    assert res4[1]['op'] == 'REQNACK'
+    res5 = await send_nym(pool_handler, wallet_handler, new_did, new_did, new_vk, 'my own nym', None)
+    print(res5)
+    assert res5['op'] == 'REPLY'
