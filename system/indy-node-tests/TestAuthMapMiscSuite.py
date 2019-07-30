@@ -305,6 +305,7 @@ class TestAuthMapMiscSuite:
            'role': steward_role_num,
            'sig_count': 1,
            'need_to_be_owner': False,
+           'off_ledger_signature': False,
            'metadata': {}
         }
         req = await ledger.build_auth_rules_request(trustee_did, json.dumps([
@@ -315,7 +316,8 @@ class TestAuthMapMiscSuite:
                 'old_value': '*',
                 'new_value': trustee_role_num,
                 'constraint': one_steward_constraint
-            }, {
+            },
+            {
                 'auth_type': '1',
                 'auth_action': 'ADD',
                 'field': 'role',
