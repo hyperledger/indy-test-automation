@@ -726,12 +726,9 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
     promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
     promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
-    # while promote_res['op'] != 'REPLY':
-    #     promote_res = json.loads(
-    #         await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
+    assert promote_res['op'] == 'REPLY'
     host = testinfra.get_host('ssh://node'+alias[4:])
     host.run('systemctl restart indy-node')
-    assert promote_res['op'] == 'REPLY'
 
 
 # TODO replace with eventually
