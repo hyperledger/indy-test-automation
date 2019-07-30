@@ -19,10 +19,10 @@ import itertools
 import docker
 
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=0, format='%(asctime)s %(message)s', filename='client_log', filemode='a'
-)
+# logger = logging.getLogger(__name__)
+# logging.basicConfig(
+#     level=0, format='%(asctime)s %(message)s', filename='client_log', filemode='a'
+# )
 
 
 @pytest.mark.asyncio
@@ -1205,10 +1205,23 @@ async def test_misc_2173(
     trustee_did, _ = get_default_trustee
     off_did, off_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     e_did, e_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    test_did, test_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     res = await send_nym(pool_handler, wallet_handler, trustee_did, off_did, off_vk, 'No role', None)
     assert res['op'] == 'REPLY'
     res = await send_nym(pool_handler, wallet_handler, trustee_did, e_did, e_vk, 'Endorser', 'ENDORSER')
     assert res['op'] == 'REPLY'
+
+    req00 = await ledger.build_nym_request(off_did, test_did, test_vk, 'Alias 1', None)
+    res00 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, off_did, req00))
+    assert res00['op'] == 'REJECT'
+    req0 = await ledger.build_nym_request(off_did, test_did, test_vk, 'Alias 1', None)
+    req0 = await ledger.append_request_endorser(req0, e_did)
+    req0 = await ledger.multi_sign_request(wallet_handler, off_did, req0)
+    req0 = await ledger.multi_sign_request(wallet_handler, e_did, req0)
+    res0 = json.loads(await ledger.submit_request(pool_handler, req0))
+    print(res0)
+    assert res0['op'] == 'REPLY'
+
     schema_id, schema_json = await anoncreds.issuer_create_schema(off_did, 'Schema 1', '0.1', json.dumps(['a1', 'a2']))
     req11 = await ledger.build_schema_request(off_did, schema_json)
     res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, off_did, req11))
