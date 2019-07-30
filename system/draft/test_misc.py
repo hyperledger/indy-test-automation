@@ -1193,6 +1193,9 @@ async def test_misc_2171(
     res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, new_did, req5))
     print(res5)
     assert res5['op'] == 'REPLY'
+    req = await ledger.build_get_auth_rule_request(None, None, None, None, None, None)
+    res6 = json.loads(await ledger.submit_request(pool_handler, req))
+    print(res6)
 
 
 @pytest.mark.asyncio
@@ -1200,3 +1203,14 @@ async def test_misc_2173(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     trustee_did, _ = get_default_trustee
+    off_did, off_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    e_did, e_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    res = await send_nym(pool_handler, wallet_handler, trustee_did, e_did, e_vk, 'Endorser', 'ENDORSER')
+    assert res['op'] == 'REPLY'
+    schema_id, schema_json = await anoncreds.issuer_create_schema(off_did, 'Schema 1', '0.1', json.dumps(['a1', 'a2']))
+    req = await ledger.build_schema_request(off_did, schema_json)
+    # TODO indy_append_request_endorser
+    req = await ledger.multi_sign_request(wallet_handler, off_did, req)
+    req = await ledger.multi_sign_request(wallet_handler, e_did, req)
+    res = json.loads(await ledger.submit_request(pool_handler, req))
+    print(res)
