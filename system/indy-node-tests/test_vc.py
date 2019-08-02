@@ -52,6 +52,25 @@ async def test_vc_by_demotion_primary(
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, timeout=360)
 
 
+@pytest.mark.asyncio
+async def test_vc_by_demotion_last(
+        pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
+):
+    _alias = 'Node7'
+    _did = 'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
+    trustee_did, _ = get_default_trustee
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+    primary_first, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+    await eventually(demote_node, pool_handler, wallet_handler, trustee_did, _alias, _did)
+    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_first)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+    primary_next, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+    await eventually(promote_node, pool_handler, wallet_handler, trustee_did, _alias, _did)
+    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_next)
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, timeout=360)
+
+
 @pytest.mark.nodes_num(8)
 @pytest.mark.asyncio
 async def test_demotion_of_backup_primary_with_restart_with_vc(
