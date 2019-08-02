@@ -13,6 +13,7 @@ from system.utils import *
 # logger = logging.getLogger(__name__)
 # logging.basicConfig(level=0, format='%(asctime)s %(message)s')
 
+
 @pytest.fixture
 async def nodes_num():
     return 7
@@ -324,13 +325,13 @@ async def test_send_and_get_revoc_reg_def_negative():
 @pytest.mark.asyncio
 async def test_send_and_get_revoc_reg_entry_positive(writer_role, reader_role):
     await pool.set_protocol_version(2)
-    timestamp0 = int(time.time())
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     writer_did, writer_vk = await did.create_and_store_my_did(wallet_handle, '{}')
     reader_did, reader_vk = await did.create_and_store_my_did(wallet_handle, '{}')
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
+    timestamp0 = int(time.time())
     # Trustee adds REVOC_REG_ENTRY writer
     await send_nym(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
     # Trustee adds REVOC_REG_ENTRY reader

@@ -19,10 +19,10 @@ import itertools
 import docker
 
 
-# logger = logging.getLogger(__name__)
-# logging.basicConfig(
-#     level=0, format='%(asctime)s %(message)s', filename='client_log', filemode='a'
-# )
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=0, format='%(asctime)s %(message)s', filename='client_log', filemode='a'
+)
 
 
 @pytest.mark.asyncio
@@ -124,7 +124,7 @@ async def test_misc_state_proof(
     assert res_entry['op'] == 'REPLY'
     timestamp1 = int(time.time())
 
-    # uncomment to check freshness state proof reading
+    # # uncomment to check freshness state proof reading
     # await asyncio.sleep(600)
 
     hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
@@ -822,7 +822,7 @@ async def test_misc_nym_alias(docker_setup_and_teardown, pool_handler, wallet_ha
 async def test_misc_mint_to_aws(payment_init):
     await pool.set_protocol_version(2)
     libsovtoken_payment_method = 'sov'
-    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis_test')
+    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
     # pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
@@ -983,10 +983,28 @@ async def test_misc_utxo_st_600_604(
     )[0]['source']
     print(source1)
 
-    # check state proof reading and from feature
+    # default check with from - negative
+    req, _ = await payment.build_get_payment_sources_with_from_request(wallet_handler, trustee_did, address0, -1501)
+    print(req)
+    res11 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res11)
+    assert json.loads(res11)['op'] == 'REQNACK'
+
+    # default check with from - positive
+    req, _ = await payment.build_get_payment_sources_with_from_request(wallet_handler, trustee_did, address0, 1000)
+    print(req)
+    res111 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res111)
+    assert json.loads(res111)['op'] == 'REPLY'
+    source111 = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res111)
+    )[0]['source']
+    print(source111)
+
+    # check state proof reading
     outputs1 = [host.run('systemctl stop indy-node') for host in hosts[:-1]]
     print(outputs1)
-    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address0)  # TODO add from
+    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address0)
     res2 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
     print(res2)
     assert json.loads(res2)['op'] == 'REPLY'
@@ -994,6 +1012,22 @@ async def test_misc_utxo_st_600_604(
         await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res2)
     )[0]['source']
     print(source2)
+
+    # check state proof reading with from - negative
+    req, _ = await payment.build_get_payment_sources_with_from_request(wallet_handler, trustee_did, address0, -1501)
+    print(req)
+    with pytest.raises(IndyError):
+        await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+
+    req, _ = await payment.build_get_payment_sources_with_from_request(wallet_handler, trustee_did, address0, 1000)
+    print(req)
+    res22 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res22)
+    assert json.loads(res22)['op'] == 'REPLY'
+    source22 = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res22)
+    )[0]['source']
+    print(source22)
 
     outputs2 = [host.run('systemctl start indy-node') for host in hosts[:-1]]
     print(outputs2)
@@ -1211,6 +1245,14 @@ async def test_misc_2173(
     res = await send_nym(pool_handler, wallet_handler, trustee_did, e_did, e_vk, 'Endorser', 'ENDORSER')
     assert res['op'] == 'REPLY'
 
+    # # we get reply with swapped builder and endorser - for now it's ok
+    # req000 = await ledger.build_nym_request(e_did, test_did, test_vk, 'Alias 1', None)
+    # req000 = await ledger.append_request_endorser(req000, off_did)
+    # req000 = await ledger.multi_sign_request(wallet_handler, e_did, req000)
+    # req000 = await ledger.multi_sign_request(wallet_handler, off_did, req000)
+    # res000 = json.loads(await ledger.submit_request(pool_handler, req000))
+    # print(res000)
+    # assert res000['op'] == 'REPLY'
     req00 = await ledger.build_nym_request(off_did, test_did, test_vk, 'Alias 1', None)
     res00 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, off_did, req00))
     assert res00['op'] == 'REJECT'
@@ -1223,6 +1265,14 @@ async def test_misc_2173(
     assert res0['op'] == 'REPLY'
 
     schema_id, schema_json = await anoncreds.issuer_create_schema(off_did, 'Schema 1', '0.1', json.dumps(['a1', 'a2']))
+    # # we get reply with swapped builder and endorser - for now it's ok
+    # req111 = await ledger.build_schema_request(e_did, schema_json)
+    # req111 = await ledger.append_request_endorser(req111, off_did)
+    # req111 = await ledger.multi_sign_request(wallet_handler, e_did, req111)
+    # req111 = await ledger.multi_sign_request(wallet_handler, off_did, req111)
+    # res111 = json.loads(await ledger.submit_request(pool_handler, req111))
+    # print(res111)
+    # assert res111['op'] == 'REPLY'
     req11 = await ledger.build_schema_request(off_did, schema_json)
     res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, off_did, req11))
     assert res11['op'] == 'REJECT'
