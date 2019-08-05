@@ -664,6 +664,10 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
     async def _get_primary():
         req = await ledger.build_get_validator_info_request(trustee_did)
         results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        # get n
+        n = len(results)
+        # calculate f
+        f = (n - 1) // 3
         # remove all timeout entries
         try:
             for i in range(len(results)):
@@ -671,16 +675,25 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         except ValueError:
             pass
         # remove all not REPLY and empty (not selected) primaries entries
-        results = {key: json.loads(results[key]) for key in results if
-                   (json.loads(results[key])['op'] == 'REPLY')
-                   & (json.loads(results[key])['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
-                      is not None)}
+        results = {
+            key: json.loads(results[key]) for key in results if
+            (json.loads(results[key])['op'] == 'REPLY')
+            &
+            (json.loads(results[key])['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
+             is not None)
+        }
         # get primaries numbers from all nodes
-        primaries = [results[key]['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
-                     [len('Node'):-len(':0')] for key in results]
+        primaries = [
+            results[key]['result']['data']['Node_info']['Replicas_status'][key+':0']['Primary'][len('Node'):-len(':0')]
+            for key in results
+        ]
+        # if all nodes are in VC except one that was promoted and restarted
+
         # count the same entries
         primaries = Counter(primaries)
-        return max(primaries, key=primaries.get)
+        res, votes = primaries.most_common()[0]
+        assert votes >= (n - f)
+        return res
 
     primary = await eventually(_get_primary, retry_wait=10, timeout=480)
     alias = get_node_alias(primary)

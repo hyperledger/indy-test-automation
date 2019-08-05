@@ -1,6 +1,6 @@
 import pytest
 from system.utils import *
-from hypothesis import settings, given, strategies, Phase, Verbosity
+from hypothesis import settings, given, strategies, Phase, Verbosity, reproduce_failure
 from hypothesis.strategies import composite
 from string import printable, ascii_letters
 import hashlib
@@ -82,8 +82,8 @@ class TestPropertyBasedSuite:
     @settings(deadline=None, max_examples=250)
     @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
            xhash=strategies.text().map(lambda x: hashlib.sha256(x.encode()).hexdigest()),
-           key=strategies.text(printable),
-           value=strategies.text(printable),
+           key=strategies.text(min_size=1, alphabet=printable),
+           value=strategies.text(min_size=1, alphabet=printable),
            enc=strategies.text(min_size=1))
     @pytest.mark.asyncio
     async def test_case_attrib(

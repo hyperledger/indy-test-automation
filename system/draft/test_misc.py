@@ -1139,7 +1139,7 @@ async def test_misc_is_1284():
 
 
 @pytest.mark.asyncio
-async def test_misc_2171(
+async def test_misc_2171_off_ledger_signature(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
         initial_token_minting
 ):
@@ -1233,9 +1233,10 @@ async def test_misc_2171(
 
 
 @pytest.mark.asyncio
-async def test_misc_2173(
+async def test_misc_2173_endorser(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
+    # TODO add more negative cases like INDY-2199
     trustee_did, _ = get_default_trustee
     off_did, off_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     e_did, e_vk = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -1329,3 +1330,10 @@ async def test_misc_2173(
     res4 = json.loads(await ledger.submit_request(pool_handler, req4))
     print(res4)
     assert res4['op'] == 'REPLY'
+
+
+@pytest.mark.asyncio
+async def test_misc_complex_pool_creation(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    trustee_did, _ = get_default_trustee
