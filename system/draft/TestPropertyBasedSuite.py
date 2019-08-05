@@ -1,6 +1,6 @@
 import pytest
 from system.utils import *
-from hypothesis import settings, given, strategies, Phase, Verbosity
+from hypothesis import settings, given, strategies, Phase, Verbosity, reproduce_failure
 from hypothesis.strategies import composite
 from string import printable, ascii_letters
 import hashlib
@@ -55,7 +55,9 @@ class TestPropertyBasedSuite:
            # verkey=strategies.text(ascii_letters, min_size=32, max_size=32),
            alias=strategies.text(min_size=1, max_size=10000))
     @pytest.mark.asyncio
-    async def test_case_nym(self, pool_handler, wallet_handler, get_default_trustee, reqid, dest, alias):
+    async def test_case_nym(
+            self, pool_handler, wallet_handler, get_default_trustee, reqid, dest, alias
+    ):
         trustee_did, trustee_vk = get_default_trustee
         roles = ['0', '2', '101', '201']
         req = {
@@ -80,11 +82,13 @@ class TestPropertyBasedSuite:
     @settings(deadline=None, max_examples=250)
     @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
            xhash=strategies.text().map(lambda x: hashlib.sha256(x.encode()).hexdigest()),
-           key=strategies.text(printable),
-           value=strategies.text(printable),
+           key=strategies.text(min_size=1, alphabet=printable),
+           value=strategies.text(min_size=1, alphabet=printable),
            enc=strategies.text(min_size=1))
     @pytest.mark.asyncio
-    async def test_case_attrib(self, pool_handler, wallet_handler, get_default_trustee, reqid, xhash, key, value, enc):
+    async def test_case_attrib(
+            self, pool_handler, wallet_handler, get_default_trustee, reqid, xhash, key, value, enc
+    ):
         trustee_did, trustee_vk = get_default_trustee
         target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         res = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, target_vk)
@@ -134,7 +138,9 @@ class TestPropertyBasedSuite:
            name=strategies.text(min_size=1),
            attrs=strategies.lists(strategies.text(min_size=1), min_size=1, max_size=125))
     @pytest.mark.asyncio
-    async def test_case_schema(self, pool_handler, wallet_handler, get_default_trustee, reqid, version, name, attrs):
+    async def test_case_schema(
+            self, pool_handler, wallet_handler, get_default_trustee, reqid, version, name, attrs
+    ):
         trustee_did, trustee_vk = get_default_trustee
         creator_did, creator_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         res = await send_nym(pool_handler, wallet_handler, trustee_did, creator_did, creator_vk, None, 'TRUSTEE')
@@ -169,14 +175,16 @@ class TestPropertyBasedSuite:
                lambda x: strategies.dictionaries(strategies.text(printable, min_size=1), x, min_size=1, max_size=3)
            ))
     @pytest.mark.asyncio
-    async def test_case_cred_def(self, pool_handler, wallet_handler, get_default_trustee,
-                                 reqid, tag, primary):
+    async def test_case_cred_def(
+            self, pool_handler, wallet_handler, get_default_trustee, reqid, tag, primary
+    ):
         trustee_did, trustee_vk = get_default_trustee
         creator_did, creator_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         res = await send_nym(pool_handler, wallet_handler, trustee_did, creator_did, creator_vk, None, 'TRUSTEE')
         assert res['op'] == 'REPLY'
-        schema_id, res = await send_schema\
-            (pool_handler, wallet_handler, creator_did, random_string(10), '1.0', json.dumps(['attribute']))
+        schema_id, res = await send_schema(
+            pool_handler, wallet_handler, creator_did, random_string(10), '1.0', json.dumps(['attribute'])
+        )
         assert res['op'] == 'REPLY'
         await asyncio.sleep(1)
         res = await get_schema(pool_handler, wallet_handler, creator_did, schema_id)

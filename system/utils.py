@@ -2,6 +2,8 @@ import time
 from datetime import datetime
 import os
 import string
+from typing import Optional
+
 import base58
 import asyncio
 from random import sample, shuffle
@@ -332,7 +334,7 @@ async def check_pool_is_functional(
 
 
 async def ensure_pool_is_functional(
-    pool_handle, wallet_handle, trustee_did, nyms_count=3, timeout=30
+    pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     await ensure_pool_performs_write_read(
         pool_handle, wallet_handle, trustee_did,
@@ -662,8 +664,22 @@ def get_node_did(node_alias, pool_info=None):
 async def get_primary(pool_handle, wallet_handle, trustee_did):
 
     async def _get_primary():
+
+        def get_primary_from_info(info: str, name: str) -> Optional[str]:
+            parsed_info = json.loads(info)
+            if parsed_info['op'] != 'REPLY':
+                return None
+            replica_name = parsed_info['result']['data']['Node_info']['Replicas_status'][name + ':0']['Primary']
+            if replica_name is None:
+                return None
+            return replica_name[len('Node'):-len(':0')]
+
         req = await ledger.build_get_validator_info_request(trustee_did)
         results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        # get n
+        n = len(results)
+        # calculate f
+        f = (n - 1) // 3
         # remove all timeout entries
         try:
             for i in range(len(results)):
@@ -671,16 +687,13 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         except ValueError:
             pass
         # remove all not REPLY and empty (not selected) primaries entries
-        results = {key: json.loads(results[key]) for key in results if
-                   (json.loads(results[key])['op'] == 'REPLY')
-                   & (json.loads(results[key])['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
-                      is not None)}
-        # get primaries numbers from all nodes
-        primaries = [results[key]['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
-                     [len('Node'):-len(':0')] for key in results]
+        primaries = [get_primary_from_info(info, name) for name, info in results.items()]
         # count the same entries
         primaries = Counter(primaries)
-        return max(primaries, key=primaries.get)
+        res, votes = primaries.most_common()[0]
+        assert res is not None
+        assert votes >= (n - f)
+        return res
 
     primary = await eventually(_get_primary, retry_wait=10, timeout=480)
     alias = get_node_alias(primary)
@@ -726,12 +739,9 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
     promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
     promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
-    # while promote_res['op'] != 'REPLY':
-    #     promote_res = json.loads(
-    #         await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
+    assert promote_res['op'] == 'REPLY'
     host = testinfra.get_host('ssh://node'+alias[4:])
     host.run('systemctl restart indy-node')
-    assert promote_res['op'] == 'REPLY'
 
 
 # TODO replace with eventually

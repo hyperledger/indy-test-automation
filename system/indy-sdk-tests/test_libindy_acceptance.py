@@ -4,16 +4,16 @@ import testinfra
 
 
 def test_libindy():
-    indy_plenum_ver = '1.9.0'
-    indy_node_ver = '1.9.0'
+    indy_plenum_ver = '1.9.1'
+    indy_node_ver = '1.9.1~rc1'
     indy_sdk_deb_path = 'https://repo.sovrin.org/sdk/lib/apt/xenial/rc/'
-    indy_sdk_deb_ver = 'libindy_1.10.1~79_amd64.deb'
-    indy_sdk_ver = '1.10.1-rc-79'
+    indy_sdk_deb_ver = 'libindy_1.11.0~81_amd64.deb'
+    indy_sdk_ver = '1.11.0-rc-81'
     os.chdir('/home/indy/indy-sdk')
     subprocess.check_call(['git', 'stash'])
     subprocess.check_call(['git', 'fetch'])
     subprocess.check_call(['git', 'checkout', 'origin/rc'])
-    subprocess.check_call(['sed', '-i', '22c\\ARG indy_stream=stable', './ci/indy-pool.dockerfile'])
+    subprocess.check_call(['sed', '-i', '22c\\ARG indy_stream=rc', './ci/indy-pool.dockerfile'])
     subprocess.check_call(['sed', '-i', '27c\\ARG indy_plenum_ver={}'.format(indy_plenum_ver),
                            './ci/indy-pool.dockerfile'])
     subprocess.check_call(['sed', '-i', '28c\\ARG indy_node_ver={}'.format(indy_node_ver),

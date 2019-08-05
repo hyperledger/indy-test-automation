@@ -124,7 +124,7 @@ async def test_misc_state_proof(
     assert res_entry['op'] == 'REPLY'
     timestamp1 = int(time.time())
 
-    # uncomment to check freshness state proof reading
+    # # uncomment to check freshness state proof reading
     # await asyncio.sleep(600)
 
     hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
@@ -822,7 +822,7 @@ async def test_misc_nym_alias(docker_setup_and_teardown, pool_handler, wallet_ha
 async def test_misc_mint_to_aws(payment_init):
     await pool.set_protocol_version(2)
     libsovtoken_payment_method = 'sov'
-    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis_test')
+    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
     # pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
@@ -915,7 +915,7 @@ async def test_misc_plug_req_handlers_regression(
 
 
 @pytest.mark.asyncio
-async def test_misc_utxo_st_600(
+async def test_misc_utxo_st_600_604(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee
 ):
     hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
@@ -983,10 +983,28 @@ async def test_misc_utxo_st_600(
     )[0]['source']
     print(source1)
 
-    # check state proof reading and from feature
+    # default check with from - negative
+    req, _ = await payment.build_get_payment_sources_with_from_request(wallet_handler, trustee_did, address0, -1501)
+    print(req)
+    res11 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res11)
+    assert json.loads(res11)['op'] == 'REQNACK'
+
+    # default check with from - positive
+    req, _ = await payment.build_get_payment_sources_with_from_request(wallet_handler, trustee_did, address0, 1000)
+    print(req)
+    res111 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res111)
+    assert json.loads(res111)['op'] == 'REPLY'
+    source111 = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res111)
+    )[0]['source']
+    print(source111)
+
+    # check state proof reading
     outputs1 = [host.run('systemctl stop indy-node') for host in hosts[:-1]]
     print(outputs1)
-    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address0)  # TODO add from
+    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address0)
     res2 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
     print(res2)
     assert json.loads(res2)['op'] == 'REPLY'
@@ -994,6 +1012,22 @@ async def test_misc_utxo_st_600(
         await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res2)
     )[0]['source']
     print(source2)
+
+    # check state proof reading with from - negative
+    req, _ = await payment.build_get_payment_sources_with_from_request(wallet_handler, trustee_did, address0, -1501)
+    print(req)
+    with pytest.raises(IndyError):
+        await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+
+    req, _ = await payment.build_get_payment_sources_with_from_request(wallet_handler, trustee_did, address0, 1000)
+    print(req)
+    res22 = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    print(res22)
+    assert json.loads(res22)['op'] == 'REPLY'
+    source22 = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res22)
+    )[0]['source']
+    print(source22)
 
     outputs2 = [host.run('systemctl start indy-node') for host in hosts[:-1]]
     print(outputs2)
@@ -1105,7 +1139,7 @@ async def test_misc_is_1284():
 
 
 @pytest.mark.asyncio
-async def test_misc_2171(
+async def test_misc_2171_off_ledger_signature(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
         initial_token_minting
 ):
@@ -1199,18 +1233,107 @@ async def test_misc_2171(
 
 
 @pytest.mark.asyncio
-async def test_misc_2173(
+async def test_misc_2173_endorser(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
+    # TODO add more negative cases like INDY-2199
     trustee_did, _ = get_default_trustee
     off_did, off_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     e_did, e_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    test_did, test_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    res = await send_nym(pool_handler, wallet_handler, trustee_did, off_did, off_vk, 'No role', None)
+    assert res['op'] == 'REPLY'
     res = await send_nym(pool_handler, wallet_handler, trustee_did, e_did, e_vk, 'Endorser', 'ENDORSER')
     assert res['op'] == 'REPLY'
+
+    # # we get reply with swapped builder and endorser - for now it's ok
+    # req000 = await ledger.build_nym_request(e_did, test_did, test_vk, 'Alias 1', None)
+    # req000 = await ledger.append_request_endorser(req000, off_did)
+    # req000 = await ledger.multi_sign_request(wallet_handler, e_did, req000)
+    # req000 = await ledger.multi_sign_request(wallet_handler, off_did, req000)
+    # res000 = json.loads(await ledger.submit_request(pool_handler, req000))
+    # print(res000)
+    # assert res000['op'] == 'REPLY'
+    req00 = await ledger.build_nym_request(off_did, test_did, test_vk, 'Alias 1', None)
+    res00 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, off_did, req00))
+    assert res00['op'] == 'REJECT'
+    req0 = await ledger.build_nym_request(off_did, test_did, test_vk, 'Alias 1', None)
+    req0 = await ledger.append_request_endorser(req0, e_did)
+    req0 = await ledger.multi_sign_request(wallet_handler, off_did, req0)
+    req0 = await ledger.multi_sign_request(wallet_handler, e_did, req0)
+    res0 = json.loads(await ledger.submit_request(pool_handler, req0))
+    print(res0)
+    assert res0['op'] == 'REPLY'
+
     schema_id, schema_json = await anoncreds.issuer_create_schema(off_did, 'Schema 1', '0.1', json.dumps(['a1', 'a2']))
-    req = await ledger.build_schema_request(off_did, schema_json)
-    # TODO indy_append_request_endorser
-    req = await ledger.multi_sign_request(wallet_handler, off_did, req)
-    req = await ledger.multi_sign_request(wallet_handler, e_did, req)
-    res = json.loads(await ledger.submit_request(pool_handler, req))
-    print(res)
+    # # we get reply with swapped builder and endorser - for now it's ok
+    # req111 = await ledger.build_schema_request(e_did, schema_json)
+    # req111 = await ledger.append_request_endorser(req111, off_did)
+    # req111 = await ledger.multi_sign_request(wallet_handler, e_did, req111)
+    # req111 = await ledger.multi_sign_request(wallet_handler, off_did, req111)
+    # res111 = json.loads(await ledger.submit_request(pool_handler, req111))
+    # print(res111)
+    # assert res111['op'] == 'REPLY'
+    req11 = await ledger.build_schema_request(off_did, schema_json)
+    res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, off_did, req11))
+    assert res11['op'] == 'REJECT'
+    req1 = await ledger.build_schema_request(off_did, schema_json)
+    req1 = await ledger.append_request_endorser(req1, e_did)
+    req1 = await ledger.multi_sign_request(wallet_handler, off_did, req1)
+    req1 = await ledger.multi_sign_request(wallet_handler, e_did, req1)
+    res1 = json.loads(await ledger.submit_request(pool_handler, req1))
+    print(res1)
+    assert res1['op'] == 'REPLY'
+
+    await asyncio.sleep(3)
+    res = json.dumps(await get_schema(pool_handler, wallet_handler, trustee_did, schema_id))
+    schema_id, schema_json = await ledger.parse_get_schema_response(res)
+    cred_def_id, cred_def_json = await anoncreds.issuer_create_and_store_credential_def(
+        wallet_handler, off_did, schema_json, 'cred def tag', None, json.dumps({'support_revocation': True})
+    )
+    req22 = await ledger.build_cred_def_request(off_did, cred_def_json)
+    res22 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, off_did, req22))
+    assert res22['op'] == 'REJECT'
+    req2 = await ledger.build_cred_def_request(off_did, cred_def_json)
+    req2 = await ledger.append_request_endorser(req2, e_did)
+    req2 = await ledger.multi_sign_request(wallet_handler, off_did, req2)
+    req2 = await ledger.multi_sign_request(wallet_handler, e_did, req2)
+    res2 = json.loads(await ledger.submit_request(pool_handler, req2))
+    print(res2)
+    assert res2['op'] == 'REPLY'
+
+    tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
+    tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
+    revoc_reg_id, revoc_reg_def_json, revoc_reg_entry_json = await anoncreds.issuer_create_and_store_revoc_reg(
+        wallet_handler, off_did, None, 'revoc reg tag', cred_def_id, json.dumps(
+            {'max_cred_num': 100, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}
+        ), tails_writer_handle
+    )
+    req33 = await ledger.build_revoc_reg_def_request(off_did, revoc_reg_def_json)
+    res33 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, off_did, req33))
+    assert res33['op'] == 'REJECT'
+    req3 = await ledger.build_revoc_reg_def_request(off_did, revoc_reg_def_json)
+    req3 = await ledger.append_request_endorser(req3, e_did)
+    req3 = await ledger.multi_sign_request(wallet_handler, off_did, req3)
+    req3 = await ledger.multi_sign_request(wallet_handler, e_did, req3)
+    res3 = json.loads(await ledger.submit_request(pool_handler, req3))
+    print(res3)
+    assert res3['op'] == 'REPLY'
+
+    req44 = await ledger.build_revoc_reg_entry_request(off_did, revoc_reg_id, 'CL_ACCUM', revoc_reg_entry_json)
+    res44 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, off_did, req44))
+    assert res44['op'] == 'REJECT'
+    req4 = await ledger.build_revoc_reg_entry_request(off_did, revoc_reg_id, 'CL_ACCUM', revoc_reg_entry_json)
+    req4 = await ledger.append_request_endorser(req4, e_did)
+    req4 = await ledger.multi_sign_request(wallet_handler, off_did, req4)
+    req4 = await ledger.multi_sign_request(wallet_handler, e_did, req4)
+    res4 = json.loads(await ledger.submit_request(pool_handler, req4))
+    print(res4)
+    assert res4['op'] == 'REPLY'
+
+
+@pytest.mark.asyncio
+async def test_misc_complex_pool_creation(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    trustee_did, _ = get_default_trustee

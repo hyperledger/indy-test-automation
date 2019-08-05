@@ -11,11 +11,10 @@ import os
 
 
 # TODO dynamic install of old version to upgrade from
-@pytest.mark.skip(reason='INDY-2132, INDY-2125')
+# TODO INDY-2132 and INDY-2125
 @pytest.mark.asyncio
 async def test_pool_upgrade_positive():
     await pool.set_protocol_version(2)
-    timestamp0 = int(time.time())
     dests = ['Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv', '8ECVSk179mjsjKRLWiQtssMLgp6EPhWXtaYyStWPSGAb',
              'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA',
              '4SWokCJWJc69Tn74VvLS6t2G2ucvXqM9FDMsWJjmsUxe', 'Cv1Ehj43DDM5ttNBmC6VPpEfwXWwfGktHwjDJsTV5Fz8',
@@ -44,7 +43,7 @@ async def test_pool_upgrade_positive():
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
     init_time = 1
-    version = '1.1.50'
+    version = '1.1.52'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -71,6 +70,7 @@ async def test_pool_upgrade_positive():
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': '000000000000000000000000Trustee1'}))
 
+    timestamp0 = int(time.time())
     # write all txns before the upgrade
     nym_before_res = await send_nym(pool_handle, wallet_handle, trustee_did, random_did)
     attrib_before_res = await send_attrib(
@@ -107,17 +107,20 @@ async def test_pool_upgrade_positive():
 
     # # cancel pool upgrade - optional
     # req = await ledger.build_pool_upgrade_request(trustee_did, name, version, 'cancel', _sha256, _timeout,
-    #                                               aws_25_schedule, None, reinstall, force, package)
+    #                                               docker_7_schedule, None, reinstall, force, package)
     # res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     # print(res)
     # assert res['op'] == 'REPLY'
 
     await asyncio.sleep(7*5*60)
+    # await asyncio.sleep(180)
 
-    docker_7_hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
-    # aws_25_hosts = [testinfra.get_host('ssh://persistent_node'+str(i),
-    #                                    ssh_config='/home/indy/.ssh/config')
-    #                 for i in range(1, 26)]
+    docker_7_hosts = [
+        testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)
+    ]
+    # aws_25_hosts = [
+    #     testinfra.get_host('ssh://persistent_node'+str(i), ssh_config='/home/indy/.ssh/config') for i in range(1, 26)
+    # ]
     version_outputs = [host.run('dpkg -l | grep {}'.format(package)) for host in docker_7_hosts]
     print(version_outputs)
     status_outputs = [host.run('systemctl status indy-node') for host in docker_7_hosts]
@@ -133,23 +136,29 @@ async def test_pool_upgrade_positive():
                                             None, 'key', None)
     get_schema_after_res = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     get_cred_def_after_res = await get_cred_def(pool_handle, wallet_handle, trustee_did, cred_def_id)
-    get_revoc_reg_def_after_res =\
-        await get_revoc_reg_def(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id1)
-    get_revoc_reg_after_res =\
-        await get_revoc_reg(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp1)
-    get_revoc_reg_delta_after_res =\
-        await get_revoc_reg_delta(pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2,
-                                  timestamp0, timestamp1)
+    get_revoc_reg_def_after_res = await get_revoc_reg_def(
+        pool_handle, wallet_handle, trustee_did, revoc_reg_def_id1
+    )
+    get_revoc_reg_after_res = await get_revoc_reg(
+        pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp1
+    )
+    get_revoc_reg_delta_after_res = await get_revoc_reg_delta(
+        pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp0, timestamp1
+    )
 
     # write and read NYM after the upgrade
     nym_res = await send_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
     await asyncio.sleep(1)
     get_nym_res = await get_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
 
-    add_before_results = [nym_before_res, attrib_before_res, schema_before_res, cred_def_before_res,
-                          revoc_reg_def_before_res, revoc_reg_entry_before_res]
-    get_after_results = [get_nym_after_res, get_attrib_after_res, get_schema_after_res, get_cred_def_after_res,
-                         get_revoc_reg_def_after_res, get_revoc_reg_after_res, get_revoc_reg_delta_after_res]
+    add_before_results = [
+        nym_before_res, attrib_before_res, schema_before_res, cred_def_before_res, revoc_reg_def_before_res,
+        revoc_reg_entry_before_res
+    ]
+    get_after_results = [
+        get_nym_after_res, get_attrib_after_res, get_schema_after_res, get_cred_def_after_res,
+        get_revoc_reg_def_after_res, get_revoc_reg_after_res, get_revoc_reg_delta_after_res
+    ]
 
     for res in add_before_results:
         assert res['op'] == 'REPLY'
