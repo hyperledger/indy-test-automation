@@ -24,11 +24,13 @@ async def test_vc_by_restart(
 ):
     trustee_did, _ = get_default_trustee
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
     primary_before, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
     p1 = NodeHost(primary_before)
     p1.stop_service()
     await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
     p1.start_service()
     await ensure_pool_is_in_sync(nodes_num=nodes_num)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
@@ -41,10 +43,12 @@ async def test_vc_by_demotion_primary(
 ):
     trustee_did, _ = get_default_trustee
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
     primary_before, primary_alias, primary_did = await get_primary(pool_handler, wallet_handler, trustee_did)
     await eventually(demote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
     await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
     primary_next, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
     await eventually(promote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
     await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_next)
@@ -60,10 +64,12 @@ async def test_vc_by_demotion_last(
     _did = 'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
     trustee_did, _ = get_default_trustee
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
     primary_first, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
     await eventually(demote_node, pool_handler, wallet_handler, trustee_did, _alias, _did)
     await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_first)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
     primary_next, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
     await eventually(promote_node, pool_handler, wallet_handler, trustee_did, _alias, _did)
     await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_next)

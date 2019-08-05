@@ -2,6 +2,8 @@ import time
 from datetime import datetime
 import os
 import string
+from typing import Optional
+
 import base58
 import asyncio
 from random import sample, shuffle
@@ -303,7 +305,7 @@ async def check_pool_performs_read(pool_handle, wallet_handle, submitter_did, di
 
 
 async def check_pool_performs_write_read(
-    pool_handle, wallet_handle, trustee_did, nyms_count=10
+    pool_handle, wallet_handle, trustee_did, nyms_count=1
 ):
     writes = await check_pool_performs_write(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
@@ -315,7 +317,7 @@ async def check_pool_performs_write_read(
 
 
 async def ensure_pool_performs_write_read(
-    pool_handle, wallet_handle, trustee_did, nyms_count=10, timeout=30
+    pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     await eventually(
         check_pool_performs_write_read, pool_handle, wallet_handle, trustee_did,
@@ -332,7 +334,7 @@ async def check_pool_is_functional(
 
 
 async def ensure_pool_is_functional(
-    pool_handle, wallet_handle, trustee_did, nyms_count=10, timeout=30
+    pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     await ensure_pool_performs_write_read(
         pool_handle, wallet_handle, trustee_did,
@@ -662,6 +664,16 @@ def get_node_did(node_alias, pool_info=None):
 async def get_primary(pool_handle, wallet_handle, trustee_did):
 
     async def _get_primary():
+
+        def get_primary_from_info(info: str, name: str) -> Optional[str]:
+            parsed_info = json.loads(info)
+            if parsed_info['op'] != 'REPLY':
+                return None
+            replica_name = parsed_info['result']['data']['Node_info']['Replicas_status'][name + ':0']['Primary']
+            if replica_name is None:
+                return None
+            return replica_name[len('Node'):-len(':0')]
+
         req = await ledger.build_get_validator_info_request(trustee_did)
         results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
         # get n
@@ -675,23 +687,11 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         except ValueError:
             pass
         # remove all not REPLY and empty (not selected) primaries entries
-        results = {
-            key: json.loads(results[key]) for key in results if
-            (json.loads(results[key])['op'] == 'REPLY')
-            &
-            (json.loads(results[key])['result']['data']['Node_info']['Replicas_status'][key + ':0']['Primary']
-             is not None)
-        }
-        # get primaries numbers from all nodes
-        primaries = [
-            results[key]['result']['data']['Node_info']['Replicas_status'][key+':0']['Primary'][len('Node'):-len(':0')]
-            for key in results
-        ]
-        # if all nodes are in VC except one that was promoted and restarted
-
+        primaries = [get_primary_from_info(info, name) for name, info in results.items()]
         # count the same entries
         primaries = Counter(primaries)
         res, votes = primaries.most_common()[0]
+        assert res is not None
         assert votes >= (n - f)
         return res
 
