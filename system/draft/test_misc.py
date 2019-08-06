@@ -1337,3 +1337,125 @@ async def test_misc_complex_pool_creation(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     trustee_did, _ = get_default_trustee
+
+
+@pytest.mark.asyncio
+async def test_misc_is_1306(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    issuer_did, _ = get_default_trustee
+    prover_did, prover_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+
+    schema_id, res1 = await send_schema(
+        pool_handler, wallet_handler, issuer_did, 'Schema 1', '1.0', json.dumps(['name', 'age'])
+    )
+    assert res1['op'] == 'REPLY'
+    await asyncio.sleep(1)
+    res = await get_schema(pool_handler, wallet_handler, issuer_did, schema_id)
+    schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
+    cred_def_id, cred_def_json, res2 = await send_cred_def(
+        pool_handler, wallet_handler, issuer_did, schema_json, 'Tag 1', None, json.dumps({'support_revocation': True})
+    )
+    assert res2['op'] == 'REPLY'
+    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, res3 = await send_revoc_reg_def(
+        pool_handler, wallet_handler, issuer_did, 'CL_ACCUM', 'Tag 2', cred_def_id, cred_def_json
+    )
+    assert res3['op'] == 'REPLY'
+
+    master_secret_id = await anoncreds.prover_create_master_secret(wallet_handler, 'Master secret 1')
+    cred_offer_json = await anoncreds.issuer_create_credential_offer(wallet_handler, cred_def_id)
+    cred_req_json, cred_req_metadata_json = await anoncreds.prover_create_credential_req(
+        wallet_handler, prover_did, cred_offer_json, cred_def_json, master_secret_id
+    )
+    cred_json, cred_revoc_id, revoc_reg_delta_json = await anoncreds.issuer_create_credential(
+        wallet_handler, cred_offer_json, cred_req_json, json.dumps(
+            {
+                "name":
+                    {
+                        "raw": "Pyotr",
+                        "encoded": "111"
+                    },
+                "age":
+                    {
+                        "raw": "99",
+                        "encoded": "222"
+                    }
+            }
+        ), None, None
+    )
+    cred_id = await anoncreds.prover_store_credential(
+        wallet_handler, None, cred_req_metadata_json, cred_json, cred_def_json, revoc_reg_def_json
+    )
+
+    # proof request
+    proof_request = json.dumps(
+        {
+            "nonce": "123432421212",
+            "name": "proof_req_1",
+            "version": "0.1",
+            "requested_attributes":
+                {
+                    "attr1_referent":
+                        {
+                            "name": "name"
+                        }
+                },
+            "requested_predicates":
+                {
+                    "predicate1_referent":
+                        {
+                            "name": "age", "p_type": ">=", "p_value": 18
+                        }
+                }
+        }
+    )
+    credentials_json = await anoncreds.prover_get_credentials_for_proof_req(wallet_handler, proof_request)
+    search_handle = await anoncreds.prover_search_credentials_for_proof_req(wallet_handler, proof_request, None)
+
+    creds_for_attr1 = await anoncreds.prover_fetch_credentials_for_proof_req(
+        search_handle, 'attr1_referent', 10
+    )
+    cred_for_attr1 = json.loads(creds_for_attr1)[0]['cred_info']
+
+    creds_for_predicate1 = await anoncreds.prover_fetch_credentials_for_proof_req(
+        search_handle, 'predicate1_referent', 10
+    )
+    cred_for_predicate1 = json.loads(creds_for_predicate1)[0]['cred_info']
+
+    await anoncreds.prover_close_credentials_search_for_proof_req(search_handle)
+
+    # primary proof
+    requested_credentials_json = json.dumps(
+        {
+            "self_attested_attributes": {},
+            "requested_attributes":
+                {
+                    "attr1_referent":
+                        {
+                            "cred_id": cred_for_attr1['referent'],
+                            "revealed": True
+                        }
+                },
+            "requested_predicates":
+                {
+                    "predicate1_referent":
+                        {
+                            "cred_id": cred_for_predicate1['referent']
+                        }
+                }
+        }
+    )
+
+    schemas_json = json.dumps(
+        {schema_id: json.loads(schema_json)}
+    )
+    cred_defs_json = json.dumps(
+        {cred_def_id: json.loads(cred_def_json)}
+    )
+
+    proof = await anoncreds.prover_create_proof(
+        wallet_handler, proof_request, requested_credentials_json, master_secret_id, schemas_json, cred_defs_json, '{}'
+    )
+
+    assert 'Pyotr' == json.loads(proof)['requested_proof']['revealed_attrs']['attr1_referent']['raw']
+    assert await anoncreds.verifier_verify_proof(proof_request, proof, schemas_json, cred_defs_json, '{}', '{}')
