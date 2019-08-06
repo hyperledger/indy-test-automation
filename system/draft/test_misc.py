@@ -1236,7 +1236,6 @@ async def test_misc_2171_off_ledger_signature(
 async def test_misc_2173_endorser(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
-    # TODO add more negative cases like INDY-2199
     trustee_did, _ = get_default_trustee
     off_did, off_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     e_did, e_vk = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -1246,14 +1245,6 @@ async def test_misc_2173_endorser(
     res = await send_nym(pool_handler, wallet_handler, trustee_did, e_did, e_vk, 'Endorser', 'ENDORSER')
     assert res['op'] == 'REPLY'
 
-    # # we get reply with swapped builder and endorser - for now it's ok
-    # req000 = await ledger.build_nym_request(e_did, test_did, test_vk, 'Alias 1', None)
-    # req000 = await ledger.append_request_endorser(req000, off_did)
-    # req000 = await ledger.multi_sign_request(wallet_handler, e_did, req000)
-    # req000 = await ledger.multi_sign_request(wallet_handler, off_did, req000)
-    # res000 = json.loads(await ledger.submit_request(pool_handler, req000))
-    # print(res000)
-    # assert res000['op'] == 'REPLY'
     req00 = await ledger.build_nym_request(off_did, test_did, test_vk, 'Alias 1', None)
     res00 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, off_did, req00))
     assert res00['op'] == 'REJECT'
@@ -1266,14 +1257,6 @@ async def test_misc_2173_endorser(
     assert res0['op'] == 'REPLY'
 
     schema_id, schema_json = await anoncreds.issuer_create_schema(off_did, 'Schema 1', '0.1', json.dumps(['a1', 'a2']))
-    # # we get reply with swapped builder and endorser - for now it's ok
-    # req111 = await ledger.build_schema_request(e_did, schema_json)
-    # req111 = await ledger.append_request_endorser(req111, off_did)
-    # req111 = await ledger.multi_sign_request(wallet_handler, e_did, req111)
-    # req111 = await ledger.multi_sign_request(wallet_handler, off_did, req111)
-    # res111 = json.loads(await ledger.submit_request(pool_handler, req111))
-    # print(res111)
-    # assert res111['op'] == 'REPLY'
     req11 = await ledger.build_schema_request(off_did, schema_json)
     res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, off_did, req11))
     assert res11['op'] == 'REJECT'
@@ -1330,13 +1313,6 @@ async def test_misc_2173_endorser(
     res4 = json.loads(await ledger.submit_request(pool_handler, req4))
     print(res4)
     assert res4['op'] == 'REPLY'
-
-
-@pytest.mark.asyncio
-async def test_misc_complex_pool_creation(
-        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
-):
-    trustee_did, _ = get_default_trustee
 
 
 @pytest.mark.asyncio
