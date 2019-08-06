@@ -9,11 +9,38 @@ logger = logging.getLogger(__name__)
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestEndorserSuite:
 
+    @pytest.mark.parametrize('role', ['TRUSTEE', 'STEWARD', 'ENDORSER'])
     @pytest.mark.asyncio
     async def test_case_endorser_roles(
-            self, pool_handler, wallet_handler, get_default_trustee
+            self, pool_handler, wallet_handler, get_default_trustee, role
     ):
-        pass
+        # acceptable roles are ENDORSER, STEWARD, TRUSTEE
+        trustee_did, _ = get_default_trustee
+        test_did, test_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        none_did, none_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        e_did, e_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, none_did, none_vk, 'No role', None)
+        assert res['op'] == 'REPLY'
+        res = await send_nym(pool_handler, wallet_handler, trustee_did, e_did, e_vk, 'Endorser', role)
+        assert res['op'] == 'REPLY'
+
+        # negative case - build txn with endorser, append none role did as endorser, multisign with both
+        req0 = await ledger.build_nym_request(e_did, test_did, test_vk, 'Alias', None)
+        req0 = await ledger.append_request_endorser(req0, none_did)
+        req0 = await ledger.multi_sign_request(wallet_handler, e_did, req0)
+        req0 = await ledger.multi_sign_request(wallet_handler, none_did, req0)
+        res0 = json.loads(await ledger.submit_request(pool_handler, req0))
+        print(res0)
+        assert res0['op'] == 'REJECT'
+
+        # positive case - build txn with none role did, append endorser as endorser, multisign with both
+        req1 = await ledger.build_nym_request(none_did, test_did, test_vk, 'Alias', None)
+        req1 = await ledger.append_request_endorser(req1, e_did)
+        req1 = await ledger.multi_sign_request(wallet_handler, none_did, req1)
+        req1 = await ledger.multi_sign_request(wallet_handler, e_did, req1)
+        res1 = json.loads(await ledger.submit_request(pool_handler, req1))
+        print(res1)
+        assert res1['op'] == 'REPLY'
 
     @pytest.mark.asyncio
     async def test_case_endorser_specification(
