@@ -41,42 +41,57 @@ class TestEndorserSuite:
         print(res1)
         assert res1['op'] == 'REPLY'
 
-    @pytest.mark.parametrize('role', [None, 'NETWORK_MONITOR'])
+    @pytest.mark.parametrize('role, result', [
+        (None, 'REJECT'),
+        ('NETWORK_MONITOR', 'REJECT'),
+        ('ENDORSER', 'REPLY'),
+        ('STEWARD', 'REPLY'),
+        ('TRUSTEE', 'REPLY'),
+    ])
     @pytest.mark.asyncio
     async def test_case_endorser_specification(
-            self, pool_handler, wallet_handler, get_default_trustee, role
+            self, pool_handler, wallet_handler, get_default_trustee, role, result
     ):
         trustee_did, _ = get_default_trustee
         test_did, test_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-        some_low_role_did, some_low_role_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        some_role_did, some_role_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         e_did, e_vk = await did.create_and_store_my_did(wallet_handler, '{}')
         res = await send_nym(
-            pool_handler, wallet_handler, trustee_did, some_low_role_did, some_low_role_vk, 'Not endorser', role
+            pool_handler, wallet_handler, trustee_did, some_role_did, some_role_vk, 'Not endorser', role
         )
         assert res['op'] == 'REPLY'
         res = await send_nym(pool_handler, wallet_handler, trustee_did, e_did, e_vk, 'Endorser', 'ENDORSER')
         assert res['op'] == 'REPLY'
 
         # build nym and DO NOT append endorser
-        req = await ledger.build_nym_request(some_low_role_did, test_did, test_vk, 'Alias', None)
+        req = await ledger.build_nym_request(some_role_did, test_did, test_vk, 'Alias', None)
         # but sign with two signatures
-        req = await ledger.multi_sign_request(wallet_handler, some_low_role_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, some_role_did, req)
         req = await ledger.multi_sign_request(wallet_handler, e_did, req)
         res = json.loads(await ledger.submit_request(pool_handler, req))
         print(res)
-        assert res['op'] == 'REJECT'
+        assert res['op'] == result
+
+        # build attrib and DO NOT append endorser
+        req = await ledger.build_attrib_request(some_role_did, some_role_did, None, None, random_string(10))
+        # but sign with two signatures
+        req = await ledger.multi_sign_request(wallet_handler, some_role_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, e_did, req)
+        res = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res)
+        assert res['op'] == result
 
         # build schema and DO NOT append endorser
         schema_id, schema_json = await anoncreds.issuer_create_schema(
-            some_low_role_did, 'Schema 9', '9.9', json.dumps(['name', 'surname'])
+            some_role_did, 'Schema 9', '9.9', json.dumps(['name', 'surname'])
         )
-        req = await ledger.build_schema_request(some_low_role_did, schema_json)
+        req = await ledger.build_schema_request(some_role_did, schema_json)
         # but sign with two signatures
-        req = await ledger.multi_sign_request(wallet_handler, some_low_role_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, some_role_did, req)
         req = await ledger.multi_sign_request(wallet_handler, e_did, req)
         res = json.loads(await ledger.submit_request(pool_handler, req))
         print(res)
-        assert res['op'] == 'REJECT'
+        assert res['op'] == result
 
     @pytest.mark.asyncio
     async def test_case_full_path(
