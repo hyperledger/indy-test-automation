@@ -364,7 +364,7 @@ async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
 async def ensure_pool_is_in_sync(node_ids=None, nodes_num=7):
     await eventually(
         check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num,
-        retry_wait=5, timeout=90
+        retry_wait=10, timeout=90
     )
 
 
@@ -695,7 +695,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         assert votes >= (n - f)
         return res
 
-    primary = await eventually(_get_primary, retry_wait=10, timeout=480)
+    primary = await eventually(_get_primary, retry_wait=20, timeout=480)
     alias = get_node_alias(primary)
     return primary, alias, get_node_did(alias)
 
@@ -880,3 +880,28 @@ class NodeHost:
 async def send_random_nyms(pool_handle, wallet_handle, submitter_did, count):
     for i in range(count):
         await send_nym(pool_handle, wallet_handle, submitter_did, random_did_and_json()[0], None, None, None)
+
+
+async def send_node(
+        pool_handle, wallet_handle,
+        alias, blskey, blskey_pop, client_ip, client_port, node_ip, node_port, services,
+        steward_did, node_dest
+):
+    data = json.dumps(
+        {
+            'alias': alias,
+            'blskey': blskey,
+            'blskey_pop': blskey_pop,
+            'client_ip': client_ip,
+            'client_port': client_port,
+            'node_ip': node_ip,
+            'node_port': node_port,
+            'services': services
+        }
+    )
+    req = await ledger.build_node_request(steward_did, node_dest, data)
+    res = json.loads(
+        await ledger.sign_and_submit_request(pool_handle, wallet_handle, steward_did, req)
+    )
+
+    return res
