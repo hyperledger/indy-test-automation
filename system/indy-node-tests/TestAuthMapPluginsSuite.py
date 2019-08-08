@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
+@pytest.mark.usefixtures('payment_init')
 class TestAuthMapPluginsSuite:
     @pytest.mark.parametrize('adder_role, adder_role_num', [
         ('TRUSTEE', '0'),
@@ -19,7 +20,7 @@ class TestAuthMapPluginsSuite:
     @pytest.mark.parametrize('sig_count', [0, 1, 3])
     @pytest.mark.asyncio
     async def test_case_mint(
-            self, payment_init, pool_handler, wallet_handler, get_default_trustee, adder_role, adder_role_num, sig_count
+            self, pool_handler, wallet_handler, get_default_trustee, adder_role, adder_role_num, sig_count
     ):
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
@@ -90,7 +91,7 @@ class TestAuthMapPluginsSuite:
     @pytest.mark.parametrize('sig_count', [0, 1, 3])
     @pytest.mark.asyncio
     async def test_case_set_fees(
-            self, payment_init, pool_handler, wallet_handler, get_default_trustee,
+            self, pool_handler, wallet_handler, get_default_trustee,
             editor_role, editor_role_num, sig_count
     ):
         libsovtoken_payment_method = 'sov'
@@ -160,7 +161,7 @@ class TestAuthMapPluginsSuite:
     @pytest.mark.parametrize('sig_count', [0, 1, 3])
     @pytest.mark.asyncio
     async def test_case_payment(
-            self, payment_init, pool_handler, wallet_handler, get_default_trustee, adder_role, adder_role_num, sig_count
+            self, pool_handler, wallet_handler, get_default_trustee, adder_role, adder_role_num, sig_count
     ):
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
