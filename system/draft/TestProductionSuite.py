@@ -16,29 +16,6 @@ PORT_2 = '9702'
 ALIAS_PREFIX = 'Node'
 SEED_PREFIX = '000000000000000000000000000node'
 GENESIS_PATH = '/var/lib/indy/sandbox/'
-EXTRA_DESTS = [
-    '4Tn3wZMNCvhSTXPcLinQDnHyj56DTLQtL61ki4jo2Loc',
-    '6G9QhQa3HWjRKeRmEvEkLbWWf2t7cw6KLtafzi494G4G',
-    'BeLdccGjNcCDpVNCbxCFb4CfZWGxLCSM4CfGFFoZ443V',
-    'CJqRrPMjPec5wvHDoggvxYUk13fXDbya3Aopc4TiFkNr',
-    'GYUibLwguJX5YcEYmy1xE45j6cbdnSjyJm9bKPiM163Z',
-    '67NLWsr8dFJrL6cDWcZkDce4hoSSGPBesk2PzqvGqL1R',
-    '4UjwEpgGVqpyovAxFRVP5mn2S4m6UHq2CftzeE73YrNq'
-]
-EXTRA_BLSKEYS = [
-    '2RdajPq6rCidK5gQbMzSJo1NfBMYiS3e44GxjTqZUk3RhBdtF28qEABHRo4MgHS2hwekoLWRTza9XiGEMRCompeujWpX85MPt87WdbTMysXZfb7J1ZXUEMrtE5aZahfx6p2YdhZdrArFvTmFWdojaD2V5SuvuaQL4G92anZ1yteay3R',
-    'zi65fRHZjK2R8wdJfDzeWVgcf9imXUsMSEY64LQ4HyhDMsSn3Br1vhnwXHE7NyGjxVnwx4FGPqxpzY8HrQ2PnrL9tu4uD34rjgPEnFXnsGAp8aF68R4CcfsmUXfuU51hogE7dZCvaF9GPou86EWrTKpW5ow3ifq16Swpn5nKMXHTKj',
-    'oApJaiaS9tKPGxb7svdDWvRSKYKFE8mFJVQyEQsRRqUMDeFQwLqRgrtxNfCtYrunCjzFmaMjFDnSy8a5n1ZCpp3TGH8oXJ8s4i7H9Yiy5hz2uPc3ManS9HiTvQE3TcBfxkuXswmR3Esy9Qi7LUjCuWGoi7fkwB3wATcLMJ5AuYr8mB',
-    '4ZaPVUjKWct8pQ3NJxC3GDA9LZqk8bPLaLmncBCPk33NbQnF1FyAvkkfj2Kmh1BbrJN6eXH6suGTvPFkrpSyLcmyp9CHJoiibdXi6mKEftNBbekepf7vzGvAmqgybzcPy1dqrykWyKVVQPQwmXXtGqNB2eafuwx8TECWakJHcJTA6AC',
-    '2ngTBQLDh78H3o7u7FpZMUgcpjuQ4brqh5v2bEj3Xs84GGVpnAbihmdQcsba8WNwrvBK6ScPa8kLLfKikZBmsVtFpPxPjD9rdT8YsGrSnYCkJARr2DKzyupKDqVncVY7ahg8Q1cDeqqgbdZwGnaAA1gSKNWjH2LRNaXF2dYh2Gjkrdo'
-]
-EXTRA_BLSKEY_POPS = [
-    'RbGAR89T5bg6Bg66Xg1fy5NjVarmvr8Q7XAmEPCA6arPvcfcDwLiEftD2cCVoEnrRSPLhgf3Cn9n81gdgMCbSBEhKuWW3njXkPFE1jvP67bU1d2jb6gw5BxyxsF9qg1Hvz6pr181u7s1WZBmGXinLoKaFhb6jptHghHvtqEuTgoqXM',
-    'QocoFNfnfbFxLobP9DeUgH2gDPc3FjB44JpfnHo9RosCDubw6AJeRj84avhBKpFqxuVQMpyXwPZ5uPVGfdadsjywrLsfABoeBw1JAvDckzAjaKDvhu1K7LX8zpzaQewWmt8VcWovyiaDJDDSdJQycvfQxzWk5G93iP26zwAriq7wYK',
-    'QqURauAZ5zhjW9yVMtGxTLLDfnAxAhavzmuSUmMosmVZLSkcYEcywHHaxi7axkpRJmsg4kmeZk1tzC4zUQrRDLc7FgcfCuTN15ub3JkynAh29x76nr7KxeHWLwMZVMyzMc5fiUfxWk2RbChitZmbbzqTVQSpjodh8TJgZX4b5p9ap7',
-    'RSZ6uTEGrXkzRMFztZRQkFJCH13BJFZC7G5DqF8K7J5YoHYsdaTzSQqGDjKaUMcuRuiUsTUta8udcF31JFJpszNzqdxTUjy5fAVFd2h2U2xW6SiucjGKGP88uNnx4eWv28P4HpaCd7A3cPxfnWpnpCtywRguqFa4TRurYZK5eTW7XM',
-    'Rbe2kBioQxNvxcbn46oe31AjDBdMMBjSgZfsN3jhfyK4r7512h815HKugx7ttr6z3AKCQmXJMz3EWPMKZMDe8Km1od1p2oiURNPjhT56jjKhkhGUzm91ndgUaM7MctGmdGJJC2R65uorvhNa7mckm76r3rvLW2ZGQd4f4YfavYsFDq'
-]
 
 
 class TestProductionSuite:
@@ -80,6 +57,7 @@ class TestProductionSuite:
         start_res = [node.exec_run(['systemctl', 'start', 'indy-node'], user='root') for node in extra_containers]
         assert all([res.exit_code == 0 for res in init_res])
         assert all([res.exit_code == 0 for res in start_res])
+        time.sleep(15)  # FIXME intermittent failure with locked db files
 
         trustee_did, _ = get_default_trustee
         stewards = {}
@@ -128,5 +106,34 @@ class TestProductionSuite:
         assert res8['op'] == 'REPLY'
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=20, timeout=30)
         await ensure_pool_is_in_sync(nodes_num=8)
+
+        # add 9th node
+        res9 = await send_node(
+            pool_handler, wallet_handler, ALIAS_PREFIX+str(nodes_num+5), EXTRA_BLSKEYS[4], EXTRA_BLSKEY_POPS[4],
+            ips[4], int(PORT_2), ips[4], int(PORT_1), ['VALIDATOR'], stewards['steward9'], EXTRA_DESTS[4]
+        )
+        assert res9['op'] == 'REPLY'
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=25, timeout=30)
+        await ensure_pool_is_in_sync(nodes_num=9)
+
+        # add 10th node - f will be changed - VC
+        primary_second, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        res10 = await send_node(
+            pool_handler, wallet_handler, ALIAS_PREFIX+str(nodes_num+6), EXTRA_BLSKEYS[5], EXTRA_BLSKEY_POPS[5],
+            ips[5], int(PORT_2), ips[5], int(PORT_1), ['VALIDATOR'], stewards['steward10'], EXTRA_DESTS[5]
+        )
+        assert res10['op'] == 'REPLY'
+        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_second)
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=30, timeout=30)
+        await ensure_pool_is_in_sync(nodes_num=10)
+
+        # add 11th node
+        res11 = await send_node(
+            pool_handler, wallet_handler, ALIAS_PREFIX+str(nodes_num+7), EXTRA_BLSKEYS[6], EXTRA_BLSKEY_POPS[6],
+            ips[6], int(PORT_2), ips[6], int(PORT_1), ['VALIDATOR'], stewards['steward11'], EXTRA_DESTS[6]
+        )
+        assert res11['op'] == 'REPLY'
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=35, timeout=30)
+        await ensure_pool_is_in_sync(nodes_num=11)
 
         # TODO write and read txns and demote/promote nodes one by one at the same time
