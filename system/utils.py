@@ -756,9 +756,6 @@ async def demote_node(pool_handle, wallet_handle, trustee_did, alias, target_did
     demote_data = json.dumps({'alias': alias, 'services': []})
     demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
     demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
-    # while demote_res['op'] != 'REPLY':
-    #     demote_res = json.loads(
-    #         await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
     assert demote_res['op'] == 'REPLY'
 
 
@@ -910,9 +907,8 @@ async def send_random_nyms(pool_handle, wallet_handle, submitter_did, count):
 
 
 async def send_node(
-        pool_handle, wallet_handle,
-        alias, blskey, blskey_pop, client_ip, client_port, node_ip, node_port, services,
-        steward_did, node_dest
+        pool_handle, wallet_handle, services, steward_did, node_dest, alias,
+        blskey=None, blskey_pop=None, client_ip=None, client_port=None, node_ip=None, node_port=None
 ):
     data = json.dumps(
         {
