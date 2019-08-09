@@ -4,9 +4,9 @@ from system.utils import *
 from system.docker_setup import client, pool_builder, pool_starter,\
     DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME, NETWORK_SUBNET
 
-import logging
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=0, format='%(asctime)s %(message)s')
+# import logging
+# logger = logging.getLogger(__name__)
+# logging.basicConfig(level=0, format='%(asctime)s %(message)s')
 
 EXTRA_NODE_NAME_BASE = 'extra_{}'.format(NODE_NAME_BASE)
 EXTRA_NODES_NUM = 7
@@ -63,7 +63,14 @@ class TestProductionSuite:
 
         trustee_did, _ = get_default_trustee
         stewards = {}
-        for i in range(5, EXTRA_NODES_NUM+5):
+
+        for i in range(1, nodes_num+1):
+            steward_did, steward_vk = await did.create_and_store_my_did(
+                wallet_handler, json.dumps({'seed': '000000000000000000000000Steward{}'.format(i)})
+            )
+            stewards['steward{}'.format(i)] = steward_did
+
+        for i in range(nodes_num+1, EXTRA_NODES_NUM+nodes_num+1):
             steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
             res = await send_nym(
                 pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, 'Steward{}'.format(i), 'STEWARD'
@@ -71,13 +78,14 @@ class TestProductionSuite:
             assert res['op'] == 'REPLY'
             stewards['steward{}'.format(i)] = steward_did
 
+        print(stewards)
+
         # add 5th node
         res = await send_node(
             pool_handler, wallet_handler, ['VALIDATOR'], trustee_did, EXTRA_DESTS[0],
             ALIAS_PREFIX+str(nodes_num+1), EXTRA_BLSKEYS[0], EXTRA_BLSKEY_POPS[0],
             ips[0], int(PORT_2), ips[0], int(PORT_1)
         )
-        print(res)
         assert res['op'] == 'REJECT'  # negative case - trustee adds node
 
         res5 = await send_node(
@@ -107,7 +115,7 @@ class TestProductionSuite:
         await ensure_pool_is_in_sync(nodes_num=6)
 
         # add 7th node - f will be changed - VC
-        primary_first, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        primary1, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
         res7 = await send_node(
             pool_handler, wallet_handler, ['VALIDATOR'], stewards['steward7'], EXTRA_DESTS[2],
             ALIAS_PREFIX+str(nodes_num+3), EXTRA_BLSKEYS[2], EXTRA_BLSKEY_POPS[2],
@@ -115,7 +123,7 @@ class TestProductionSuite:
         )
         assert res7['op'] == 'REPLY'
         await pool.refresh_pool_ledger(pool_handler)
-        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_first)
+        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
         await ensure_pool_is_in_sync(nodes_num=7)
 
@@ -140,7 +148,7 @@ class TestProductionSuite:
         await ensure_pool_is_in_sync(nodes_num=9)
 
         # add 10th node - f will be changed - VC
-        primary_second, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        primary2, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
         res10 = await send_node(
             pool_handler, wallet_handler, ['VALIDATOR'], stewards['steward10'], EXTRA_DESTS[5],
             ALIAS_PREFIX+str(nodes_num+6), EXTRA_BLSKEYS[5], EXTRA_BLSKEY_POPS[5],
@@ -148,7 +156,7 @@ class TestProductionSuite:
         )
         assert res10['op'] == 'REPLY'
         await pool.refresh_pool_ledger(pool_handler)
-        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_second)
+        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
         await ensure_pool_is_in_sync(nodes_num=10)
 
@@ -159,45 +167,84 @@ class TestProductionSuite:
             ips[6], int(PORT_2), ips[6], int(PORT_1)
         )
         assert res11['op'] == 'REPLY'
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=35, timeout=30)
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
         await ensure_pool_is_in_sync(nodes_num=11)
 
-        pool_info = get_pool_info(primary_second)
+        pool_info = get_pool_info(primary2)
         print(pool_info)
 
-        # demote initial 1st node
+        # demote initial 1st node by trustee
         await eventually(demote_node, pool_handler, wallet_handler, trustee_did, 'Node1', pool_info['Node1'])
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
 
-        # demote initial 2nd node
-        primary_third, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        # demote initial 2nd node by trustee - VC
+        primary3, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
         await eventually(
             demote_node, pool_handler, wallet_handler, trustee_did, 'Node2', pool_info['Node2']
         )
         await pool.refresh_pool_ledger(pool_handler)
-        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_third)
+        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary3)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
 
-        # demote initial 3rd node
+        # demote initial 3rd node by trustee
         await eventually(
             demote_node, pool_handler, wallet_handler, trustee_did, 'Node3', pool_info['Node3']
         )
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
 
-        # demote initial 4th node
+        # demote initial 4th node by trustee
         await eventually(
             demote_node, pool_handler, wallet_handler, trustee_did, 'Node4', pool_info['Node4']
         )
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
 
-        # demote 11th node by owner
+        # demote 11th node by owner - VC
         with pytest.raises(AssertionError):  # negative case - steward demotes node that he doesn't own
             await demote_node(pool_handler, wallet_handler, stewards['steward5'], 'Node11', pool_info['Node11'])
 
-        primary_forth, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        primary4, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
         await eventually(
             demote_node, pool_handler, wallet_handler, stewards['steward11'], 'Node11', pool_info['Node11']
         )
         await pool.refresh_pool_ledger(pool_handler)
-        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_forth)
+        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary4)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+
+        # promote 11th node by trustee - VC
+        with pytest.raises(AssertionError):  # negative case - steward promotes node that he doesn't own
+            await promote_node(pool_handler, wallet_handler, stewards['steward6'], 'Node11', pool_info['Node11'])
+
+        primary5, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        await eventually(
+            promote_node, pool_handler, wallet_handler, trustee_did, 'Node11', pool_info['Node11']
+        )
+        await pool.refresh_pool_ledger(pool_handler)
+        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary5)
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+
+        # promote initial 4th node by owner
+        await eventually(
+            promote_node, pool_handler, wallet_handler, stewards['steward4'], 'Node4', pool_info['Node4']
+        )
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+
+        # promote initial 3rd node by owner
+        await eventually(
+            promote_node, pool_handler, wallet_handler, stewards['steward3'], 'Node3', pool_info['Node3']
+        )
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+
+        # promote initial 2nd node by owner - VC
+        primary6, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        await eventually(
+            promote_node, pool_handler, wallet_handler, stewards['steward2'], 'Node2', pool_info['Node2']
+        )
+        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary6)
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+
+        # promote initial 1st node by owner
+        await eventually(
+            promote_node, pool_handler, wallet_handler, stewards['steward1'], 'Node1', pool_info['Node1']
+        )
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_is_in_sync(nodes_num=11)
