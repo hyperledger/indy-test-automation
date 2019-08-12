@@ -54,6 +54,50 @@ EXTRA_BLSKEY_POPS = [
     'RTZ3YMzzhsjeXkXieyhnvYdpLGBrEwcJWd3tDcX74EBTtghzW53DaVsYF4M5be6YBuLTGNiZkbzV7AhQ4gjtjsk8t6RFPPxxGtFxQMUNjPrRdJWwGrynTpRuk3vxWy1XKpmd5hEaauXNJdBLdj5cRFCae6WkqYTqbQN3kxpF3dd7cT'
 ]
 
+PERSISTENT_INSTANCES = {
+    'ap-northeast-1': ['i-07813055c26ecf5d2', 'i-0ba6de7b7e4ac763a'],
+    'ap-northeast-2': ['i-0d2d372e6a3c5e017'],
+    'ap-southeast-1': ['i-0ca3f7bf60d60d133', 'i-06836b3ffe6aaca39'],
+    'ap-southeast-2': ['i-0aaed544f37ee52c1', 'i-0fcb2d529e3f9a04f'],
+    'ca-central-1': ['i-03078455ca5dda6b8', 'i-00cd5b1dca8a078e1'],
+    'eu-central-1': ['i-06d864ffc17f20f94', 'i-0d38585877dc14755'],
+    'eu-west-1': ['i-06f30f8aed3af1d4c', 'i-058781262b6761fdc'],
+    'eu-west-2': ['i-0f6dedb3ee93e1138'],
+    'sa-east-1': ['i-0eb6a38d4fe2d47a5', 'i-08a30f8a12db050f9'],
+    'us-east-1': ['i-06784287da28fa930', 'i-0995b5b9f320a2824', 'i-0d1b2f330f139ea85'],
+    'us-east-2': ['i-0eb04f156b1c51b14', 'i-07cdbd66e43be4296'],
+    'us-west-1': ['i-043ba82aa40f0fdae', 'i-0db8a21e6c0252ba7'],
+    'us-west-2': ['i-042ee39c972737df7', 'i-0852c0983a638d6d9']
+}
+
+ORIGINAL_MAPPING = {
+    'i-06d864ffc17f20f94': 'vol-0379428547d514ae2',
+    'i-0d38585877dc14755': 'vol-02999333a7b1b652a',
+    'i-07813055c26ecf5d2': 'vol-0d4cdb4f0412443c7',
+    'i-0ba6de7b7e4ac763a': 'vol-0f311b05f1796e963',
+    'i-0f6dedb3ee93e1138': 'vol-0f36900112bf52107',
+    'i-043ba82aa40f0fdae': 'vol-05c8b4c04926b8f9e',
+    'i-0db8a21e6c0252ba7': 'vol-0bc80bbae343c430e',
+    'i-06784287da28fa930': 'vol-0560016eb5ce57e2c',
+    'i-0995b5b9f320a2824': 'vol-0210a9f59477b7c7c',
+    'i-0d1b2f330f139ea85': 'vol-05512ff56b9f8bdcd',
+    'i-0ca3f7bf60d60d133': 'vol-0aebb232089ec39ff',
+    'i-06836b3ffe6aaca39': 'vol-01a8207bfa16a9ebc',
+    'i-06f30f8aed3af1d4c': 'vol-05dd0abe9eb45e7a8',
+    'i-058781262b6761fdc': 'vol-0f3072109275366fc',
+    'i-042ee39c972737df7': 'vol-0fd523fd76be9cdcb',
+    'i-0852c0983a638d6d9': 'vol-08a17642f64d89870',
+    'i-0aaed544f37ee52c1': 'vol-0ac4868972e68a32d',
+    'i-0fcb2d529e3f9a04f': 'vol-079586732947212a2',
+    'i-0eb04f156b1c51b14': 'vol-0fc5e91eca4f535af',
+    'i-07cdbd66e43be4296': 'vol-0d8ab5f28f6212612',
+    'i-03078455ca5dda6b8': 'vol-07cc1de112cd2fabd',
+    'i-00cd5b1dca8a078e1': 'vol-01003e71e0349d6d6',
+    'i-0eb6a38d4fe2d47a5': 'vol-04999b7fb69739f54',
+    'i-08a30f8a12db050f9': 'vol-0f7a5863cb7942141',
+    'i-0d2d372e6a3c5e017': 'vol-0accc7c6548af7a7a'
+}
+
 
 def run_async_method(method, *args, **kwargs):
     loop = asyncio.get_event_loop()
@@ -391,7 +435,7 @@ async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
 async def ensure_pool_is_in_sync(node_ids=None, nodes_num=7):
     await eventually(
         check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num,
-        retry_wait=10, timeout=90
+        retry_wait=25, timeout=200
     )
 
 
