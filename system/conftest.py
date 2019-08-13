@@ -89,7 +89,7 @@ async def get_default_trustee(wallet_handler):
 
 # TODO different payment plugins (libsovtoken, libnullpay, ...)
 @pytest.fixture(scope="module")
-def payment_init_session(request):
+def payment_init_module(request):
     if request.config.getoption("payments"):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(payment_initializer('libsovtoken.so', 'sovtoken_init'))
