@@ -403,6 +403,20 @@ class TestEndorserSuite:
         print(res3)
         assert res3['op'] == 'REPLY'
 
+        # add schema with author with wrong role endorser and fees - should fail
+        req = await ledger.build_schema_request(author_did, schema_json)
+        req = await ledger.append_request_endorser(req, trustee_did)
+        req, _ = await payment.add_request_fees(
+            wallet_handler, author_did, req, json.dumps([source1]), json.dumps(
+                [{'recipient': address, 'amount': 750 * 100000}]
+            ), None
+        )
+        req = await ledger.multi_sign_request(wallet_handler, author_did, req)
+        req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+        res4 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res4)
+        assert res4['op'] == 'REJECT'
+
         # add schema with author with fees
         req = await ledger.build_schema_request(author_did, schema_json)
         req, _ = await payment.add_request_fees(
@@ -410,11 +424,11 @@ class TestEndorserSuite:
                 [{'recipient': address, 'amount': 750 * 100000}]
             ), None
         )
-        res4 = json.loads(
+        res5 = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, author_did, req)
         )
-        print(res4)
-        assert res4['op'] == 'REPLY'
+        print(res5)
+        assert res5['op'] == 'REPLY'
 
         # add schema with author with endorser
         schema_id, schema_json = await anoncreds.issuer_create_schema(
@@ -424,6 +438,6 @@ class TestEndorserSuite:
         req = await ledger.append_request_endorser(req, e_did)
         req = await ledger.multi_sign_request(wallet_handler, author_did, req)
         req = await ledger.multi_sign_request(wallet_handler, e_did, req)
-        res5 = json.loads(await ledger.submit_request(pool_handler, req))
-        print(res5)
-        assert res5['op'] == 'REPLY'
+        res6 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res6)
+        assert res6['op'] == 'REPLY'
