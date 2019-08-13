@@ -96,7 +96,7 @@ def payment_init_module(request):
 
 
 @pytest.fixture()
-def payment_init(request, payment_init_session):
+def payment_init(request, payment_init_module):
     # it will skips any test that depends on payment plugins
     # if pytest is run without '--payments' option
     # (more details: https://docs.pytest.org/en/latest/reference.html#_pytest.config.Config.getoption)
