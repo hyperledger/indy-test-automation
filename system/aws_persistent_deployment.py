@@ -1,6 +1,8 @@
 import boto3
 from pprint import pprint
-from system.utils import PERSISTENT_INSTANCES, ORIGINAL_MAPPING  # instance ids are the same for now
+from system.utils import PERSISTENT_INSTANCES, ORIGINAL_MAPPING, UPGRADE_MAPPING  # instance ids are the same for now
+import time
+import botocore
 
 
 REGION_NAMES = [
@@ -35,12 +37,16 @@ def operate_instances(action, instance_ids):  # action -> 'start' | 'stop'
         print([getattr(instance, action)() for instance in instances])
 
 
-def operate_volumes(action, instance_ids):  # action -> 'detach_volume' | 'attach_volume'
+def operate_volumes(action, instance_ids, mapping):  # action -> 'detach_volume' | 'attach_volume'
     for k, v in instance_ids.items():
         ec2_resource = boto3.resource('ec2', region_name=k)
         instances = [ec2_resource.Instance(_id) for _id in v]
-        print([getattr(instance, action)(Device=DEVICE, VolumeId=ORIGINAL_MAPPING[instance.id])
-               for instance in instances])
+        for instance in instances:
+            try:
+                res = getattr(instance, action)(Device=DEVICE, VolumeId=mapping[instance.id])
+                print(res)
+            except botocore.exceptions.ClientError as e:
+                pass
 
 
 def get_persistent_snapshot_ids(find_version):
@@ -56,7 +62,28 @@ def get_persistent_snapshot_ids(find_version):
     return snapshot_ids
 
 
+def create_volumes_from_snapshots():
+    pass
+
+
+def switch_volumes_for_upgrade():
+    operate_instances('stop', PERSISTENT_INSTANCES)
+    time.sleep(15)
+    operate_volumes('detach_volume', PERSISTENT_INSTANCES, ORIGINAL_MAPPING)
+    operate_volumes('attach_volume', PERSISTENT_INSTANCES, UPGRADE_MAPPING)
+    time.sleep(15)
+    operate_instances('start', PERSISTENT_INSTANCES)
+
+
+def switch_volumes_for_load():
+    operate_instances('stop', PERSISTENT_INSTANCES)
+    time.sleep(15)
+    operate_volumes('detach_volume', PERSISTENT_INSTANCES, UPGRADE_MAPPING)
+    operate_volumes('attach_volume', PERSISTENT_INSTANCES, ORIGINAL_MAPPING)
+    time.sleep(15)
+    operate_instances('start', PERSISTENT_INSTANCES)
+
+
 if __name__ == '__main__':
-    # operate_instances('stop', PERSISTENT_INSTANCES)
-    # operate_volumes('attach_volume', PERSISTENT_INSTANCES)
-    get_persistent_snapshot_ids('1.1.51')
+    switch_volumes_for_load()
+    # get_persistent_snapshot_ids('1.1.51')
