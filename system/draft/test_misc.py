@@ -26,7 +26,7 @@ logging.basicConfig(
 
 
 @pytest.mark.asyncio
-async def test_misc_get_nonexistent():
+async def test_misc_get_nonexistent(docker_setup_and_teardown):
     await pool.set_protocol_version(2)
     timestamp0 = int(time.time())
     pool_handle, _ = await pool_helper()
@@ -36,23 +36,31 @@ async def test_misc_get_nonexistent():
     timestamp1 = int(time.time())
 
     res1 = json.dumps(
-        await get_schema(pool_handle, wallet_handle, submitter_did, 'WKWN6U6XKTFxJBC3mB7Pdo:2:schema1:1.0'))
+        await get_schema(pool_handle, wallet_handle, submitter_did, 'WKWN6U6XKTFxJBC3mB7Pdo:2:schema1:1.0')
+    )
     res2 = json.dumps(
-        await get_cred_def(pool_handle, wallet_handle, submitter_did, '3VTSJXBKw2DBjfaJt4eS1X:3:CL:685:TAG'))
+        await get_cred_def(pool_handle, wallet_handle, submitter_did, '3VTSJXBKw2DBjfaJt4eS1X:3:CL:685:TAG')
+    )
     res3 = json.dumps(
         await get_revoc_reg_def(
             pool_handle, wallet_handle, submitter_did,
-            'RgTvEeKFSxd2Fcsxh42k9T:4:RgTvEeKFSxd2Fcsxh42k9T:3:CL:689:cred_def_tag:CL_ACCUM:revoc_def_tag'))
+            'RgTvEeKFSxd2Fcsxh42k9T:4:RgTvEeKFSxd2Fcsxh42k9T:3:CL:689:cred_def_tag:CL_ACCUM:revoc_def_tag'
+        )
+    )
     res4 = json.dumps(
         await get_revoc_reg(
             pool_handle, wallet_handle, submitter_did,
             'RgTvEeKFSxd2Fcsxh42k9T:4:RgTvEeKFSxd2Fcsxh42k9T:3:CL:689:cred_def_tag:CL_ACCUM:revoc_def_tag',
-            timestamp0))
+            timestamp0
+        )
+    )
     res5 = json.dumps(
         await get_revoc_reg_delta(
             pool_handle, wallet_handle, submitter_did,
             'RgTvEeKFSxd2Fcsxh42k9T:4:RgTvEeKFSxd2Fcsxh42k9T:3:CL:689:cred_def_tag:CL_ACCUM:revoc_def_tag',
-            timestamp0, timestamp1))
+            timestamp0, timestamp1
+        )
+    )
 
     with pytest.raises(IndyError, match='LedgerNotFound'):
         await ledger.parse_get_schema_response(res1)
@@ -1435,3 +1443,32 @@ async def test_misc_is_1306(
 
     assert 'Pyotr' == json.loads(proof)['requested_proof']['revealed_attrs']['attr1_referent']['raw']
     assert await anoncreds.verifier_verify_proof(proof_request, proof, schemas_json, cred_defs_json, '{}', '{}')
+
+
+@pytest.mark.asyncio
+async def test_misc_is_1248(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    issuer_did, _ = get_default_trustee
+
+    schema_id, res1 = await send_schema(
+        pool_handler, wallet_handler, issuer_did, 'Schema 1', '1.0', json.dumps(['name', 'age'])
+    )
+    assert res1['op'] == 'REPLY'
+    await asyncio.sleep(1)
+
+    res = await get_schema(pool_handler, wallet_handler, issuer_did, schema_id)
+    schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
+    cred_def_id, original_cred_def_json, res2 = await send_cred_def(
+        pool_handler, wallet_handler, issuer_did, schema_json, 'Tag 1', None, json.dumps({'support_revocation': True})
+    )
+    assert res2['op'] == 'REPLY'
+
+    rotated_cred_def_json = await anoncreds.issuer_rotate_credential_def_start(
+        wallet_handler, cred_def_id, json.dumps({'support_revocation': True})
+    )
+    req = await ledger.build_cred_def_request(issuer_did, rotated_cred_def_json)
+    res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, issuer_did, req))
+    print(res3)
+    assert res3['op'] == 'REPLY'
+    await anoncreds.issuer_rotate_credential_def_apply(wallet_handler, cred_def_id)
