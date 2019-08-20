@@ -21,7 +21,7 @@ import docker
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
-    level=0, format='%(asctime)s %(message)s', filename='client_log', filemode='a'
+    level=0, format='%(asctime)s %(message)s'
 )
 
 
@@ -1135,13 +1135,22 @@ async def test_misc_2112(
 
 @pytest.mark.asyncio
 async def test_misc_is_1284():
+    SEC_PER_DAY = 24 * 60 * 60
     pool_handle, _ = await pool_helper(path_to_genesis='../buildernet_genesis')
     wallet_handle, _, _ = await wallet_helper()
     builder_did, builder_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': str('I22aXMicTRh1ILWojMVJMvvzznlFwVUj')}))
-    res = await send_nym(
-        pool_handle, wallet_handle, builder_did, 'NSNGwB2MK7WVoG7CLmHhfy', '~PRDkZn9HMSL2MUWKFJLpi9', None, 'STEWARD'
+    req0 = await ledger.build_get_txn_author_agreement_request(builder_did, None)
+    res_taa = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, builder_did, req0))
+
+    req1 = await ledger.build_nym_request(
+        builder_did, 'NSNGwB2MK7WVoG7CLmHhfy', '~PRDkZn9HMSL2MUWKFJLpi9', None, 'STEWARD'
     )
+    req1 = await ledger.append_txn_author_agreement_acceptance_to_request(
+        req1, res_taa['result']['data']['text'], res_taa['result']['data']['version'], None, 'on_file',
+        int(time.time()) // SEC_PER_DAY * SEC_PER_DAY
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, builder_did, req1))
     print(res)
     assert res['op'] == 'REJECT'
 

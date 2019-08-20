@@ -197,7 +197,7 @@ async def payment_initializer(library_name, initializer_name):
 async def eventually(awaited_func,
                      *args,
                      retry_wait: float = 1,
-                     timeout: float = 15,
+                     timeout: float = 60,
                      acceptableExceptions=None,
                      verbose=True,
                      **kwargs):
@@ -389,6 +389,7 @@ async def check_pool_performs_write(pool_handle, wallet_handle, submitter_did, n
     for _ in range(nyms_count):
         some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
         resp = await send_nym(pool_handle, wallet_handle, submitter_did, some_did)
+        print(resp)
         assert resp['op'] == 'REPLY'
         res.append(resp)
     return res
@@ -398,6 +399,7 @@ async def check_pool_performs_read(pool_handle, wallet_handle, submitter_did, di
     res = []
     for did in dids:
         resp = await get_nym(pool_handle, wallet_handle, submitter_did, did)
+        print(resp)
         assert resp['result']['seqNo'] is not None
         res.append(resp)
     return res
@@ -463,7 +465,7 @@ async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
 async def ensure_pool_is_in_sync(node_ids=None, nodes_num=7):
     await eventually(
         check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num,
-        retry_wait=25, timeout=200
+        retry_wait=20, timeout=200
     )
 
 

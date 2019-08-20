@@ -85,5 +85,6 @@ def switch_volumes_for_load():
 
 
 if __name__ == '__main__':
-    switch_volumes_for_load()
+    operate_instances('start', PERSISTENT_INSTANCES)
+    # switch_volumes_for_load()
     # get_persistent_snapshot_ids('1.1.51')
