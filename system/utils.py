@@ -389,7 +389,6 @@ async def check_pool_performs_write(pool_handle, wallet_handle, submitter_did, n
     for _ in range(nyms_count):
         some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
         resp = await send_nym(pool_handle, wallet_handle, submitter_did, some_did)
-        print(resp)
         assert resp['op'] == 'REPLY'
         res.append(resp)
     return res
@@ -399,7 +398,6 @@ async def check_pool_performs_read(pool_handle, wallet_handle, submitter_did, di
     res = []
     for did in dids:
         resp = await get_nym(pool_handle, wallet_handle, submitter_did, did)
-        print(resp)
         assert resp['result']['seqNo'] is not None
         res.append(resp)
     return res
