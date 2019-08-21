@@ -476,15 +476,15 @@ async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, prim
     )
 
 
-async def check_pool_availability(pool_handle, wallet_handle, trustee_did):
+async def check_all_nodes_online(pool_handle, wallet_handle, trustee_did):
     req = await ledger.build_get_validator_info_request(trustee_did)
     results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     results = {k: json.loads(v) for k, v in results.items()}
     assert all([v['result']['data']['Pool_info']['Unreachable_nodes_count'] == 0 for k, v in results.items()])
 
 
-async def ensure_pool_availability(pool_handle, wallet_handle, trustee_did):
-    await eventually(check_pool_availability, pool_handle, wallet_handle, trustee_did, retry_wait=10, timeout=100)
+async def ensure_all_nodes_online(pool_handle, wallet_handle, trustee_did):
+    await eventually(check_all_nodes_online, pool_handle, wallet_handle, trustee_did, retry_wait=10, timeout=100)
 
 
 # TODO use threads to make that concurrent/async
