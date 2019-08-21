@@ -727,7 +727,8 @@ async def test_misc_hypothesis_async(docker_setup_and_teardown, pool_handler, wa
 
 @pytest.mark.parametrize('role_under_test', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR', 'NETWORK_MONITOR'])
 @pytest.mark.asyncio
-async def test_misc_indy_2033(pool_handler, wallet_handler, get_default_trustee, role_under_test):
+# INDY-2033
+async def test_misc_role_changing(pool_handler, wallet_handler, get_default_trustee, role_under_test):
     trustee_did, _ = get_default_trustee
     # another_trustee_did, another_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -747,7 +748,8 @@ async def test_misc_indy_2033(pool_handler, wallet_handler, get_default_trustee,
 
 
 @pytest.mark.asyncio
-async def test_misc_indy_1720(pool_handler, wallet_handler, get_default_trustee):
+# INDY-1720
+async def test_misc_vc_processing(pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
     primary1, alias1, target_did1 = await get_primary(pool_handler, wallet_handler, trustee_did)
     await demote_node(pool_handler, wallet_handler, trustee_did, alias1, target_did1)
@@ -772,7 +774,8 @@ async def test_misc_indy_1720(pool_handler, wallet_handler, get_default_trustee)
 
 @pytest.mark.repeat(3)
 @pytest.mark.asyncio
-async def test_misc_is_1237(get_default_trustee):
+# IS-1237
+async def test_misc_auth_rule_special_case(get_default_trustee):
     print()
     trustee_did, _ = get_default_trustee
     req1 = json.loads(await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
@@ -923,7 +926,8 @@ async def test_misc_plug_req_handlers_regression(
 
 
 @pytest.mark.asyncio
-async def test_misc_utxo_st_600_604(
+# ST-600 / ST-604
+async def test_misc_get_utxo_pagination_and_state_proof(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee
 ):
     hosts = [testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)]
@@ -1044,7 +1048,8 @@ async def test_misc_utxo_st_600_604(
 
 @pytest.mark.nodes_num(4)
 @pytest.mark.asyncio
-async def test_misc_2164(
+# INDY-2164
+async def test_misc_slow_pool_valid_response_test(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     trustee_did, _ = get_default_trustee
@@ -1114,7 +1119,8 @@ async def test_misc_2164(
 
 @pytest.mark.nodes_num(4)
 @pytest.mark.asyncio
-async def test_misc_2112(
+# INDY-2112
+async def test_misc_repeatable_ledger_status(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num
 ):
     client = docker.from_env()
@@ -1134,7 +1140,8 @@ async def test_misc_2112(
 
 
 @pytest.mark.asyncio
-async def test_misc_is_1284():
+# IS-1284
+async def test_misc_slow_pool_valid_response_live():
     SEC_PER_DAY = 24 * 60 * 60
     pool_handle, _ = await pool_helper(path_to_genesis='../buildernet_genesis')
     wallet_handle, _, _ = await wallet_helper()
@@ -1156,7 +1163,8 @@ async def test_misc_is_1284():
 
 
 @pytest.mark.asyncio
-async def test_misc_2171_off_ledger_signature(
+#  INDY-2171
+async def test_misc_off_ledger_signature(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
         initial_token_minting
 ):
@@ -1250,7 +1258,8 @@ async def test_misc_2171_off_ledger_signature(
 
 
 @pytest.mark.asyncio
-async def test_misc_2173_endorser(
+#  INDY-2173
+async def test_misc_endorser(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     trustee_did, _ = get_default_trustee
@@ -1333,7 +1342,8 @@ async def test_misc_2173_endorser(
 
 
 @pytest.mark.asyncio
-async def test_misc_is_1306(
+#  IS-1306
+async def test_misc_revocation_proof_without_timestamps(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     issuer_did, _ = get_default_trustee
@@ -1455,7 +1465,8 @@ async def test_misc_is_1306(
 
 
 @pytest.mark.asyncio
-async def test_misc_is_1248(
+#  IS-1248
+async def test_misc_modify_cred_def(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     issuer_did, _ = get_default_trustee
