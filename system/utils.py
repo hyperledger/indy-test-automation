@@ -54,6 +54,78 @@ EXTRA_BLSKEY_POPS = [
     'RTZ3YMzzhsjeXkXieyhnvYdpLGBrEwcJWd3tDcX74EBTtghzW53DaVsYF4M5be6YBuLTGNiZkbzV7AhQ4gjtjsk8t6RFPPxxGtFxQMUNjPrRdJWwGrynTpRuk3vxWy1XKpmd5hEaauXNJdBLdj5cRFCae6WkqYTqbQN3kxpF3dd7cT'
 ]
 
+PERSISTENT_INSTANCES = {
+    'ap-northeast-1': ['i-07813055c26ecf5d2', 'i-0ba6de7b7e4ac763a'],
+    'ap-northeast-2': ['i-0d2d372e6a3c5e017'],
+    'ap-southeast-1': ['i-0ca3f7bf60d60d133', 'i-06836b3ffe6aaca39'],
+    'ap-southeast-2': ['i-0aaed544f37ee52c1', 'i-0fcb2d529e3f9a04f'],
+    'ca-central-1': ['i-03078455ca5dda6b8', 'i-00cd5b1dca8a078e1'],
+    'eu-central-1': ['i-06d864ffc17f20f94', 'i-0d38585877dc14755'],
+    'eu-west-1': ['i-06f30f8aed3af1d4c', 'i-058781262b6761fdc'],
+    'eu-west-2': ['i-0f6dedb3ee93e1138'],
+    'sa-east-1': ['i-0eb6a38d4fe2d47a5', 'i-08a30f8a12db050f9'],
+    'us-east-1': ['i-06784287da28fa930', 'i-0995b5b9f320a2824', 'i-0d1b2f330f139ea85'],
+    'us-east-2': ['i-0eb04f156b1c51b14', 'i-07cdbd66e43be4296'],
+    'us-west-1': ['i-043ba82aa40f0fdae', 'i-0db8a21e6c0252ba7'],
+    'us-west-2': ['i-042ee39c972737df7', 'i-0852c0983a638d6d9']
+}
+
+ORIGINAL_MAPPING = {
+    'i-06d864ffc17f20f94': 'vol-0379428547d514ae2',
+    'i-0d38585877dc14755': 'vol-02999333a7b1b652a',
+    'i-07813055c26ecf5d2': 'vol-0d4cdb4f0412443c7',
+    'i-0ba6de7b7e4ac763a': 'vol-0f311b05f1796e963',
+    'i-0f6dedb3ee93e1138': 'vol-0f36900112bf52107',
+    'i-043ba82aa40f0fdae': 'vol-05c8b4c04926b8f9e',
+    'i-0db8a21e6c0252ba7': 'vol-0bc80bbae343c430e',
+    'i-06784287da28fa930': 'vol-0560016eb5ce57e2c',
+    'i-0995b5b9f320a2824': 'vol-0210a9f59477b7c7c',
+    'i-0d1b2f330f139ea85': 'vol-05512ff56b9f8bdcd',
+    'i-0ca3f7bf60d60d133': 'vol-0aebb232089ec39ff',
+    'i-06836b3ffe6aaca39': 'vol-01a8207bfa16a9ebc',
+    'i-06f30f8aed3af1d4c': 'vol-05dd0abe9eb45e7a8',
+    'i-058781262b6761fdc': 'vol-0f3072109275366fc',
+    'i-042ee39c972737df7': 'vol-0fd523fd76be9cdcb',
+    'i-0852c0983a638d6d9': 'vol-08a17642f64d89870',
+    'i-0aaed544f37ee52c1': 'vol-0ac4868972e68a32d',
+    'i-0fcb2d529e3f9a04f': 'vol-079586732947212a2',
+    'i-0eb04f156b1c51b14': 'vol-0fc5e91eca4f535af',
+    'i-07cdbd66e43be4296': 'vol-0d8ab5f28f6212612',
+    'i-03078455ca5dda6b8': 'vol-07cc1de112cd2fabd',
+    'i-00cd5b1dca8a078e1': 'vol-01003e71e0349d6d6',
+    'i-0eb6a38d4fe2d47a5': 'vol-04999b7fb69739f54',
+    'i-08a30f8a12db050f9': 'vol-0f7a5863cb7942141',
+    'i-0d2d372e6a3c5e017': 'vol-0accc7c6548af7a7a'
+}
+
+UPGRADE_MAPPING = {
+    'i-06d864ffc17f20f94': 'vol-051af3baaf0f6cd79',
+    'i-0d38585877dc14755': 'vol-07995a4f913fb48e0',
+    'i-07813055c26ecf5d2': 'vol-04b843e80d43803e2',
+    'i-0ba6de7b7e4ac763a': 'vol-02a0b13192ba4dc24',
+    'i-0f6dedb3ee93e1138': 'vol-07b0f9b5dfc7761cd',
+    'i-043ba82aa40f0fdae': 'vol-0745711426b43482d',
+    'i-0db8a21e6c0252ba7': 'vol-00f187f38a7fea117',
+    'i-06784287da28fa930': 'vol-0a5becbbacaba38fc',
+    'i-0995b5b9f320a2824': 'vol-0bc8402bf3c0716ee',
+    'i-0d1b2f330f139ea85': 'vol-0d29cd9ab1bcb1fe7',
+    'i-0ca3f7bf60d60d133': 'vol-04336c0879d61f142',
+    'i-06836b3ffe6aaca39': 'vol-0642137ca1755c56a',
+    'i-06f30f8aed3af1d4c': 'vol-0732baa1820578a13',
+    'i-058781262b6761fdc': 'vol-0e50222cf92f650ba',
+    'i-042ee39c972737df7': 'vol-04d47d0e36b9d1654',
+    'i-0852c0983a638d6d9': 'vol-094541febda5dd7a6',
+    'i-0aaed544f37ee52c1': 'vol-0fc5c2167d798fb14',
+    'i-0fcb2d529e3f9a04f': 'vol-070f8553ee5916321',
+    'i-0eb04f156b1c51b14': 'vol-0207754c5da19b6a3',
+    'i-07cdbd66e43be4296': 'vol-0bf6bb9e58ee1fccf',
+    'i-03078455ca5dda6b8': 'vol-01335c35c5df2c3ea',
+    'i-00cd5b1dca8a078e1': 'vol-0909aadb945034638',
+    'i-0eb6a38d4fe2d47a5': 'vol-04cb82f1a3cbb7d03',
+    'i-08a30f8a12db050f9': 'vol-07eb8485e8950ce45',
+    'i-0d2d372e6a3c5e017': 'vol-0b33ffe97a96507f8'
+}
+
 
 def run_async_method(method, *args, **kwargs):
     loop = asyncio.get_event_loop()
@@ -347,8 +419,7 @@ async def ensure_pool_performs_write_read(
     pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     await eventually(
-        check_pool_performs_write_read, pool_handle, wallet_handle, trustee_did,
-        nyms_count=nyms_count, timeout=timeout
+        check_pool_performs_write_read, pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count, timeout=timeout
     )
 
 
@@ -364,8 +435,7 @@ async def ensure_pool_is_functional(
     pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     await ensure_pool_performs_write_read(
-        pool_handle, wallet_handle, trustee_did,
-        nyms_count=nyms_count, timeout=timeout
+        pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count, timeout=timeout
     )
 
 
@@ -390,8 +460,7 @@ async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
 
 async def ensure_pool_is_in_sync(node_ids=None, nodes_num=7):
     await eventually(
-        check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num,
-        retry_wait=10, timeout=90
+        check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num, retry_wait=20, timeout=200
     )
 
 
@@ -403,9 +472,19 @@ async def check_primary_changed(pool_handler, wallet_handler, trustee_did, prima
 
 async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
     return await eventually(
-        check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before,
-        retry_wait=20, timeout=480
+        check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before, retry_wait=20, timeout=480
     )
+
+
+async def check_all_nodes_online(pool_handle, wallet_handle, trustee_did):
+    req = await ledger.build_get_validator_info_request(trustee_did)
+    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+    results = {k: json.loads(v) for k, v in results.items()}
+    assert all([v['result']['data']['Pool_info']['Unreachable_nodes_count'] == 0 for k, v in results.items()])
+
+
+async def ensure_all_nodes_online(pool_handle, wallet_handle, trustee_did):
+    await eventually(check_all_nodes_online, pool_handle, wallet_handle, trustee_did, retry_wait=10, timeout=100)
 
 
 # TODO use threads to make that concurrent/async
@@ -744,9 +823,6 @@ async def demote_random_node(pool_handle, wallet_handle, trustee_did):
     demote_data = json.dumps({'alias': alias, 'services': []})
     demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
     demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
-    # while demote_res['op'] != 'REPLY':
-    #     demote_res = json.loads(
-    #         await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
     assert demote_res['op'] == 'REPLY'
 
     return alias, target_did
