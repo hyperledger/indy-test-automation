@@ -197,7 +197,7 @@ async def payment_initializer(library_name, initializer_name):
 async def eventually(awaited_func,
                      *args,
                      retry_wait: float = 1,
-                     timeout: float = 60,
+                     timeout: float = 15,
                      acceptableExceptions=None,
                      verbose=True,
                      **kwargs):
