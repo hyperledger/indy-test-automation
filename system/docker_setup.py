@@ -10,7 +10,7 @@ import asyncio
 from async_generator import yield_
 
 from .utils import (
-    pool_helper, wallet_helper, default_trustee, ensure_pool_is_functional,
+    pool_helper, wallet_helper, default_trustee, ensure_pool_is_functional, ensure_pool_availability,
     NodeHost
 )
 
@@ -138,6 +138,7 @@ async def wait_until_pool_is_ready():
     wallet_handle, _, _ = await wallet_helper()
     trustee_did, _ = await default_trustee(wallet_handle)
     pool_handle, _ = await pool_helper()
+    await ensure_pool_availability(pool_handle, wallet_handle, trustee_did)
     await ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did)
 
 

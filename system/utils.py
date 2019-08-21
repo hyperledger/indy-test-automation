@@ -419,8 +419,7 @@ async def ensure_pool_performs_write_read(
     pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     await eventually(
-        check_pool_performs_write_read, pool_handle, wallet_handle, trustee_did,
-        nyms_count=nyms_count, timeout=timeout
+        check_pool_performs_write_read, pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count, timeout=timeout
     )
 
 
@@ -436,8 +435,7 @@ async def ensure_pool_is_functional(
     pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     await ensure_pool_performs_write_read(
-        pool_handle, wallet_handle, trustee_did,
-        nyms_count=nyms_count, timeout=timeout
+        pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count, timeout=timeout
     )
 
 
@@ -462,8 +460,7 @@ async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
 
 async def ensure_pool_is_in_sync(node_ids=None, nodes_num=7):
     await eventually(
-        check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num,
-        retry_wait=20, timeout=200
+        check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num, retry_wait=20, timeout=200
     )
 
 
@@ -475,9 +472,19 @@ async def check_primary_changed(pool_handler, wallet_handler, trustee_did, prima
 
 async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
     return await eventually(
-        check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before,
-        retry_wait=20, timeout=480
+        check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before, retry_wait=20, timeout=480
     )
+
+
+async def check_pool_availability(pool_handle, wallet_handle, trustee_did):
+    req = await ledger.build_get_validator_info_request(trustee_did)
+    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+    results = {k: json.loads(v) for k, v in results.items()}
+    assert all([v['result']['data']['Pool_info']['Unreachable_nodes_count'] == 0 for k, v in results.items()])
+
+
+async def ensure_pool_availability(pool_handle, wallet_handle, trustee_did):
+    await eventually(check_pool_availability, pool_handle, wallet_handle, trustee_did, retry_wait=10, timeout=100)
 
 
 # TODO use threads to make that concurrent/async
@@ -816,9 +823,6 @@ async def demote_random_node(pool_handle, wallet_handle, trustee_did):
     demote_data = json.dumps({'alias': alias, 'services': []})
     demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
     demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
-    # while demote_res['op'] != 'REPLY':
-    #     demote_res = json.loads(
-    #         await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
     assert demote_res['op'] == 'REPLY'
 
     return alias, target_did

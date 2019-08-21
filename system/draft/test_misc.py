@@ -1481,3 +1481,16 @@ async def test_misc_is_1248(
     print(res3)
     assert res3['op'] == 'REPLY'
     await anoncreds.issuer_rotate_credential_def_apply(wallet_handler, cred_def_id)
+
+
+@pytest.mark.asyncio
+async def test_misc_draft(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    await asyncio.sleep(30)
+    trustee_did, _ = get_default_trustee
+    req = await ledger.build_get_validator_info_request(trustee_did)
+    results = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    results = {k: json.loads(v) for k, v in results.items()}
+    assert all([v['result']['data']['Pool_info']['Unreachable_nodes_count'] == 0 for k, v in results.items()])
+    print(results)
