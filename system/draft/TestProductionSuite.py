@@ -17,12 +17,13 @@ SEED_PREFIX = '000000000000000000000000000node'
 GENESIS_PATH = '/var/lib/indy/sandbox/'
 
 
+@pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestProductionSuite:
 
     @pytest.mark.nodes_num(4)
     @pytest.mark.asyncio
     async def test_case_complex_pool_operations(
-            self, docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
     ):
         # create extra nodes
         extra_containers = pool_starter(

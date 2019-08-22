@@ -17,6 +17,8 @@ from hypothesis import errors, settings, Verbosity, given, strategies
 import pprint
 import itertools
 import docker
+from system.docker_setup import client, pool_builder, pool_starter,\
+    DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME
 
 
 logger = logging.getLogger(__name__)
@@ -1254,6 +1256,7 @@ async def test_misc_off_ledger_signature(
     assert res5['op'] == 'REPLY'
     req = await ledger.build_get_auth_rule_request(None, None, None, None, None, None)
     res6 = json.loads(await ledger.submit_request(pool_handler, req))
+    assert res6['op'] == 'REPLY'
     print(res6)
 
 
@@ -1494,14 +1497,162 @@ async def test_misc_modify_cred_def(
     await anoncreds.issuer_rotate_credential_def_apply(wallet_handler, cred_def_id)
 
 
+@pytest.mark.nodes_num(4)
+@pytest.mark.asyncio
+# INDY-2211
+async def test_misc_upgrade_ledger_with_old_auth_rule(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    # set up 1.1.50 sovrin + 1.9.0 indy-node stable versions for this test
+
+    # create extra node
+    new_node = pool_starter(
+        pool_builder(
+            DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, 'new_node', NETWORK_NAME, 1
+        )
+    )[0]
+
+    GENESIS_PATH = '/var/lib/indy/sandbox/'
+
+    # put both genesis files
+    for _, prefix in enumerate(['pool', 'domain']):
+        bits, stat = client.containers.get('node1'). \
+            get_archive('{}{}_transactions_genesis'.format(GENESIS_PATH, prefix))
+        assert new_node.put_archive(GENESIS_PATH, bits)
+
+    new_ip = '10.0.0.6'
+    PORT_1 = '9701'
+    PORT_2 = '9702'
+    new_alias = 'Node5'
+
+    # initialize
+    assert new_node.exec_run(
+        ['init_indy_node', new_alias, new_ip, PORT_1, new_ip, PORT_2, '000000000000000000000000000node5'],
+        user='indy'
+    ).exit_code == 0
+
+    # upgrade
+    version = '1.1.52'
+    package = 'sovrin'
+    assert new_node.exec_run(
+        ['apt', 'update'],
+        user='root'
+    ).exit_code == 0
+    assert new_node.exec_run(
+        ['apt', 'install', '{}={}'.format(package, version), '-y'],
+        user='root'
+    ).exit_code == 0
+
+    # start
+    assert new_node.exec_run(
+        ['systemctl', 'start', 'indy-node'],
+        user='root'
+    ).exit_code == 0
+
+    trustee_did, _ = get_default_trustee
+    steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    res = await send_nym(
+        pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, 'Steward5', 'STEWARD'
+    )
+    assert res['op'] == 'REPLY'
+
+    dests = [
+        'Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv', '8ECVSk179mjsjKRLWiQtssMLgp6EPhWXtaYyStWPSGAb',
+        'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA'
+    ]
+    init_time = 1
+    name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
+    action = 'start'
+    _sha256 = hashlib.sha256().hexdigest()
+    _timeout = 5
+    docker_4_schedule = json.dumps(
+        dict(
+            {dest: datetime.strftime(
+                datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z'
+            ) for dest, i in zip(dests, range(len(dests)))}
+        )
+    )
+    reinstall = False
+    force = False
+
+    # set rule for schema adding
+    req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
+                                               json.dumps({
+                                                   'constraint_id': 'ROLE',
+                                                   'role': '0',
+                                                   'sig_count': 3,
+                                                   'need_to_be_owner': False,
+                                                   'metadata': {}
+                                               }))
+    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res1)
+    assert res1['op'] == 'REPLY'
+
+    # schedule pool upgrade
+    req = await ledger.build_pool_upgrade_request(
+        trustee_did, name, version, action, _sha256, _timeout, docker_4_schedule, None, reinstall, force, package
+    )
+    res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res2)
+    assert res2['op'] == 'REPLY'
+
+    # wait until upgrade is finished
+    await asyncio.sleep(4*5*60)
+
+    # add 5th node
+    res3 = await send_node(
+        pool_handler, wallet_handler, ['VALIDATOR'], steward_did, EXTRA_DESTS[0], new_alias,
+        EXTRA_BLSKEYS[0], EXTRA_BLSKEY_POPS[0], new_ip, int(PORT_2), new_ip, int(PORT_1)
+    )
+    assert res3['op'] == 'REPLY'
+    await ensure_pool_is_in_sync(nodes_num=5)
+
+    # set another rule for schema adding
+    req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
+                                               json.dumps({
+                                                    'constraint_id': 'OR',
+                                                    'auth_constraints': [
+                                                           {
+                                                               'constraint_id': 'ROLE',
+                                                               'role': '0',
+                                                               'sig_count': 1,
+                                                               'need_to_be_owner': False,
+                                                               'off_ledger_signature': False,
+                                                               'metadata': {}
+                                                           },
+                                                           {
+                                                               'constraint_id': 'ROLE',
+                                                               'role': '*',
+                                                               'sig_count': 0,
+                                                               'need_to_be_owner': False,
+                                                               'off_ledger_signature': True,
+                                                               'metadata': {}
+                                                           }
+                                                    ]
+                                                }))
+    res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res4)
+    assert res4['op'] == 'REPLY'
+
+    # set old rule for schema adding
+    req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
+                                               json.dumps({
+                                                   'constraint_id': 'ROLE',
+                                                   'role': '0',
+                                                   'sig_count': 3,
+                                                   'need_to_be_owner': False,
+                                                   'metadata': {}
+                                               }))
+    res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res5)
+    assert res5['op'] == 'REPLY'
+
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
+    await ensure_pool_is_in_sync(nodes_num=5)
+
+
 @pytest.mark.asyncio
 async def test_misc_draft(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
-    await asyncio.sleep(30)
     trustee_did, _ = get_default_trustee
-    req = await ledger.build_get_validator_info_request(trustee_did)
-    results = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    results = {k: json.loads(v) for k, v in results.items()}
-    assert all([v['result']['data']['Pool_info']['Unreachable_nodes_count'] == 0 for k, v in results.items()])
-    print(results)
