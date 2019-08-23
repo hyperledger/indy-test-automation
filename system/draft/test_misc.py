@@ -1660,10 +1660,4 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
 
     await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
     await ensure_pool_is_in_sync(nodes_num=5)
-
-
-@pytest.mark.asyncio
-async def test_misc_draft(
-        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
-):
-    pass
+    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
