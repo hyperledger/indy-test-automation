@@ -11,6 +11,7 @@ from collections import Counter
 from collections.abc import Iterable
 from inspect import isawaitable
 import random
+import itertools
 import functools
 from ctypes import CDLL
 import testinfra
@@ -477,14 +478,37 @@ async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, prim
 
 
 async def check_all_nodes_online(pool_handle, wallet_handle, trustee_did):
-    req = await ledger.build_get_validator_info_request(trustee_did)
-    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-    results = {k: json.loads(v) for k, v in results.items()}
+    results = get_validator_info(pool_handle, wallet_handle, trustee_did)
     assert all([v['result']['data']['Pool_info']['Unreachable_nodes_count'] == 0 for k, v in results.items()])
 
 
 async def ensure_all_nodes_online(pool_handle, wallet_handle, trustee_did):
     await eventually(check_all_nodes_online, pool_handle, wallet_handle, trustee_did, retry_wait=10, timeout=100)
+
+
+async def check_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trustee_did):
+    results = get_validator_info(pool_handle, wallet_handle, trustee_did)
+    committed_state_roots = [
+        v['result']['data']['Node_info']['Committed_state_root_hashes'] for k, v in results.items()
+    ]
+    uncommitted_state_roots = [
+        v['result']['data']['Node_info']['Uncommitted_state_root_hashes'] for k, v in results.items()
+    ]
+    assert all([a == b for a, b in itertools.combinations(committed_state_roots, 2)])
+    assert all([a == b for a, b in itertools.combinations(uncommitted_state_roots, 2)])
+
+
+async def ensure_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trustee_did):
+    await eventually(
+        check_state_root_hashes_are_in_sync, pool_handle, wallet_handle, trustee_did, retry_wait=20, timeout=200
+    )
+
+
+async def get_validator_info(pool_handle, wallet_handle, trustee_did):
+    req = await ledger.build_get_validator_info_request(trustee_did)
+    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+    results = {k: json.loads(v) for k, v in results.items()}
+    return results
 
 
 # TODO use threads to make that concurrent/async

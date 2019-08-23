@@ -1503,7 +1503,16 @@ async def test_misc_modify_cred_def(
 async def test_misc_upgrade_ledger_with_old_auth_rule(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
-    # set up 1.1.50 sovrin + 1.9.0 indy-node stable versions for this test
+    """
+    set up 1.1.50 sovrin + 1.9.0 node + 1.9.0 plenum + 1.0.0 plugins stable to fail
+    (upgrade to 1.1.52 sovrin)
+
+    set up 1.9.0~dev1014 node + 1.9.0~dev829 plenum master (no plugins env)
+    (upgrade to 1.9.2~dev1061 node)
+
+    set up 1.1.128 sovrin + 1.9.0~dev1014 node + 1.9.0~dev829 plenum + 1.0.0~dev59 plugins master (prod env)
+    (upgrade to ? sovrin)
+    """
 
     # create extra node
     new_node = pool_starter(
@@ -1515,6 +1524,7 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     GENESIS_PATH = '/var/lib/indy/sandbox/'
 
     # put both genesis files
+    assert new_node.exec_run(['mkdir', GENESIS_PATH], user='indy').exit_code == 0
     for _, prefix in enumerate(['pool', 'domain']):
         bits, stat = client.containers.get('node1'). \
             get_archive('{}{}_transactions_genesis'.format(GENESIS_PATH, prefix))
@@ -1532,8 +1542,8 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     ).exit_code == 0
 
     # upgrade
-    version = '1.1.52'
-    package = 'sovrin'
+    version = '1.9.2~dev1061'
+    package = 'indy-node'
     assert new_node.exec_run(
         ['apt', 'update'],
         user='root'
@@ -1575,12 +1585,12 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     reinstall = False
     force = False
 
-    # set rule for schema adding
-    req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
+    # set rule for cred def adding
+    req = await ledger.build_auth_rule_request(trustee_did, '102', 'ADD', '*', None, '*',
                                                json.dumps({
                                                    'constraint_id': 'ROLE',
-                                                   'role': '0',
-                                                   'sig_count': 3,
+                                                   'role': '2',
+                                                   'sig_count': 1,
                                                    'need_to_be_owner': False,
                                                    'metadata': {}
                                                }))
@@ -1589,6 +1599,7 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     assert res1['op'] == 'REPLY'
 
     # schedule pool upgrade
+    version = '1.9.2.dev1061'  # overwrite for upgrade txn
     req = await ledger.build_pool_upgrade_request(
         trustee_did, name, version, action, _sha256, _timeout, docker_4_schedule, None, reinstall, force, package
     )
@@ -1607,7 +1618,7 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     assert res3['op'] == 'REPLY'
     await ensure_pool_is_in_sync(nodes_num=5)
 
-    # set another rule for schema adding
+    # set rule for schema adding with off ledger parameters
     req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
                                                json.dumps({
                                                     'constraint_id': 'OR',
@@ -1634,12 +1645,12 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     print(res4)
     assert res4['op'] == 'REPLY'
 
-    # set old rule for schema adding
-    req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
+    # set rule for revoc reg def adding
+    req = await ledger.build_auth_rule_request(trustee_did, '113', 'ADD', '*', None, '*',
                                                json.dumps({
                                                    'constraint_id': 'ROLE',
-                                                   'role': '0',
-                                                   'sig_count': 3,
+                                                   'role': '2',
+                                                   'sig_count': 1,
                                                    'need_to_be_owner': False,
                                                    'metadata': {}
                                                }))
@@ -1655,4 +1666,4 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
 async def test_misc_draft(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
-    trustee_did, _ = get_default_trustee
+    pass
