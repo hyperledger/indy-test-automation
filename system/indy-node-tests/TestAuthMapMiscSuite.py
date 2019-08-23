@@ -305,7 +305,6 @@ class TestAuthMapMiscSuite:
            'role': steward_role_num,
            'sig_count': 1,
            'need_to_be_owner': False,
-           'off_ledger_signature': False,
            'metadata': {}
         }
         req = await ledger.build_auth_rules_request(trustee_did, json.dumps([
