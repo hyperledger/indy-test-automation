@@ -96,26 +96,33 @@ async def test_misc_get_txn_by_seqno():
     print(res)
 
 
+# TODO parametrize this to read as trustee and as default user
 @pytest.mark.asyncio
 async def test_misc_state_proof(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
         initial_token_minting
 ):
+    libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee
     random_did = random_did_and_json()[0]
     address = initial_token_minting
+    address2 = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, '{}')
+
     res_nym = await send_nym(pool_handler, wallet_handler, trustee_did, random_did)
     assert res_nym['op'] == 'REPLY'
+
     res_attr = await send_attrib(
         pool_handler, wallet_handler, trustee_did, random_did, None, json.dumps({'key': 'value'}), None
     )
     assert res_attr['op'] == 'REPLY'
+
     schema_id, res_sch = await send_schema(
         pool_handler, wallet_handler, trustee_did, random_string(10), '1.0', json.dumps(
             [random_string(1), random_string(2), random_string(3)]
         )
     )
     assert res_sch['op'] == 'REPLY'
+
     await asyncio.sleep(1)
     timestamp0 = int(time.time())
     res = json.dumps(await get_schema(pool_handler, wallet_handler, trustee_did, schema_id))
@@ -126,13 +133,30 @@ async def test_misc_state_proof(
         )
     )
     assert res_cred_def['op'] == 'REPLY'
+
     revoc_reg_def_id, _, _, res_entry = await send_revoc_reg_entry(
         pool_handler, wallet_handler, trustee_did, 'CL_ACCUM', random_string(3), cred_def_id, json.dumps(
             {'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}
         )
     )
     assert res_entry['op'] == 'REPLY'
+
     timestamp1 = int(time.time())
+
+    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    source = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res)
+    )[0]['source']
+    req = await payment.build_payment_req(
+        wallet_handler, trustee_did, json.dumps([source]), json.dumps(
+            [{"recipient": address2, "amount": 999 * 100000}]
+        ), random_string(100)
+    )
+    res_pay = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    assert json.loads(res_pay)['op'] == 'REPLY'
+    receipts = json.loads(await payment.parse_payment_response(libsovtoken_payment_method, res_pay))
+    receipt = receipts[0]
 
     # # uncomment to check freshness state proof reading
     # await asyncio.sleep(600)
@@ -168,9 +192,17 @@ async def test_misc_state_proof(
         req7 = await ledger.build_get_revoc_reg_delta_request(None, revoc_reg_def_id, timestamp0, timestamp1)
         res7 = json.loads(await ledger.submit_request(pool_handler, req7))
 
-        # tokens
-        req8, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address)
+        req8 = await ledger.build_get_txn_request(trustee_did, '1001', 1)
         res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req8))
+
+        # tokens
+        req9, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address)
+        res9 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req9))
+
+        req10 = await payment.build_verify_payment_req(wallet_handler, trustee_did, receipt)
+        res10 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req10))
+        print(res10)
+
     finally:
         outputs1 = [host.run('systemctl start indy-node') for host in hosts[:-1]]
         print(outputs1)
@@ -181,10 +213,10 @@ async def test_misc_state_proof(
     assert res4['result']['seqNo'] is not None
     assert res5['result']['seqNo'] is not None
     assert res6['result']['seqNo'] is not None
-    print(res66)
     assert res66['result']['seqNo'] is None
     assert res7['result']['seqNo'] is not None
-    assert res8['op'] == 'REPLY' and res8['result']['outputs'][0]['seqNo'] is not None
+    assert res8['result']['seqNo'] is not None
+    assert res9['op'] == 'REPLY' and res9['result']['outputs'][0]['seqNo'] is not None
 
 
 @pytest.mark.asyncio
@@ -657,8 +689,10 @@ async def test_misc_indy_1554_can_write_false(pool_handler, wallet_handler, get_
     (None, 'REVOC_REG_ENTRY', 'EDIT', '*', '*', '*'),
 ])
 @pytest.mark.asyncio
-async def test_misc_is_1202(pool_handler, wallet_handler, get_default_trustee,
-                            submitter_did, txn_type, action, field, old_value, new_value):
+async def test_misc_is_1202(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
+        submitter_did, txn_type, action, field, old_value, new_value
+):
     trustee_did, _ = get_default_trustee
     req = await ledger.build_get_auth_rule_request(submitter_did, txn_type, action, field, old_value, new_value)
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
@@ -774,7 +808,6 @@ async def test_misc_vc_processing(pool_handler, wallet_handler, get_default_trus
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
 
 
-@pytest.mark.repeat(3)
 @pytest.mark.asyncio
 # IS-1237
 async def test_misc_auth_rule_special_case(get_default_trustee):
@@ -1510,8 +1543,8 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     set up 1.9.0~dev1014 node + 1.9.0~dev829 plenum master (no plugins env)
     (upgrade to 1.9.2~dev1061 node)
 
-    set up 1.1.128 sovrin + 1.9.0~dev1014 node + 1.9.0~dev829 plenum + 1.0.0~dev59 plugins master (prod env)
-    (upgrade to ? sovrin)
+    set up 1.1.135 sovrin + 1.9.0~dev1014 node + 1.9.0~dev829 plenum + 1.0.0~dev59 plugins master (prod env)
+    (upgrade to 1.1.136 sovrin)
     """
 
     # create extra node
@@ -1524,7 +1557,7 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     GENESIS_PATH = '/var/lib/indy/sandbox/'
 
     # put both genesis files
-    assert new_node.exec_run(['mkdir', GENESIS_PATH], user='indy').exit_code == 0
+    # assert new_node.exec_run(['mkdir', GENESIS_PATH], user='indy').exit_code == 0
     for _, prefix in enumerate(['pool', 'domain']):
         bits, stat = client.containers.get('node1'). \
             get_archive('{}{}_transactions_genesis'.format(GENESIS_PATH, prefix))
@@ -1542,16 +1575,37 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     ).exit_code == 0
 
     # upgrade
-    version = '1.9.2~dev1061'
-    package = 'indy-node'
+    plenum_ver = '1.9.2~dev871'
+    plenum_pkg = 'indy-plenum'
+    node_ver = '1.9.2~dev1061'
+    node_pkg = 'indy-node'
+    sovrin_ver = '1.1.139'
+    sovrin_pkg = 'sovrin'
+    plugin_ver = '1.0.2~dev79'
     assert new_node.exec_run(
         ['apt', 'update'],
         user='root'
     ).exit_code == 0
     assert new_node.exec_run(
-        ['apt', 'install', '{}={}'.format(package, version), '-y'],
+        ['apt', 'install',
+         '{}={}'.format(sovrin_pkg, sovrin_ver),
+         '{}={}'.format(node_pkg, node_ver),
+         '{}={}'.format(plenum_pkg, plenum_ver),
+         '{}={}'.format('sovtoken', plugin_ver),
+         '{}={}'.format('sovtokenfees', plugin_ver),
+         '-y'],
         user='root'
     ).exit_code == 0
+
+    # # node only upgrade
+    # assert new_node.exec_run(
+    #     ['apt', 'update'],
+    #     user='root'
+    # ).exit_code == 0
+    # assert new_node.exec_run(
+    #     ['apt', 'install', '{}={}'.format(node_pkg, node_ver), '-y'],
+    #     user='root'
+    # ).exit_code == 0
 
     # start
     assert new_node.exec_run(
@@ -1571,7 +1625,7 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
         'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA'
     ]
     init_time = 1
-    name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
+    name = 'upgrade'+'_'+node_ver+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
     _sha256 = hashlib.sha256().hexdigest()
     _timeout = 5
@@ -1601,11 +1655,46 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     # schedule pool upgrade
     version = '1.9.2.dev1061'  # overwrite for upgrade txn
     req = await ledger.build_pool_upgrade_request(
-        trustee_did, name, version, action, _sha256, _timeout, docker_4_schedule, None, reinstall, force, package
+        trustee_did, name, sovrin_ver, action, _sha256, _timeout, docker_4_schedule, None, reinstall, force, sovrin_pkg
     )
     res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     print(res2)
     assert res2['op'] == 'REPLY'
+
+    # # INDY-2216
+    # print(client.containers.list())
+    #
+    # for node in client.containers.list()[1:]:
+    #     assert node.exec_run(
+    #         ['systemctl', 'stop', 'indy-node'],
+    #         user='root'
+    #     ).exit_code == 0
+    #
+    # for node in client.containers.list()[1:]:
+    #     assert node.exec_run(
+    #         ['apt', 'update'],
+    #         user='root'
+    #     ).exit_code == 0
+    #     print(
+    #         node.exec_run(
+    #             ['apt', 'install',
+    #              '{}={}'.format(sovrin_pkg, sovrin_ver),
+    #              '{}={}'.format(node_pkg, node_ver),
+    #              '{}={}'.format(plenum_pkg, plenum_ver),
+    #              '{}={}'.format('sovtoken', plugin_ver),
+    #              '{}={}'.format('sovtokenfees', plugin_ver),
+    #              '-y',
+    #              '--allow-change-held-packages'],
+    #             user='root'
+    #         )
+    #     )
+    #
+    # for node in client.containers.list()[1:]:
+    #     assert node.exec_run(
+    #         ['systemctl', 'start', 'indy-node'],
+    #         user='root'
+    #     ).exit_code == 0
+    # # ------------------------
 
     # wait until upgrade is finished
     await asyncio.sleep(4*5*60)
@@ -1661,3 +1750,11 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
     await ensure_pool_is_in_sync(nodes_num=5)
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.asyncio
+async def test_misc_get_auth_rule():
+    pool_handle, _ = await pool_helper(path_to_genesis='/home/indy/indy-test-automation/system/buildernet_genesis')
+    req = await ledger.build_get_auth_rule_request(None, None, None, None, None, None)
+    res = json.loads(await ledger.submit_request(pool_handle, req))
+    print(res)
