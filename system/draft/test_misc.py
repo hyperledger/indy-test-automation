@@ -1547,7 +1547,7 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
         )
     )[0]
 
-    GENESIS_PATH = '/var/lib/indy/net3/'
+    GENESIS_PATH = '/var/lib/indy/sandbox/'
 
     # put both genesis files
     print(new_node.exec_run(['mkdir', GENESIS_PATH], user='indy'))
@@ -1573,20 +1573,20 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     plenum_pkg = 'indy-plenum'
     node_ver = '1.9.2~dev1064'
     node_pkg = 'indy-node'
-    sovrin_ver = '1.1.142'
+    sovrin_ver = '1.1.143'
     sovrin_pkg = 'sovrin'
-    plugin_ver = '1.0.2~dev79'
+    plugin_ver = '1.0.2~dev80'
     assert new_node.exec_run(
         ['apt', 'update'],
         user='root'
     ).exit_code == 0
     assert new_node.exec_run(
         ['apt', 'install',
-         # '{}={}'.format(sovrin_pkg, sovrin_ver),
+         '{}={}'.format(sovrin_pkg, sovrin_ver),
          '{}={}'.format(node_pkg, node_ver),
          '{}={}'.format(plenum_pkg, plenum_ver),
-         # '{}={}'.format('sovtoken', plugin_ver),
-         # '{}={}'.format('sovtokenfees', plugin_ver),
+         '{}={}'.format('sovtoken', plugin_ver),
+         '{}={}'.format('sovtokenfees', plugin_ver),
          '-y'],
         user='root'
     ).exit_code == 0
@@ -1619,7 +1619,7 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
         'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA'
     ]
     init_time = 1
-    name = 'upgrade'+'_'+node_ver+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
+    name = 'upgrade'+'_'+sovrin_ver+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
     _sha256 = hashlib.sha256().hexdigest()
     _timeout = 5
@@ -1647,9 +1647,9 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     assert res1['op'] == 'REPLY'
 
     # schedule pool upgrade
-    version = '1.9.2.dev1064'  # overwrite for upgrade txn
+    version = '1.9.2.dev1064'  # overwrite for upgrade txn (for indy-node only)
     req = await ledger.build_pool_upgrade_request(
-        trustee_did, name, version, action, _sha256, _timeout, docker_4_schedule, None, reinstall, force, node_pkg
+        trustee_did, name, sovrin_ver, action, _sha256, _timeout, docker_4_schedule, None, reinstall, force, sovrin_pkg
     )
     res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     print(res2)
