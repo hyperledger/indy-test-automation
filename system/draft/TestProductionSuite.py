@@ -33,7 +33,8 @@ class TestProductionSuite:
         )
 
         # put both genesis files into extra nodes
-        assert all([c.exec_run(['mkdir', GENESIS_PATH], user='indy').exit_code == 0 for c in extra_containers])
+        print([c.exec_run(['mkdir', GENESIS_PATH], user='indy') for c in extra_containers])
+
         for node in extra_containers:
             for _, prefix in enumerate(['pool', 'domain']):
                 bits, stat = client.containers.get('node1'). \

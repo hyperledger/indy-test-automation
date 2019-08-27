@@ -21,12 +21,6 @@ from system.docker_setup import client, pool_builder, pool_starter,\
     DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME
 
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(
-    level=0, format='%(asctime)s %(message)s'
-)
-
-
 @pytest.mark.asyncio
 async def test_misc_get_nonexistent(docker_setup_and_teardown):
     await pool.set_protocol_version(2)
@@ -195,7 +189,6 @@ async def test_misc_state_proof(
         req8 = await ledger.build_get_txn_request(trustee_did, '1001', 1)
         res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req8))
 
-        # tokens
         req9, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address)
         res9 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req9))
 
@@ -1554,10 +1547,11 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
         )
     )[0]
 
-    GENESIS_PATH = '/var/lib/indy/sandbox/'
+    GENESIS_PATH = '/var/lib/indy/net3/'
 
     # put both genesis files
-    # assert new_node.exec_run(['mkdir', GENESIS_PATH], user='indy').exit_code == 0
+    print(new_node.exec_run(['mkdir', GENESIS_PATH], user='indy'))
+
     for _, prefix in enumerate(['pool', 'domain']):
         bits, stat = client.containers.get('node1'). \
             get_archive('{}{}_transactions_genesis'.format(GENESIS_PATH, prefix))
@@ -1575,11 +1569,11 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     ).exit_code == 0
 
     # upgrade
-    plenum_ver = '1.9.2~dev871'
+    plenum_ver = '1.9.2~dev872'
     plenum_pkg = 'indy-plenum'
-    node_ver = '1.9.2~dev1061'
+    node_ver = '1.9.2~dev1064'
     node_pkg = 'indy-node'
-    sovrin_ver = '1.1.139'
+    sovrin_ver = '1.1.142'
     sovrin_pkg = 'sovrin'
     plugin_ver = '1.0.2~dev79'
     assert new_node.exec_run(
@@ -1588,11 +1582,11 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     ).exit_code == 0
     assert new_node.exec_run(
         ['apt', 'install',
-         '{}={}'.format(sovrin_pkg, sovrin_ver),
+         # '{}={}'.format(sovrin_pkg, sovrin_ver),
          '{}={}'.format(node_pkg, node_ver),
          '{}={}'.format(plenum_pkg, plenum_ver),
-         '{}={}'.format('sovtoken', plugin_ver),
-         '{}={}'.format('sovtokenfees', plugin_ver),
+         # '{}={}'.format('sovtoken', plugin_ver),
+         # '{}={}'.format('sovtokenfees', plugin_ver),
          '-y'],
         user='root'
     ).exit_code == 0
@@ -1653,9 +1647,9 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     assert res1['op'] == 'REPLY'
 
     # schedule pool upgrade
-    version = '1.9.2.dev1061'  # overwrite for upgrade txn
+    version = '1.9.2.dev1064'  # overwrite for upgrade txn
     req = await ledger.build_pool_upgrade_request(
-        trustee_did, name, sovrin_ver, action, _sha256, _timeout, docker_4_schedule, None, reinstall, force, sovrin_pkg
+        trustee_did, name, version, action, _sha256, _timeout, docker_4_schedule, None, reinstall, force, node_pkg
     )
     res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     print(res2)
@@ -1757,4 +1751,30 @@ async def test_misc_get_auth_rule():
     pool_handle, _ = await pool_helper(path_to_genesis='/home/indy/indy-test-automation/system/buildernet_genesis')
     req = await ledger.build_get_auth_rule_request(None, None, None, None, None, None)
     res = json.loads(await ledger.submit_request(pool_handle, req))
-    print(res)
+    print('\n', res)
+
+
+@pytest.mark.asyncio
+# INDY-2215
+async def test_misc_catchup_special_case(
+    docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num
+):
+    test_nodes = [NodeHost(i) for i in range(1, nodes_num + 1)]
+    docker_client = docker.from_env()
+    trustee_did, _ = get_default_trustee
+
+    primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+    test_nodes[7].stop_service()
+    primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
+
+    docker_client.networks.list(names=[NETWORK_NAME])[0].disconnect('node7')
+    test_nodes[7].start_service()
+
+    await asyncio.sleep(60)
+
+    client.networks.list(names=[NETWORK_NAME])[0].connect('node7')
+    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
+
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
