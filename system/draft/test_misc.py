@@ -228,10 +228,21 @@ async def test_misc_state_proof(
 
     for ledger_type, seqno in [('DOMAIN', 16), ('POOL', 8), ('CONFIG', 1), ('1001', 1)]:
         req8 = await ledger.build_get_txn_request(None, ledger_type, seqno)
-        print(req8)
         res8 = json.loads(await ledger.submit_request(pool_handler, req8))
-        print(res8)
         assert res8['result']['seqNo'] is not None
+
+    # # ----------------
+    # TODO investigate genesis txns state proof reading from doamin and pool ledgers
+    # req888 = await ledger.build_get_txn_request(trustee_did, 'DOMAIN', 1)
+    # print('REQ EXPLICIT >>>', req888)
+    # res888 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req888))
+    # print('RES EXPLICIT >>>', res888)
+    #
+    # req88 = await ledger.build_get_txn_request(None, None, 1)
+    # print('REQ IMPLICIT >>>', req88)
+    # res88 = json.loads(await ledger.submit_request(pool_handler, req88))
+    # print('RES IMPLICIT >>>', res88)
+    # # ----------------
 
     req9, _ = await payment.build_get_payment_sources_request(wallet_handler, None, address2)
     print(req9)
@@ -1803,17 +1814,26 @@ async def test_misc_catchup_special_case(
     trustee_did, _ = get_default_trustee
 
     primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
-    test_nodes[7].stop_service()
-    primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
-    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
+    assert docker_client.containers.list(
+        filters={'name': 'node7'}
+    )[0].exec_run(
+        ['systemctl', 'stop', 'indy-node'], user='root'
+    ).exit_code == 0
+    # primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
 
     docker_client.networks.list(names=[NETWORK_NAME])[0].disconnect('node7')
-    test_nodes[7].start_service()
+    assert docker_client.containers.list(
+        filters={'name': 'node7'}
+    )[0].exec_run(
+        ['systemctl', 'start', 'indy-node'], user='root'
+    ).exit_code == 0
 
+    # wait a few minutes
     await asyncio.sleep(60)
 
     client.networks.list(names=[NETWORK_NAME])[0].connect('node7')
-    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
+    # await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
 
     await ensure_pool_is_in_sync(nodes_num=nodes_num)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
