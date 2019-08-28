@@ -1830,7 +1830,7 @@ async def test_misc_catchup_special_case(
     ).exit_code == 0
 
     # wait a few minutes
-    await asyncio.sleep(60)
+    await asyncio.sleep(120)
 
     client.networks.list(names=[NETWORK_NAME])[0].connect('node7')
     # await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
