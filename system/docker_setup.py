@@ -16,6 +16,8 @@ from .utils import (
 
 import logging
 logger = logging.getLogger(__name__)
+# set logging here
+# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
 
 DOCKER_BUILD_CTX_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 'docker', 'node'
@@ -89,6 +91,7 @@ def pool_starter(node_containers):
 
 
 def pool_initializer(node_containers):
+    indy_network_name = 'sandbox'
     ips = []
     for i in range(len(node_containers)):
         ips.append('.'.join(NETWORK_SUBNET.split('/')[0].split('.')[:3] + [str(i + 2)]))
@@ -97,7 +100,8 @@ def pool_initializer(node_containers):
                                '--nodes', str(len(node_containers)),
                                '--clients', '1',
                                '--nodeNum', str(i+1),
-                               '--ips', ips],
+                               '--ips', ips,
+                               '--network', indy_network_name],
                               user='indy')
                 for i, node in enumerate(node_containers)]
     start_res = [node.exec_run(['systemctl', 'start', 'indy-node'], user='root') for node in node_containers]

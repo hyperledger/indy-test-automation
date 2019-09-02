@@ -11,6 +11,7 @@ from collections import Counter
 from collections.abc import Iterable
 from inspect import isawaitable
 import random
+import itertools
 import functools
 from ctypes import CDLL
 import testinfra
@@ -99,31 +100,31 @@ ORIGINAL_MAPPING = {
 }
 
 UPGRADE_MAPPING = {
-    'i-06d864ffc17f20f94': 'vol-051af3baaf0f6cd79',
-    'i-0d38585877dc14755': 'vol-07995a4f913fb48e0',
-    'i-07813055c26ecf5d2': 'vol-04b843e80d43803e2',
-    'i-0ba6de7b7e4ac763a': 'vol-02a0b13192ba4dc24',
-    'i-0f6dedb3ee93e1138': 'vol-07b0f9b5dfc7761cd',
-    'i-043ba82aa40f0fdae': 'vol-0745711426b43482d',
-    'i-0db8a21e6c0252ba7': 'vol-00f187f38a7fea117',
-    'i-06784287da28fa930': 'vol-0a5becbbacaba38fc',
-    'i-0995b5b9f320a2824': 'vol-0bc8402bf3c0716ee',
-    'i-0d1b2f330f139ea85': 'vol-0d29cd9ab1bcb1fe7',
-    'i-0ca3f7bf60d60d133': 'vol-04336c0879d61f142',
-    'i-06836b3ffe6aaca39': 'vol-0642137ca1755c56a',
-    'i-06f30f8aed3af1d4c': 'vol-0732baa1820578a13',
-    'i-058781262b6761fdc': 'vol-0e50222cf92f650ba',
-    'i-042ee39c972737df7': 'vol-04d47d0e36b9d1654',
-    'i-0852c0983a638d6d9': 'vol-094541febda5dd7a6',
-    'i-0aaed544f37ee52c1': 'vol-0fc5c2167d798fb14',
-    'i-0fcb2d529e3f9a04f': 'vol-070f8553ee5916321',
-    'i-0eb04f156b1c51b14': 'vol-0207754c5da19b6a3',
-    'i-07cdbd66e43be4296': 'vol-0bf6bb9e58ee1fccf',
-    'i-03078455ca5dda6b8': 'vol-01335c35c5df2c3ea',
-    'i-00cd5b1dca8a078e1': 'vol-0909aadb945034638',
-    'i-0eb6a38d4fe2d47a5': 'vol-04cb82f1a3cbb7d03',
-    'i-08a30f8a12db050f9': 'vol-07eb8485e8950ce45',
-    'i-0d2d372e6a3c5e017': 'vol-0b33ffe97a96507f8'
+    'i-06d864ffc17f20f94': 'vol-077cc8d587b041f23',  # 4
+    'i-0d38585877dc14755': 'vol-02cd98f4eaca2fbcc',  # 17
+    'i-07813055c26ecf5d2': 'vol-0e92240c830cce462',  # 18
+    'i-0ba6de7b7e4ac763a': 'vol-0021bff615c8bc407',  # 5
+    'i-0f6dedb3ee93e1138': 'vol-0fca45427e32982f0',  # 13
+    'i-043ba82aa40f0fdae': 'vol-0e820c91b25058abd',  # 14
+    'i-0db8a21e6c0252ba7': 'vol-0cc505e3c33ace23e',  # 1
+    'i-06784287da28fa930': 'vol-0ed51820ee07e97e8',  # 24
+    'i-0995b5b9f320a2824': 'vol-0d2f368eaed3eea18',  # 10
+    'i-0d1b2f330f139ea85': 'vol-0bef4404f956a79bd',  # 23
+    'i-0ca3f7bf60d60d133': 'vol-0f8d5ec316649c715',  # 6
+    'i-06836b3ffe6aaca39': 'vol-016421526cb9b6d65',  # 19
+    'i-06f30f8aed3af1d4c': 'vol-098edb6155f9973b5',  # 16
+    'i-058781262b6761fdc': 'vol-052b1cae3f6060f7b',  # 3
+    'i-042ee39c972737df7': 'vol-05886ac75ef411fb7',  # 22
+    'i-0852c0983a638d6d9': 'vol-03edb41f21fab4149',  # 12
+    'i-0aaed544f37ee52c1': 'vol-02eb46c5f71cc0d95',  # 20
+    'i-0fcb2d529e3f9a04f': 'vol-05bfd03912d885317',  # 7
+    'i-0eb04f156b1c51b14': 'vol-00655dfaa725e3adb',  # 21
+    'i-07cdbd66e43be4296': 'vol-0fc1d6a80c354eebb',  # 11
+    'i-03078455ca5dda6b8': 'vol-0b0c41eb84e1d007a',  # 15
+    'i-00cd5b1dca8a078e1': 'vol-077f0dd1b9d3b2606',  # 2
+    'i-0eb6a38d4fe2d47a5': 'vol-05e0d74deb7135dc1',  # 9
+    'i-08a30f8a12db050f9': 'vol-01a734649902ef115',  # 25
+    'i-0d2d372e6a3c5e017': 'vol-0abc2059816e67ae7'  # 8
 }
 
 
@@ -477,14 +478,37 @@ async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, prim
 
 
 async def check_all_nodes_online(pool_handle, wallet_handle, trustee_did):
-    req = await ledger.build_get_validator_info_request(trustee_did)
-    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-    results = {k: json.loads(v) for k, v in results.items()}
+    results = await get_validator_info(pool_handle, wallet_handle, trustee_did)
     assert all([v['result']['data']['Pool_info']['Unreachable_nodes_count'] == 0 for k, v in results.items()])
 
 
 async def ensure_all_nodes_online(pool_handle, wallet_handle, trustee_did):
     await eventually(check_all_nodes_online, pool_handle, wallet_handle, trustee_did, retry_wait=10, timeout=100)
+
+
+async def check_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trustee_did):
+    results = await get_validator_info(pool_handle, wallet_handle, trustee_did)
+    committed_state_roots = [
+        v['result']['data']['Node_info']['Committed_state_root_hashes'] for k, v in results.items()
+    ]
+    uncommitted_state_roots = [
+        v['result']['data']['Node_info']['Uncommitted_state_root_hashes'] for k, v in results.items()
+    ]
+    assert all([a == b for a, b in itertools.combinations(committed_state_roots, 2)])
+    assert all([a == b for a, b in itertools.combinations(uncommitted_state_roots, 2)])
+
+
+async def ensure_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trustee_did):
+    await eventually(
+        check_state_root_hashes_are_in_sync, pool_handle, wallet_handle, trustee_did, retry_wait=20, timeout=200
+    )
+
+
+async def get_validator_info(pool_handle, wallet_handle, trustee_did):
+    req = await ledger.build_get_validator_info_request(trustee_did)
+    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+    results = {k: json.loads(v) for k, v in results.items()}
+    return results
 
 
 # TODO use threads to make that concurrent/async

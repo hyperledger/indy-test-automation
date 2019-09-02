@@ -4,11 +4,11 @@ import testinfra
 
 
 def test_libindy():
-    indy_plenum_ver = '1.9.1'
-    indy_node_ver = '1.9.1~rc1'
+    indy_plenum_ver = '1.9.2'
+    indy_node_ver = '1.9.2~rc1'
     indy_sdk_deb_path = 'https://repo.sovrin.org/sdk/lib/apt/xenial/rc/'
-    indy_sdk_deb_ver = 'libindy_1.11.0~81_amd64.deb'
-    indy_sdk_ver = '1.11.0-rc-81'
+    indy_sdk_deb_ver = 'libindy_1.11.1~85_amd64.deb'
+    indy_sdk_ver = '1.11.1-rc-85'
     os.chdir('/home/indy/indy-sdk')
     subprocess.check_call(['git', 'stash'])
     subprocess.check_call(['git', 'fetch'])
@@ -37,8 +37,9 @@ def test_libindy():
     host = testinfra.get_host("docker://{}".format(client_id))
 
     # test java
-    java_res = host.\
-        run('cd /home/indy/samples/java && TEST_POOL_IP=127.0.0.1 mvn clean compile exec:java -Dexec.mainClass="Main"')
+    java_res = host.run(
+        'cd /home/indy/samples/java && TEST_POOL_IP=127.0.0.1 mvn clean compile exec:java -Dexec.mainClass="Main"'
+    )
     print(java_res)
     java_checks = [
         'Anoncreds sample -> completed', 'Anoncreds Revocation sample -> completed', 'Ledger sample -> completed',

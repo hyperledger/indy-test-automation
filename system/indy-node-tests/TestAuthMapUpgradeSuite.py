@@ -60,7 +60,7 @@ async def test_case_pool_upgrade(
     assert res3['op'] == 'REPLY'
     # start pool upgrade
     init_time = 30
-    version = '1.9.999'
+    version = '1.99.999'
     name = 'upgrade' + '_' + version + '_' + datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     _sha256 = hashlib.sha256().hexdigest()
     _timeout = 5
