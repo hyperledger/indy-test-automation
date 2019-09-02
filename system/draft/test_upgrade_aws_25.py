@@ -7,7 +7,6 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 import json
 import testinfra
-import os
 
 
 # TODO dynamic install of old version to upgrade from
@@ -15,20 +14,6 @@ import os
 @pytest.mark.asyncio
 async def test_pool_upgrade_positive():
     await pool.set_protocol_version(2)
-    dests = ['Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv', '8ECVSk179mjsjKRLWiQtssMLgp6EPhWXtaYyStWPSGAb',
-             'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA',
-             '4SWokCJWJc69Tn74VvLS6t2G2ucvXqM9FDMsWJjmsUxe', 'Cv1Ehj43DDM5ttNBmC6VPpEfwXWwfGktHwjDJsTV5Fz8',
-             'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW', '98VysG35LxrutKTNXvhaztPFHnx5u9kHtT7PnUGqDa8x',
-             '6pfbFuX5tx7u3XKz8MNK4BJiHxvEcnGRBs1AQyNaiEQL', 'HaNW78ayPK4b8vTggD4smURBZw7icxJpjZvCMLdUueiN',
-             '2zUsJuF9suBy2iKkcgmm8uoMB6u5Dq2oHoRuchrZbj2N', 'BXV4SXKEJeYQ8XCRHgpw1Xume5ntqALsRhbUYcF85Mse',
-             '71WAtEevzz8aZr8baNJhQCUDLwRhM7LeaErSKNWWKxzn', 'FEUGMFWCSAM725vyH8JZnsitiNUy31NPhugVKb8zDpng',
-             'DPZ8GJ1NyNZGJMU6qQZVuBsumY1aVzvcV4FqQK9Y215x', 'FYDoBrDhfGuSwt39Sgd3DZETihpnXy6SzZBggyD9HMrD',
-             'EMNhsHNsEpuffxCmgC3fpwVj7LgwtSm3riSizCMN6MBo', 'HD1XnVG6jXqGdmFMDTdJk3AoChxaqTfa6zGLkyXTtHwH',
-             'DUGXi5vxRZcrDC8VPZFU6bpiHDMhnWic9tDaoDJv3Bj6', 'D7jphMASPQAD6UFvT2ULjEfYybCJVDzwvfG5ZWJoXa69',
-             '7vcRBffPvKuGQz4F1ThYAo3Ucq3rXgU62enf6d23u8KX', 'DfSoxVHbbdZrAmwTJcRqM2arwUSvK3L6PXjqWHGo58xD',
-             'FTBmYnhxVd8zXZFRzca5WFKh7taW9J573T8pXEWL8Wbb', 'EjZrHfLTBR38d67HasBxpyKRBvrPBJ5RiAMubPWXLxWr',
-             'koKn32jREPYR642DQsFftPoCkTf3XCPcfvc3x9RhRK7'
-             ]
     persistent_dests = ['Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv', '8ECVSk179mjsjKRLWiQtssMLgp6EPhWXtaYyStWPSGAb',
                         'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA',
                         '4SWokCJWJc69Tn74VvLS6t2G2ucvXqM9FDMsWJjmsUxe', 'Cv1Ehj43DDM5ttNBmC6VPpEfwXWwfGktHwjDJsTV5Fz8',
@@ -43,17 +28,12 @@ async def test_pool_upgrade_positive():
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
     init_time = 1
-    version = '1.1.54'
+    version = '1.1.56'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
     _sha256 = hashlib.sha256().hexdigest()
     _timeout = 5
-    # docker_7_schedule = json.dumps(dict(
-    #     {dest:
-    #         datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
-    #      for dest, i in zip(dests[:7], range(len(dests[:7])))}
-    # ))
     aws_25_schedule = json.dumps(dict(
         {dest:
             datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
@@ -63,7 +43,6 @@ async def test_pool_upgrade_positive():
     force = False
     package = 'sovrin'
     pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
-    # pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     random_did = random_did_and_json()[0]
     another_random_did = random_did_and_json()[0]
@@ -72,6 +51,7 @@ async def test_pool_upgrade_positive():
     )
 
     timestamp0 = int(time.time())
+
     # write all txns before the upgrade
     nym_before_res = await send_nym(pool_handle, wallet_handle, trustee_did, random_did)
     attrib_before_res = await send_attrib(
@@ -91,11 +71,14 @@ async def test_pool_upgrade_positive():
 
     revoc_reg_def_id1, _, _, revoc_reg_def_before_res = await send_revoc_reg_def(
         pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5), cred_def_id,
-        json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+        json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'})
+    )
 
     revoc_reg_def_id2, _, _, revoc_reg_entry_before_res = await send_revoc_reg_entry(
         pool_handle, wallet_handle, trustee_did, 'CL_ACCUM', random_string(5), cred_def_id,
-        json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}))
+        json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'})
+    )
+
     timestamp1 = int(time.time())
 
     # set auth rule for pool restart action
@@ -120,18 +103,15 @@ async def test_pool_upgrade_positive():
     assert res['op'] == 'REPLY'
 
     # # cancel pool upgrade - optional
-    # req = await ledger.build_pool_upgrade_request(trustee_did, name, version, 'cancel', _sha256, _timeout,
-    #                                               docker_7_schedule, None, reinstall, force, package)
+    # req = await ledger.build_pool_upgrade_request(
+    #     trustee_did, name, version, 'cancel', _sha256, _timeout, aws_25_schedule, None, reinstall, force, package
+    # )
     # res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
     # print(res)
     # assert res['op'] == 'REPLY'
 
     await asyncio.sleep(25*5*60)
-    # await asyncio.sleep(180)
 
-    # docker_7_hosts = [
-    #     testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)
-    # ]
     aws_25_hosts = [
         testinfra.get_host('ssh://persistent_node'+str(i), ssh_config='/home/indy/.ssh/config') for i in range(1, 26)
     ]
@@ -146,8 +126,7 @@ async def test_pool_upgrade_positive():
 
     # read all txns that were added before the upgrade
     get_nym_after_res = await get_nym(pool_handle, wallet_handle, trustee_did, random_did)
-    get_attrib_after_res = await get_attrib(pool_handle, wallet_handle, trustee_did, random_did,
-                                            None, 'key', None)
+    get_attrib_after_res = await get_attrib(pool_handle, wallet_handle, trustee_did, random_did, None, 'key', None)
     get_schema_after_res = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     get_cred_def_after_res = await get_cred_def(pool_handle, wallet_handle, trustee_did, cred_def_id)
     get_revoc_reg_def_after_res = await get_revoc_reg_def(
@@ -174,17 +153,9 @@ async def test_pool_upgrade_positive():
         get_revoc_reg_def_after_res, get_revoc_reg_after_res, get_revoc_reg_delta_after_res
     ]
 
-    for res in add_before_results:
-        assert res['op'] == 'REPLY'
-
-    for res in get_after_results:
-        assert res['result']['seqNo'] is not None
-
+    assert all([res['op'] == 'REPLY' for res in add_before_results])
+    assert all([res['result']['seqNo'] is not None for res in get_after_results])
     assert nym_res['op'] == 'REPLY'
     assert get_nym_res['result']['seqNo'] is not None
-
-    for check in version_checks:
-        assert check is not -1
-
-    for check in status_checks:
-        assert check is not -1
+    assert all([check is not -1 for check in version_checks])
+    assert all([check is not -1 for check in status_checks])
