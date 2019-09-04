@@ -18,7 +18,7 @@ import testinfra
 import json
 from json import JSONDecodeError
 
-from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError
+from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError, payment
 
 
 import logging
@@ -1028,3 +1028,14 @@ async def send_node(
     )
 
     return res
+
+    # TODO implement helpers to get buildernet and stn genesis files from sovrin repo
+
+
+async def get_payment_sources(pool_handle, wallet_handle, address):
+    payment_method = 'sov'
+    req, _ = await payment.build_get_payment_sources_request(wallet_handle, None, address)
+    res = await ledger.submit_request(pool_handle, req)
+    source = json.loads(await payment.parse_get_payment_sources_response(payment_method, res))[0]['source']
+
+    return source
