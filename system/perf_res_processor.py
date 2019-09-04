@@ -26,6 +26,7 @@ class PerformanceReport:
         self._report = pd.DataFrame(columns=self._columns, index=self._rows)
         self.process_node_info()
         self.process_journal_exceptions()
+        self.process_log_errors()
 
     @property
     def report(self):
@@ -111,13 +112,37 @@ class PerformanceReport:
             node_keys = ['Node{}.'.format(i) for i in range(1, 26)]
             results = []
             for node_key in node_keys:
-                logs = [x for x in log_file_names if x.__contains__(node_key)]
-                print(logs)
-                xzs = [x for x in xz_file_names if x.__contains__(node_key)]
-                print(xzs)
+                res = []
 
-        get_log_errors_as_lists()
+                # find errors in all .log
+                log_names = [x for x in log_file_names if x.__contains__(node_key)]
+                if log_names:
+                    for log_name in log_names:
+                        try:
+                            res += subprocess.check_output(
+                                ['egrep', '-i', 'error', path + log_name]
+                            ).decode().strip().splitlines()
+                        except subprocess.CalledProcessError:
+                            res += []
+
+                # find errors in all .xz
+                xz_names = [x for x in xz_file_names if x.__contains__(node_key)]
+                if xz_names:
+                    for xz_name in xz_names:
+                        try:
+                            res += subprocess.check_output(
+                                ['xzgrep', '-i', 'error', path + xz_name]
+                            ).decode().strip().splitlines()
+                        except subprocess.CalledProcessError:
+                            res += []
+
+                results.append(res)
+
+            return results
+
+        for i, result in enumerate(get_log_errors_as_lists(), start=1):
+            self._report.loc[[i], ['LOG_ERRORS']] = len(result)
 
 
 if __name__ == '__main__':
-    print(PerformanceReport().process_log_errors())
+    print(PerformanceReport().report)
