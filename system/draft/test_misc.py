@@ -1842,7 +1842,7 @@ async def test_misc_catchup_special_case(
 
 @pytest.mark.asyncio
 # SN-7
-async def test_misc_drop_config_state_with_fees(
+async def test_misc_drop_states(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
         initial_token_minting, initial_fees_setting, check_no_failures_fixture
 ):
@@ -1920,7 +1920,8 @@ async def test_misc_drop_config_state_with_fees(
     node7 = NodeHost(7)
     node7.stop_service()
     time.sleep(3)
-    print(node7.run('rm -rf /var/lib/indy/sandbox/data/Node7/config_state'))
+    for _ledger in ['pool', 'domain', 'config', 'sovtoken']:
+        print(node7.run('rm -rf /var/lib/indy/sandbox/data/Node7/{}_state'.format(_ledger)))
     time.sleep(3)
     node7.start_service()
 
