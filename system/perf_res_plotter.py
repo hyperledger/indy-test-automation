@@ -6,7 +6,7 @@ import numpy as np
 sns.set()
 
 
-def plot_metrics(paths):  # takes list of paths to csv metrics files
+def plot_metrics(paths, save_path=None):  # takes list of paths to csv metrics files
     titles = [path.split('/')[-1].replace('.csv', '') for path in paths]
     metrics = [
         'ordered_batch_size_per_sec',
@@ -27,7 +27,10 @@ def plot_metrics(paths):  # takes list of paths to csv metrics files
         pd.read_csv(path).loc[:, metrics].plot(
             x='timestamp', subplots=True, cmap='cool', title=title, figsize=(9.5, 4.5),  # logy=True
         )
-    plt.show()
+    if save_path:
+        plt.savefig(save_path)
+    else:
+        plt.show()
 
 
 def plot_client_stats(path):  # takes path to `total`
@@ -41,9 +44,6 @@ def plot_client_stats(path):  # takes path to `total`
 
 if __name__ == '__main__':
     plot_metrics([
-        '/home/indy/indy-node/scripts/ansible/logs/metrics/metrics1.csv',
-        '/home/indy/indy-node/scripts/ansible/logs/metrics/metrics5.csv',
-        '/home/indy/indy-node/scripts/ansible/logs/metrics/metrics20.csv',
-        '/home/indy/indy-node/scripts/ansible/logs/metrics/metrics25.csv',
+        '/home/indy/indy-node/scripts/ansible/logs/metrics/metrics1.csv'
     ])
     # plot_client_stats('/home/indy/total_writes.csv')

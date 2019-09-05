@@ -1,13 +1,20 @@
 import os
+from shutil import copyfile
 import subprocess
 import json
 import re
+import datetime
 import pandas as pd
+from system.perf_res_plotter import plot_metrics
 
+
+NODES_NUM = 25
 BASE_DIR = '/home/indy/indy-node/scripts/ansible/logs/'
 NODE_INFO_DIR = BASE_DIR + 'node_info/'
 JCTL_DIR = BASE_DIR + 'jctl/'
 METRICS_DIR = BASE_DIR + 'metrics/'
+OUTPUT_DIR = '/home/indy/performance-results__'+datetime.datetime.now().strftime('%d-%m-%Y__%H:%M/')
+SUB_DIRS = [OUTPUT_DIR+'Node{}/'.format(i) for i in range(1, NODES_NUM+1)]
 NATURAL_SORTING = lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split('(\d+)', s)]
 
 
@@ -22,15 +29,22 @@ class PerformanceReport:
             'JCTL_EXCEPTIONS',
             'LOG_ERRORS'
         ]
-        self._rows = rows if rows else list(range(1, 26))
+        self._rows = rows if rows else list(range(1, NODES_NUM+1))
         self._report = pd.DataFrame(columns=self._columns, index=self._rows)
+        self.create_dirs()
         self.process_node_info()
         self.process_journal_exceptions()
         self.process_log_errors()
+        self.process_metrics()
 
     @property
     def report(self):
         return self._report
+
+    @staticmethod
+    def create_dirs(path=OUTPUT_DIR, sub_dirs=SUB_DIRS):
+        assert os.mkdir(path) is None
+        assert all([os.mkdir(sub_dir) is None for sub_dir in sub_dirs])
 
     def process_node_info(self, path=NODE_INFO_DIR):
 
@@ -92,24 +106,20 @@ class PerformanceReport:
 
     def process_log_errors(self, path=BASE_DIR):
 
-        def get_log_errors_as_lists():
+        def get_log_errors_as_lists():  # return list of lists
             log_file_names = sorted(
                 [x for x in os.listdir(path) if (x.__contains__('log') and not x.__contains__('xz'))],
                 key=NATURAL_SORTING
             )
-            # !!! MORE THAN ONE LOG FOR EACH NODE !!!
             print(log_file_names)
-            print(len(log_file_names))
 
             xz_file_names = sorted(
                 [x for x in os.listdir(path) if x.__contains__('xz')],
                 key=NATURAL_SORTING
             )
-            # !!! MORE THAN ONE XZ FOR EACH NODE !!!
             print(xz_file_names)
-            print(len(xz_file_names))
 
-            node_keys = ['Node{}.'.format(i) for i in range(1, 26)]
+            node_keys = ['Node{}.'.format(i) for i in range(1, NODES_NUM+1)]
             results = []
             for node_key in node_keys:
                 res = []
@@ -120,7 +130,7 @@ class PerformanceReport:
                     for log_name in log_names:
                         try:
                             res += subprocess.check_output(
-                                ['egrep', '-i', 'error', path + log_name]
+                                ['egrep', 'ERROR', path + log_name]
                             ).decode().strip().splitlines()
                         except subprocess.CalledProcessError:
                             res += []
@@ -131,7 +141,7 @@ class PerformanceReport:
                     for xz_name in xz_names:
                         try:
                             res += subprocess.check_output(
-                                ['xzgrep', '-i', 'error', path + xz_name]
+                                ['xzgrep', 'ERROR', path + xz_name]
                             ).decode().strip().splitlines()
                         except subprocess.CalledProcessError:
                             res += []
@@ -142,6 +152,28 @@ class PerformanceReport:
 
         for i, result in enumerate(get_log_errors_as_lists(), start=1):
             self._report.loc[[i], ['LOG_ERRORS']] = len(result)
+
+    @staticmethod
+    def process_metrics(path_from=METRICS_DIR, paths_to=SUB_DIRS):
+        metric_file_names = sorted(
+                [x for x in os.listdir(path_from) if not x.__contains__('summary')],
+                key=NATURAL_SORTING
+            )
+
+        assert all(
+            [plot_metrics([path_from+metric_file_name], path_to+'Figure.png') is None
+             for metric_file_name, path_to in zip(metric_file_names, paths_to)]
+        )
+
+        summary_file_names = sorted(
+                [x for x in os.listdir(path_from) if x.__contains__('summary')],
+                key=NATURAL_SORTING
+            )
+
+        assert all(
+            [copyfile(path_from+summary_file_name, path_to+summary_file_name) is not None
+             for summary_file_name, path_to in zip(summary_file_names, paths_to)]
+        )
 
 
 if __name__ == '__main__':
