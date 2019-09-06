@@ -115,7 +115,7 @@ class PerformanceReport:
             print(journal_file_names)
 
             results = []
-            ignore_list = ['grep', 'preauth']  # ignore excess entries
+            ignore_list = ['grep', 'preauth', 'user']  # ignore excess entries
             for i, file_name in enumerate(journal_file_names):
                 res = []
                 try:
