@@ -216,7 +216,7 @@ class PerformanceReport:
 
                 # create file with pattern matching entries for each node
                 with open(SUB_DIRS[i]+'pattern_log_entries.txt', 'w') as f:
-                    for item in res:
+                    for item in pattern_res:
                         f.write('{}\n'.format(item))
 
             return results, pattern_results
