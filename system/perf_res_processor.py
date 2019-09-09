@@ -95,17 +95,29 @@ class PerformanceReport:
             # load json files as dicts
             for file_name in node_info_file_names:
                 with open(path + file_name) as json_file:
-                    results.append(json.load(json_file))
+                    try:
+                        results.append(json.load(json_file))
+                    except json.decoder.JSONDecodeError:
+                        results.append({})
 
             return results
 
         for i, result in enumerate(get_node_info_as_dicts(), start=1):
-            self._report.loc[[i], ['DOMAIN_TXNS_WRITTEN']] =\
-                result['Node_info']['Metrics']['transaction-count']['ledger']
-            self._report.loc[[i], ['TOKEN_TXNS_WRITTEN']] =\
-                result['Node_info']['Metrics']['transaction-count']['1001']
-            self._report.loc[[i], ['VIEW_NO']] =\
-                result['Node_info']['View_change_status']['View_No']
+            try:
+                self._report.loc[[i], ['DOMAIN_TXNS_WRITTEN']] =\
+                    result['Node_info']['Metrics']['transaction-count']['ledger']
+            except KeyError:
+                self._report.loc[[i], ['DOMAIN_TXNS_WRITTEN']] = None
+            try:
+                self._report.loc[[i], ['TOKEN_TXNS_WRITTEN']] =\
+                    result['Node_info']['Metrics']['transaction-count']['1001']
+            except KeyError:
+                self._report.loc[[i], ['TOKEN_TXNS_WRITTEN']] = None
+            try:
+                self._report.loc[[i], ['VIEW_NO']] =\
+                    result['Node_info']['View_change_status']['View_No']
+            except KeyError:
+                self._report.loc[[i], ['VIEW_NO']] = None
 
     def process_journal_exceptions(self, path=JCTL_DIR):
 

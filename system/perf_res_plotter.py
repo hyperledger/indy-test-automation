@@ -24,9 +24,12 @@ def plot_metrics(paths, save_path=None):  # takes list of paths to csv metrics f
         'timestamp'
     ]
     for path, title in zip(paths, titles):
-        pd.read_csv(path).loc[:, metrics].plot(
-            x='timestamp', subplots=True, cmap='cool', title=title, figsize=(20, 10),  # logy=True
-        )
+        try:
+            pd.read_csv(path).loc[:, metrics].plot(
+                x='timestamp', subplots=True, cmap='cool', title=title, figsize=(20, 10),  # logy=True
+            )
+        except pd.errors.EmptyDataError:
+            plt.plot()
     if save_path:
         plt.savefig(save_path)
     else:
