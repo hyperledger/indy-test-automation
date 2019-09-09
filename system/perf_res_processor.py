@@ -27,14 +27,35 @@ LOG_PATTERNS = [
 
 
 class PathReg:
-    base_dir = '/home/indy/indy-node/scripts/ansible/logs/'
-    node_info_dir = os.path.join(base_dir, 'node_info/')
-    jctl_dir = os.path.join(base_dir, 'jctl/')
-    metrics_dir = os.path.join(base_dir, 'metrics/')
-    output_dir = '/home/indy/performance_results'
+    def __init__(
+            self, base_dir='/home/indy/indy-node/scripts/ansible/logs/', output_dir='/home/indy/performance_results/'
+    ):
+        self._base_dir = base_dir
+        self._output_dir = output_dir
+
+    @property
+    def base_dir(self):
+        return self._base_dir
+
+    @property
+    def output_dir(self):
+        return self._output_dir
+
+    @property
+    def node_info_dir(self):
+        return os.path.join(self.base_dir, 'node_info/')
+
+    @property
+    def jctl_dir(self):
+        return os.path.join(self.base_dir, 'jctl/')
+
+    @property
+    def metrics_dir(self):
+        return os.path.join(self.base_dir, 'metrics/')
 
 
-sub_dirs = [os.path.join(PathReg.output_dir, 'Node{}/'.format(i)) for i in range(1, NODES_NUM+1)]
+path_reg = PathReg()
+sub_dirs = [os.path.join(path_reg.output_dir, 'Node{}/'.format(i)) for i in range(1, NODES_NUM+1)]
 
 
 class PerformanceReport:
@@ -63,13 +84,13 @@ class PerformanceReport:
         return self._report
 
     @staticmethod
-    def create_dirs(path=PathReg.output_dir, sub_dirs=sub_dirs):
+    def create_dirs(path=path_reg.output_dir, sub_dirs=sub_dirs):
         assert os.mkdir(path) is None
         assert all([os.mkdir(sub_dir) is None for sub_dir in sub_dirs])
 
-    def save_report(self, path=PathReg.output_dir):
+    def save_report(self, path=path_reg.output_dir):
         # save csv
-        self.report.to_csv(path+'report.csv')
+        self.report.to_csv(os.path.join(path, 'report.csv'))
 
         # save figure
         plt.clf()
@@ -83,9 +104,9 @@ class PerformanceReport:
         ax.table(
             cellText=self.report.values, colLabels=self.report.columns, rowLabels=list(self.report.index), loc='center'
         )
-        plt.savefig(path+'report.png', dpi=500)
+        plt.savefig(os.path.join(path, 'report.png'), dpi=500)
 
-    def process_node_info(self, path=PathReg.node_info_dir):
+    def process_node_info(self, path=path_reg.node_info_dir):
 
         def get_node_info_as_dicts():  # return list of dicts
             # get info file paths and sort them in natural order
@@ -99,7 +120,7 @@ class PerformanceReport:
             results = []
             # load json files as dicts
             for file_name in node_info_file_names:
-                with open(path + file_name) as json_file:
+                with open(os.path.join(path, file_name)) as json_file:
                     try:
                         results.append(json.load(json_file))
                     except json.decoder.JSONDecodeError:
@@ -124,7 +145,7 @@ class PerformanceReport:
             except KeyError:
                 self._report.loc[[i], ['VIEW_NO']] = None
 
-    def process_journal_exceptions(self, path=PathReg.jctl_dir):
+    def process_journal_exceptions(self, path=path_reg.jctl_dir):
 
         def get_journal_exceptions_as_lists():  # return list of lists
             # get journal file paths and sort them in natural order
@@ -155,7 +176,7 @@ class PerformanceReport:
         for i, result in enumerate(get_journal_exceptions_as_lists(), start=1):
             self._report.loc[[i], ['JCTL_EXCEPTIONS']] = len(result)
 
-    def process_log_errors(self, path=PathReg.base_dir):
+    def process_log_errors(self, path=path_reg.base_dir):
 
         def get_log_errors_as_lists():  # return list of lists
             log_file_names = sorted(
@@ -212,7 +233,7 @@ class PerformanceReport:
             self._report.loc[[i], ['PATTERN_MATCHES']] = len(item)
 
     @staticmethod
-    def process_metrics(path_from=PathReg.metrics_dir, paths_to=sub_dirs):
+    def process_metrics(path_from=path_reg.metrics_dir, paths_to=sub_dirs):
         metric_file_names = sorted(
                 [x for x in os.listdir(path_from) if not x.__contains__('summary')],
                 key=NATURAL_SORTING
