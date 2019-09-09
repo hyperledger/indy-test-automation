@@ -5,18 +5,12 @@ import json
 import re
 import datetime
 import pandas as pd
-from pandas.plotting import table
 import matplotlib.pyplot as plt
 from system.perf_res_plotter import plot_metrics
+from system.utils import run_external_cmd
 
 
 NODES_NUM = 25
-BASE_DIR = '/home/indy/indy-node/scripts/ansible/logs/'
-NODE_INFO_DIR = BASE_DIR + 'node_info/'
-JCTL_DIR = BASE_DIR + 'jctl/'
-METRICS_DIR = BASE_DIR + 'metrics/'
-OUTPUT_DIR = '/home/indy/performance-results__'+datetime.datetime.now().strftime('%d-%m-%Y__%H-%M/')
-SUB_DIRS = [OUTPUT_DIR+'Node{}/'.format(i) for i in range(1, NODES_NUM+1)]
 NATURAL_SORTING = lambda s: [int(t) if t.isdigit() else t.lower() for t in re.split('(\d+)', s)]
 LOG_PATTERNS = [
     'blacklisting',
@@ -30,6 +24,17 @@ LOG_PATTERNS = [
     'error in plugin field',
     'incorrect audit ledger',
 ]
+
+
+class PathReg:
+    base_dir = '/home/indy/indy-node/scripts/ansible/logs/'
+    node_info_dir = os.path.join(base_dir, 'node_info/')
+    jctl_dir = os.path.join(base_dir, 'jctl/')
+    metrics_dir = os.path.join(base_dir, 'metrics/')
+    output_dir = '/home/indy/performance_results'
+
+
+sub_dirs = [os.path.join(PathReg.output_dir, 'Node{}/'.format(i)) for i in range(1, NODES_NUM+1)]
 
 
 class PerformanceReport:
@@ -58,11 +63,11 @@ class PerformanceReport:
         return self._report
 
     @staticmethod
-    def create_dirs(path=OUTPUT_DIR, sub_dirs=SUB_DIRS):
+    def create_dirs(path=PathReg.output_dir, sub_dirs=sub_dirs):
         assert os.mkdir(path) is None
         assert all([os.mkdir(sub_dir) is None for sub_dir in sub_dirs])
 
-    def save_report(self, path=OUTPUT_DIR):
+    def save_report(self, path=PathReg.output_dir):
         # save csv
         self.report.to_csv(path+'report.csv')
 
@@ -80,7 +85,7 @@ class PerformanceReport:
         )
         plt.savefig(path+'report.png', dpi=500)
 
-    def process_node_info(self, path=NODE_INFO_DIR):
+    def process_node_info(self, path=PathReg.node_info_dir):
 
         def get_node_info_as_dicts():  # return list of dicts
             # get info file paths and sort them in natural order
@@ -119,7 +124,7 @@ class PerformanceReport:
             except KeyError:
                 self._report.loc[[i], ['VIEW_NO']] = None
 
-    def process_journal_exceptions(self, path=JCTL_DIR):
+    def process_journal_exceptions(self, path=PathReg.jctl_dir):
 
         def get_journal_exceptions_as_lists():  # return list of lists
             # get journal file paths and sort them in natural order
@@ -131,15 +136,9 @@ class PerformanceReport:
             for i, file_name in enumerate(journal_file_names):
                 res = []
                 try:
-                    res += subprocess.check_output(
-                        ['xzgrep', '-i', 'exception', path + file_name]
-                    ).decode().strip().splitlines()
-                except subprocess.CalledProcessError:
-                    res += []
-                try:
-                    res += subprocess.check_output(
-                        ['xzgrep', '-i', 'error', path + file_name]
-                    ).decode().strip().splitlines()
+                    res += run_external_cmd(
+                        'xzcat {} | sed -n "/Traceback/,/Error/p"'.format(os.path.join(path, file_name))
+                    )
                 except subprocess.CalledProcessError:
                     res += []
                 res = [x for x in res if not any(map(x.__contains__, ignore_list))]
@@ -147,7 +146,7 @@ class PerformanceReport:
                 results.append(res)
 
                 # create file with exception entries for each node
-                with open(SUB_DIRS[i]+'exception_journal_entries.txt', 'w') as f:
+                with open(sub_dirs[i] + 'exception_journal_entries.txt', 'w') as f:
                     for item in res:
                         f.write('{}\n'.format(item))
 
@@ -156,20 +155,14 @@ class PerformanceReport:
         for i, result in enumerate(get_journal_exceptions_as_lists(), start=1):
             self._report.loc[[i], ['JCTL_EXCEPTIONS']] = len(result)
 
-    def process_log_errors(self, path=BASE_DIR):
+    def process_log_errors(self, path=PathReg.base_dir):
 
         def get_log_errors_as_lists():  # return list of lists
             log_file_names = sorted(
-                [x for x in os.listdir(path) if (x.__contains__('log') and not x.__contains__('xz'))],
+                [x for x in os.listdir(path) if x.__contains__('log')],
                 key=NATURAL_SORTING
             )
             print(log_file_names)
-
-            xz_file_names = sorted(
-                [x for x in os.listdir(path) if x.__contains__('xz')],
-                key=NATURAL_SORTING
-            )
-            print(xz_file_names)
 
             node_keys = ['Node{}.'.format(i) for i in range(1, NODES_NUM+1)]
             results = []
@@ -178,56 +171,34 @@ class PerformanceReport:
                 res = []
                 pattern_res = []
 
-                # find errors in all .log
+                # find errors and patterns in logs including xz
                 log_names = [x for x in log_file_names if x.__contains__(node_key)]
-                if log_names:
-                    for log_name in log_names:
+                for log_name in log_names:
+                    try:
+                        res += subprocess.check_output(
+                            ['xzgrep', 'ERROR', os.path.join(path, log_name)]
+                        ).decode().strip().splitlines()
+                    except subprocess.CalledProcessError:
+                        res += []
+
+                    for item in LOG_PATTERNS:
                         try:
-                            res += subprocess.check_output(
-                                ['egrep', 'ERROR', path + log_name]
+                            pattern_res += subprocess.check_output(
+                                ['xzgrep', item, os.path.join(path, log_name)]
                             ).decode().strip().splitlines()
                         except subprocess.CalledProcessError:
-                            res += []
-
-                        # grep patterns and add them too
-                        for item in LOG_PATTERNS:
-                            try:
-                                pattern_res += subprocess.check_output(
-                                    ['egrep', item, path + log_name]
-                                ).decode().strip().splitlines()
-                            except subprocess.CalledProcessError:
-                                pattern_res += []
-
-                # find errors in all .xz
-                xz_names = [x for x in xz_file_names if x.__contains__(node_key)]
-                if xz_names:
-                    for xz_name in xz_names:
-                        try:
-                            res += subprocess.check_output(
-                                ['xzgrep', 'ERROR', path + xz_name]
-                            ).decode().strip().splitlines()
-                        except subprocess.CalledProcessError:
-                            res += []
-
-                        # grep patterns and add them too
-                        for item in LOG_PATTERNS:
-                            try:
-                                pattern_res += subprocess.check_output(
-                                    ['xzgrep', item, path + xz_name]
-                                ).decode().strip().splitlines()
-                            except subprocess.CalledProcessError:
-                                pattern_res += []
+                            pattern_res += []
 
                 results.append(res)
                 pattern_results.append(pattern_res)
 
                 # create file with error entries for each node
-                with open(SUB_DIRS[i]+'error_log_entries.txt', 'w') as f:
+                with open(sub_dirs[i] + 'error_log_entries.txt', 'w') as f:
                     for item in res:
                         f.write('{}\n'.format(item))
 
                 # create file with pattern matching entries for each node
-                with open(SUB_DIRS[i]+'pattern_log_entries.txt', 'w') as f:
+                with open(sub_dirs[i] + 'pattern_log_entries.txt', 'w') as f:
                     for item in pattern_res:
                         f.write('{}\n'.format(item))
 
@@ -241,7 +212,7 @@ class PerformanceReport:
             self._report.loc[[i], ['PATTERN_MATCHES']] = len(item)
 
     @staticmethod
-    def process_metrics(path_from=METRICS_DIR, paths_to=SUB_DIRS):
+    def process_metrics(path_from=PathReg.metrics_dir, paths_to=sub_dirs):
         metric_file_names = sorted(
                 [x for x in os.listdir(path_from) if not x.__contains__('summary')],
                 key=NATURAL_SORTING
@@ -260,7 +231,7 @@ class PerformanceReport:
 
         # copy metrics summary for each node
         assert all(
-            [copyfile(path_from+summary_file_name, path_to+summary_file_name) is not None
+            [copyfile(os.path.join(path_from, summary_file_name), os.path.join(path_to, summary_file_name)) is not None
              for summary_file_name, path_to in zip(summary_file_names, paths_to)]
         )
 

@@ -3,7 +3,7 @@ from datetime import datetime
 import os
 import string
 from typing import Optional
-
+import subprocess
 import base58
 import asyncio
 from random import sample, shuffle
@@ -1039,3 +1039,13 @@ async def get_payment_sources(pool_handle, wallet_handle, address):
     source = json.loads(await payment.parse_get_payment_sources_response(payment_method, res))[0]['source']
 
     return source
+
+
+# use it for shell commands with pipe
+def run_external_cmd(cmd):
+    ret = subprocess.run(cmd,
+                         shell=True,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE,
+                         timeout=5)
+    return ret.stdout.decode().strip().splitlines()
