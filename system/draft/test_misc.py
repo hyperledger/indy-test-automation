@@ -232,7 +232,7 @@ async def test_misc_state_proof(
         assert res8['result']['seqNo'] is not None
 
     # # ----------------
-    # TODO investigate genesis txns state proof reading from doamin and pool ledgers
+    # TODO investigate genesis txns state proof reading from domain and pool ledgers
     # req888 = await ledger.build_get_txn_request(trustee_did, 'DOMAIN', 1)
     # print('REQ EXPLICIT >>>', req888)
     # res888 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req888))
@@ -451,7 +451,9 @@ async def test_misc_vi_freshness(pool_handler, wallet_handler, get_default_trust
 
 @pytest.mark.parametrize('role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR', 'NETWORK_MONITOR'])
 @pytest.mark.asyncio
-async def test_misc_permission_error_messages(pool_handler, wallet_handler, get_default_trustee, role):
+async def test_misc_permission_error_messages(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, role
+):
     # INDY-1963
     trustee_did, _ = get_default_trustee
     did1, vk1 = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -1809,7 +1811,6 @@ async def test_misc_get_auth_rule():
 async def test_misc_catchup_special_case(
     docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num
 ):
-    test_nodes = [NodeHost(i) for i in range(1, nodes_num + 1)]
     docker_client = docker.from_env()
     trustee_did, _ = get_default_trustee
 
@@ -1837,3 +1838,111 @@ async def test_misc_catchup_special_case(
 
     await ensure_pool_is_in_sync(nodes_num=nodes_num)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.asyncio
+# SN-7
+async def test_misc_drop_states(
+        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
+        initial_token_minting, initial_fees_setting, check_no_failures_fixture
+):
+    libsovtoken_payment_method = 'sov'
+    trustee_did, _ = get_default_trustee
+    address2 = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, '{}')
+
+    # mint tokens
+    address = initial_token_minting
+
+    # set fees
+    print(initial_fees_setting)
+
+    # set auth rule for schema
+    req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
+                                               json.dumps({
+                                                   'constraint_id': 'OR',
+                                                   'auth_constraints': [
+                                                       {
+                                                           'constraint_id': 'ROLE',
+                                                           'role': '0',
+                                                           'sig_count': 1,
+                                                           'need_to_be_owner': False,
+                                                           'metadata': {'fees': 'add_schema_250'}
+                                                       },
+                                                       {
+                                                           'constraint_id': 'ROLE',
+                                                           'role': '2',
+                                                           'sig_count': 1,
+                                                           'need_to_be_owner': False,
+                                                           'metadata': {'fees': 'add_schema_250'}
+                                                       },
+                                                       {
+                                                           'constraint_id': 'ROLE',
+                                                           'role': '101',
+                                                           'sig_count': 1,
+                                                           'need_to_be_owner': False,
+                                                           'metadata': {'fees': 'add_schema_250'}
+                                                       }
+                                                   ]
+                                               }))
+    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res1)
+    assert res1['op'] == 'REPLY'
+
+    # write schema with fees
+    source1 = await get_payment_sources(pool_handler, wallet_handler, address)
+    schema_id, schema_json = await anoncreds.issuer_create_schema(
+        trustee_did, random_string(5), '1.0', json.dumps(['name', 'age'])
+    )
+    req = await ledger.build_schema_request(trustee_did, schema_json)
+    req_with_fees_json, _ = await payment.add_request_fees(
+        wallet_handler, trustee_did, req, json.dumps([source1]), json.dumps(
+            [{'recipient': address, 'amount': 750 * 100000}]
+        ), None
+    )
+    res2 = json.loads(
+        await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req_with_fees_json)
+    )
+    print(res2)
+    assert res2['op'] == 'REPLY'
+
+    # send payment
+    source2 = await get_payment_sources(pool_handler, wallet_handler, address)
+    req, _ = await payment.build_payment_req(
+        wallet_handler, trustee_did, json.dumps([source2]), json.dumps(
+            [{"recipient": address2, "amount": 500 * 100000}, {"recipient": address, "amount": 250 * 100000}]
+        ), None
+    )
+    res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res3)
+    assert res3['op'] == 'REPLY'
+
+    # stop Node7 -> drop token state -> start Node7
+    node7 = NodeHost(7)
+    node7.stop_service()
+    time.sleep(3)
+    for _ledger in ['pool', 'domain', 'config', 'sovtoken']:
+        print(node7.run('rm -rf /var/lib/indy/sandbox/data/Node7/{}_state'.format(_ledger)))
+    time.sleep(3)
+    node7.start_service()
+
+    # check that pool is ok
+    await ensure_pool_is_in_sync()
+    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+    # write some txns
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
+
+    # send another payment
+    source3 = await get_payment_sources(pool_handler, wallet_handler, address)
+    req, _ = await payment.build_payment_req(
+        wallet_handler, trustee_did, json.dumps([source3]), json.dumps(
+            [{"recipient": address2, "amount": 125 * 100000}, {"recipient": address, "amount": 125 * 100000}]
+        ), None
+    )
+    res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res4)
+    assert res4['op'] == 'REPLY'
+
+    # check again that pool is ok
+    await ensure_pool_is_in_sync()
+    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)

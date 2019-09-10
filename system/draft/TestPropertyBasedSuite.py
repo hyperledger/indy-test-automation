@@ -254,7 +254,7 @@ class TestPropertyBasedSuite:
             res = {k: json.loads(v) for k, v in res.items()}
             assert all([v['op'] == 'REQNACK' for k, v in res.items()])
 
-    @settings(deadline=None, max_examples=1000, verbosity=Verbosity.verbose)
+    @settings(deadline=None, max_examples=10000, verbosity=Verbosity.verbose)
     @given(amount=strategies.integers(min_value=0, max_value=999999999999999999),
            seqno=strategies.integers(min_value=0, max_value=999999999999999999),
            signatures=strategies.text(ascii_letters, min_size=0, max_size=10000),
