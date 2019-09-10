@@ -1946,3 +1946,36 @@ async def test_misc_drop_states(
     # check again that pool is ok
     await ensure_pool_is_in_sync()
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.asyncio
+# INDY-2103
+async def test_misc_error_message(
+    docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee
+):
+    libsovtoken_payment_method = 'sov'
+    trustee_did, _ = get_default_trustee
+    address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps(
+        {"seed": str('0000000000000000000000000Wallet0')}))
+    trustee_did_2, trustee_vk_2 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+    trustee_did_3, trustee_vk_3 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+    some_did, some_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+    await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_2, trustee_vk_2, None, 'TRUSTEE')
+    await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_3, trustee_vk_3, None, 'TRUSTEE')
+    await send_nym(pool_handler, wallet_handler, trustee_did, some_did, some_vk, None, None)
+    req, _ = await payment.build_mint_req(
+        wallet_handler, trustee_did, json.dumps([{'recipient': address, 'amount': 1000}]), None
+    )
+    req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+    req = await ledger.multi_sign_request(wallet_handler, trustee_did_2, req)
+    req = await ledger.multi_sign_request(wallet_handler, trustee_did_3, req)
+    req = await ledger.multi_sign_request(wallet_handler, some_did, req)
+    req = json.loads(req)
+    req['signatures'][some_did] = req['signatures'][some_did][::-1]
+    res = json.loads(await ledger.submit_request(pool_handler, json.dumps(req)))
+    print(res)
+    assert res['op'] == 'REQNACK'
+    assert res['reason'].__contains__(
+        'insufficient number of valid signatures, 4 is required but 3 valid and 1 invalid have been provided. '
+        'The following signatures are invalid: did={}, signature={}'.format(some_did, req['signatures'][some_did])
+    )
