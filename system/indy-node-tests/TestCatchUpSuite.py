@@ -74,6 +74,42 @@ class TestCatchUpSuite:
     ):
         client = docker.from_env()
         trustee_did, _ = get_default_trustee
+
+        # # --- update config
+        # # TODO move this into new helper to update the whole pool config easily
+        # test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
+        # path_to_config = '/etc/indy/indy_config.py'
+        # separator = "echo ' '"
+        # print(
+        #     [
+        #         node.run(
+        #             "{} >> {} && echo 'RETRY_TIMEOUT_NOT_RESTRICTED = 6' >> {}".format(
+        #                 separator, path_to_config, path_to_config
+        #             )
+        #         ) for node in test_nodes
+        #     ]
+        # )
+        # print(
+        #     [
+        #         node.run(
+        #             "{} >> {} && echo 'RETRY_TIMEOUT_RESTRICTED = 15' >> {}".format(
+        #                 separator, path_to_config, path_to_config
+        #             )
+        #         ) for node in test_nodes
+        #     ]
+        # )
+        # print(
+        #     [
+        #         node.run(
+        #             "{} >> {} && echo 'MAX_RECONNECT_RETRY_ON_SAME_SOCKET = 1' >> {}".format(
+        #                 separator, path_to_config, path_to_config
+        #             )
+        #         ) for node in test_nodes
+        #     ]
+        # )
+        # print([node.restart_service() for node in test_nodes])
+        # # ---
+
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
