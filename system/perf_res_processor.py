@@ -3,10 +3,10 @@ from shutil import copyfile
 import subprocess
 import json
 import re
-import datetime
 import pandas as pd
 import matplotlib.pyplot as plt
 from system.perf_res_plotter import plot_metrics
+from system.perf_res_plotter import metrics
 from system.utils import run_external_cmd
 
 
@@ -73,9 +73,9 @@ class PerformanceReport:
         self._rows = rows if rows else list(range(1, NODES_NUM+1))
         self._report = pd.DataFrame(columns=self._columns, index=self._rows)
         self.create_dirs()
-        self.process_node_info()
-        self.process_journal_exceptions()
-        self.process_log_errors()
+        # self.process_node_info()
+        # self.process_journal_exceptions()
+        # self.process_log_errors()
         self.process_metrics()
         self.save_report()
 
@@ -92,7 +92,6 @@ class PerformanceReport:
         # save csv
         self.report.to_csv(os.path.join(path, 'report.csv'))
 
-        # save figure
         plt.clf()
         fig, ax = plt.subplots()
 
@@ -104,6 +103,8 @@ class PerformanceReport:
         ax.table(
             cellText=self.report.values, colLabels=self.report.columns, rowLabels=list(self.report.index), loc='center'
         )
+
+        # save figure
         plt.savefig(os.path.join(path, 'report.png'), dpi=500)
 
     def process_node_info(self, path=path_reg.node_info_dir):
@@ -241,7 +242,7 @@ class PerformanceReport:
 
         # create metrics figure for each node
         assert all(
-            [plot_metrics([path_from+metric_file_name], path_to+'Figure.png') is None
+            [plot_metrics([os.path.join(path_from, metric_file_name)], os.path.join(path_to, 'Figure.png')) is None
              for metric_file_name, path_to in zip(metric_file_names, paths_to)]
         )
 
@@ -255,6 +256,15 @@ class PerformanceReport:
             [copyfile(os.path.join(path_from, summary_file_name), os.path.join(path_to, summary_file_name)) is not None
              for summary_file_name, path_to in zip(summary_file_names, paths_to)]
         )
+
+        # # generate and save summary figure FIXME subplots can't contain other subplots so now it looks bad
+        # plt.clf()
+        # for i, metric_file_name in enumerate(metric_file_names, start=1):
+        #     plt.subplot(5, 5, i)
+        #     data = pd.read_csv(os.path.join(path_from, metric_file_name)).loc[:, metrics]
+        #     plt.plot(data['timestamp'], data['ordered_batch_size_per_sec'], 'g-')
+        #     plt.plot(data['timestamp'], data['backup_ordered_batch_size_per_sec'], 'b-')
+        # plt.savefig(os.path.join(path_reg.output_dir, 'SummaryFigure.png'))
 
 
 if __name__ == '__main__':
