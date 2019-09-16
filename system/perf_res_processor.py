@@ -73,9 +73,9 @@ class PerformanceReport:
         self._rows = rows if rows else list(range(1, NODES_NUM+1))
         self._report = pd.DataFrame(columns=self._columns, index=self._rows)
         self.create_dirs()
-        # self.process_node_info()
-        # self.process_journal_exceptions()
-        # self.process_log_errors()
+        self.process_node_info()
+        self.process_journal_exceptions()
+        self.process_log_errors()
         self.process_metrics()
         self.save_report()
 
