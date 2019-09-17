@@ -1981,3 +1981,43 @@ async def test_misc_error_message(
         'insufficient number of valid signatures, 4 is required but 3 valid and 1 invalid have been provided. '
         'The following signatures are invalid: did={}, signature={}'.format(some_did, req['signatures'][some_did])
     )  # new error message check
+
+
+@pytest.mark.nodes_num(4)
+@pytest.mark.asyncio
+# ST-623
+async def test_misc(
+    docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee, nodes_num
+):
+    trustee_did, _ = get_default_trustee
+    dests = [
+        'Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv', '8ECVSk179mjsjKRLWiQtssMLgp6EPhWXtaYyStWPSGAb',
+        'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA',
+    ]
+    docker_4_schedule = json.dumps(
+        dict(
+            {dest: datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=1+i*5), '%Y-%m-%dT%H:%M:%S%z')
+             for dest, i in zip(dests, range(len(dests)))}
+        )
+    )
+
+    # schedule pool upgrade
+    req = await ledger.build_pool_upgrade_request(
+        trustee_did, 'upgrade', '1.10.0.dev1083', 'start', hashlib.sha256().hexdigest(), 5, docker_4_schedule, None,
+        True, False, 'indy-node'
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res)
+    assert res['op'] == 'REPLY'
+
+    # load pool during upgrade
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=1000)
+
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.parametrize('attr', ['1', '2', '3'])
+@pytest.mark.asyncio
+async def test_dummy(dummy, attr):
+    print(dummy+attr)

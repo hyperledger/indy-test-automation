@@ -18,10 +18,12 @@ class TestTokensSuiteProp:
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         try:
-            trustee_did2, trustee_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps(
-                {"seed": str('000000000000000000000000Trustee2')}))
-            trustee_did3, trustee_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps(
-                {"seed": str('000000000000000000000000Trustee3')}))
+            trustee_did2, trustee_vk2 = await did.create_and_store_my_did(
+                wallet_handler, json.dumps({"seed": str('000000000000000000000000Trustee2')})
+            )
+            trustee_did3, trustee_vk3 = await did.create_and_store_my_did(
+                wallet_handler, json.dumps({"seed": str('000000000000000000000000Trustee3')})
+            )
             await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
             await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
         except IndyError:
@@ -66,10 +68,12 @@ class TestTokensSuiteProp:
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         try:
-            trustee_did2, trustee_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps(
-                {"seed": str('000000000000000000000000Trustee2')}))
-            trustee_did3, trustee_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps(
-                {"seed": str('000000000000000000000000Trustee3')}))
+            trustee_did2, trustee_vk2 = await did.create_and_store_my_did(
+                wallet_handler, json.dumps({"seed": str('000000000000000000000000Trustee2')})
+            )
+            trustee_did3, trustee_vk3 = await did.create_and_store_my_did(
+                wallet_handler, json.dumps({"seed": str('000000000000000000000000Trustee3')})
+            )
             await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
             await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
         except IndyError:
