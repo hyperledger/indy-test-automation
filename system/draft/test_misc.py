@@ -2015,9 +2015,3 @@ async def test_misc(
 
     await ensure_pool_is_in_sync(nodes_num=nodes_num)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
-
-
-@pytest.mark.parametrize('attr', ['1', '2', '3'])
-@pytest.mark.asyncio
-async def test_dummy(dummy, attr):
-    print(dummy+attr)
