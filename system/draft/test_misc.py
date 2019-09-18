@@ -1986,7 +1986,7 @@ async def test_misc_error_message(
 @pytest.mark.nodes_num(4)
 @pytest.mark.asyncio
 # ST-623
-async def test_misc(
+async def test_misc_order_during_rolling_upgrade(
     docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee, nodes_num
 ):
     trustee_did, _ = get_default_trustee
