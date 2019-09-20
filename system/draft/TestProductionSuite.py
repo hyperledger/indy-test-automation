@@ -192,13 +192,13 @@ class TestProductionSuite:
         await eventually(
             demote_node, pool_handler, wallet_handler, trustee_did, 'Node3', pool_info['Node3']
         )
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25, timeout=240)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
 
         # demote initial 4th node by trustee
         await eventually(
             demote_node, pool_handler, wallet_handler, trustee_did, 'Node4', pool_info['Node4']
         )
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25, timeout=240)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
 
         # demote 11th node by owner - VC
         with pytest.raises(AssertionError):  # negative case - steward demotes node that he doesn't own

@@ -1,7 +1,7 @@
 import pytest
 from system.utils import *
 from indy import payment
-from hypothesis import errors, settings, Verbosity, given, strategies
+from hypothesis import settings, given, strategies
 
 max_size = 1e+17
 

@@ -4,10 +4,6 @@ from system.utils import *
 import docker
 from system.docker_setup import NETWORK_NAME
 
-import logging
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=0, format='%(asctime)s %(message)s')
-
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestCatchUpSuite:
@@ -23,16 +19,16 @@ class TestCatchUpSuite:
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         test_nodes[-1].stop_service()
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=100)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=100, timeout=60)
 
         test_nodes[-2].stop_service()
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=75)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=75, timeout=60)
 
         test_nodes[-2].start_service()
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=50)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=50, timeout=60)
 
         test_nodes[-1].start_service()
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25, timeout=60)
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
@@ -50,19 +46,19 @@ class TestCatchUpSuite:
 
         await eventually(demote_node, pool_handler, wallet_handler, trustee_did, 'Node9', pool_info['Node9'])
         await pool.refresh_pool_ledger(pool_handler)
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=100)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=100, timeout=60)
 
         await eventually(demote_node, pool_handler, wallet_handler, trustee_did, 'Node8', pool_info['Node8'])
         await pool.refresh_pool_ledger(pool_handler)
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=75)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=75, timeout=60)
 
         await eventually(promote_node, pool_handler, wallet_handler, trustee_did, 'Node8', pool_info['Node8'])
         await pool.refresh_pool_ledger(pool_handler)
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=50)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=50, timeout=60)
 
         await eventually(promote_node, pool_handler, wallet_handler, trustee_did, 'Node9', pool_info['Node9'])
         await pool.refresh_pool_ledger(pool_handler)
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25, timeout=60)
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
@@ -114,16 +110,16 @@ class TestCatchUpSuite:
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         client.networks.list(names=[NETWORK_NAME])[0].disconnect('node9')
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=100)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=100, timeout=60)
 
         client.networks.list(names=[NETWORK_NAME])[0].disconnect('node8')
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=75)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=75, timeout=60)
 
         client.networks.list(names=[NETWORK_NAME])[0].connect('node8')
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=50)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=50, timeout=60)
 
         client.networks.list(names=[NETWORK_NAME])[0].connect('node9')
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25, timeout=60)
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
