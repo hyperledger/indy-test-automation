@@ -9,15 +9,17 @@ import os
 import sys
 from indy import payment
 
+max_size = 1e+17
+
 
 @composite
 def strategy_for_op_and_data_cases(draw):
-    reqid = draw(strategies.integers(min_value=1, max_value=999999999999999))
+    reqid = draw(strategies.integers(min_value=1, max_value=max_size))
     reqtype = draw(strategies.integers().filter(lambda x: x not in [6, 7, 119, 20001]))
     data = draw(
         strategies.recursive(
             strategies.dictionaries(
-                strategies.text(printable, min_size=1), strategies.text(printable, min_size=1), min_size=1, max_size=5
+                strategies.text(printable, min_size=1), strategies.text(printable, min_size=1), min_size=1, max_size=3
             ), lambda x: strategies.dictionaries(strategies.text(printable, min_size=1), x, min_size=1, max_size=3)
         )
     )
@@ -50,7 +52,7 @@ class TestPropertyBasedSuite:
         print('-'*25)
 
     @settings(deadline=None, max_examples=1000, verbosity=Verbosity.verbose)
-    @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
+    @given(reqid=strategies.integers(min_value=1, max_value=max_size),
            dest=strategies.text(ascii_letters, min_size=16, max_size=16),
            # verkey=strategies.text(ascii_letters, min_size=32, max_size=32),
            alias=strategies.text(min_size=1, max_size=10000))
@@ -80,7 +82,7 @@ class TestPropertyBasedSuite:
         assert res['op'] == 'REPLY'
 
     @settings(deadline=None, max_examples=250)
-    @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
+    @given(reqid=strategies.integers(min_value=1, max_value=max_size),
            xhash=strategies.text().map(lambda x: hashlib.sha256(x.encode()).hexdigest()),
            key=strategies.text(min_size=1, alphabet=printable),
            value=strategies.text(min_size=1, alphabet=printable),
@@ -133,7 +135,7 @@ class TestPropertyBasedSuite:
         assert res3['op'] == 'REPLY'
 
     @settings(deadline=None, max_examples=250)
-    @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
+    @given(reqid=strategies.integers(min_value=1, max_value=max_size),
            version=strategies.floats(min_value=0.1, max_value=999.999),
            name=strategies.text(min_size=1),
            attrs=strategies.lists(strategies.text(min_size=1), min_size=1, max_size=125))
@@ -166,7 +168,7 @@ class TestPropertyBasedSuite:
         assert res['op'] == 'REPLY'
 
     @settings(deadline=None, max_examples=250, verbosity=Verbosity.verbose)
-    @given(reqid=strategies.integers(min_value=1, max_value=999999999999999),
+    @given(reqid=strategies.integers(min_value=1, max_value=max_size),
            tag=strategies.text(printable, min_size=1),
            primary=strategies.recursive(
                strategies.dictionaries(
@@ -242,11 +244,9 @@ class TestPropertyBasedSuite:
                 'data': values[2]
             }
         }
-        print(req)
         res = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
         )
-        print(res)
         # server-side static validation
         try:
             assert res['op'] == 'REQNACK'
@@ -255,10 +255,10 @@ class TestPropertyBasedSuite:
             assert all([v['op'] == 'REQNACK' for k, v in res.items()])
 
     @settings(deadline=None, max_examples=10000, verbosity=Verbosity.verbose)
-    @given(amount=strategies.integers(min_value=0, max_value=999999999999999999),
-           seqno=strategies.integers(min_value=0, max_value=999999999999999999),
-           signatures=strategies.text(ascii_letters, min_size=0, max_size=10000),
-           reqid=strategies.integers(min_value=1, max_value=999999999999999999))
+    @given(amount=strategies.integers(min_value=0, max_value=max_size),
+           seqno=strategies.integers(min_value=0, max_value=max_size),
+           signatures=strategies.text(ascii_letters, min_size=0, max_size=max_size),
+           reqid=strategies.integers(min_value=1, max_value=max_size))
     @pytest.mark.asyncio
     async def test_case_invalid_payment(
             self, payment_init, pool_handler, wallet_handler, get_default_trustee, amount, seqno, signatures, reqid

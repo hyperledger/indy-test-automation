@@ -96,7 +96,7 @@ class TestProductionSuite:
             ips[0], int(PORT_2), ips[0], int(PORT_1)
         )
         assert res5['op'] == 'REPLY'
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
         await ensure_pool_is_in_sync(nodes_num=5)
 
         # add 6th node
@@ -113,7 +113,7 @@ class TestProductionSuite:
             ips[1], int(PORT_2), ips[1], int(PORT_1)
         )
         assert res6['op'] == 'REPLY'
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
         await ensure_pool_is_in_sync(nodes_num=6)
 
         # add 7th node - f will be changed - VC
@@ -126,7 +126,7 @@ class TestProductionSuite:
         assert res7['op'] == 'REPLY'
         await pool.refresh_pool_ledger(pool_handler)
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
         await ensure_pool_is_in_sync(nodes_num=7)
 
         # add 8th node
@@ -136,7 +136,7 @@ class TestProductionSuite:
             ips[3], int(PORT_2), ips[3], int(PORT_1)
         )
         assert res8['op'] == 'REPLY'
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
         await ensure_pool_is_in_sync(nodes_num=8)
 
         # add 9th node
@@ -146,7 +146,7 @@ class TestProductionSuite:
             ips[4], int(PORT_2), ips[4], int(PORT_1)
         )
         assert res9['op'] == 'REPLY'
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
         await ensure_pool_is_in_sync(nodes_num=9)
 
         # add 10th node - f will be changed - VC
@@ -159,7 +159,7 @@ class TestProductionSuite:
         assert res10['op'] == 'REPLY'
         await pool.refresh_pool_ledger(pool_handler)
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
         await ensure_pool_is_in_sync(nodes_num=10)
 
         # add 11th node
@@ -169,7 +169,7 @@ class TestProductionSuite:
             ips[6], int(PORT_2), ips[6], int(PORT_1)
         )
         assert res11['op'] == 'REPLY'
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
         await ensure_pool_is_in_sync(nodes_num=11)
 
         pool_info = get_pool_info(primary2)
@@ -177,7 +177,7 @@ class TestProductionSuite:
 
         # demote initial 1st node by trustee
         await eventually(demote_node, pool_handler, wallet_handler, trustee_did, 'Node1', pool_info['Node1'])
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25, timeout=240)
 
         # demote initial 2nd node by trustee - VC
         primary3, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
@@ -186,19 +186,19 @@ class TestProductionSuite:
         )
         await pool.refresh_pool_ledger(pool_handler)
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary3)
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25, timeout=240)
 
         # demote initial 3rd node by trustee
         await eventually(
             demote_node, pool_handler, wallet_handler, trustee_did, 'Node3', pool_info['Node3']
         )
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
 
         # demote initial 4th node by trustee
         await eventually(
             demote_node, pool_handler, wallet_handler, trustee_did, 'Node4', pool_info['Node4']
         )
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
 
         # demote 11th node by owner - VC
         with pytest.raises(AssertionError):  # negative case - steward demotes node that he doesn't own
@@ -210,7 +210,7 @@ class TestProductionSuite:
         )
         await pool.refresh_pool_ledger(pool_handler)
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary4)
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
 
         # promote 11th node by trustee - VC
         with pytest.raises(AssertionError):  # negative case - steward promotes node that he doesn't own
@@ -222,19 +222,19 @@ class TestProductionSuite:
         )
         await pool.refresh_pool_ledger(pool_handler)
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary5)
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
 
         # promote initial 4th node by owner
         await eventually(
             promote_node, pool_handler, wallet_handler, stewards['steward4'], 'Node4', pool_info['Node4']
         )
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
 
         # promote initial 3rd node by owner
         await eventually(
             promote_node, pool_handler, wallet_handler, stewards['steward3'], 'Node3', pool_info['Node3']
         )
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
 
         # promote initial 2nd node by owner - VC
         primary6, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
@@ -242,11 +242,11 @@ class TestProductionSuite:
             promote_node, pool_handler, wallet_handler, stewards['steward2'], 'Node2', pool_info['Node2']
         )
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary6)
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
 
         # promote initial 1st node by owner
         await eventually(
             promote_node, pool_handler, wallet_handler, stewards['steward1'], 'Node1', pool_info['Node1']
         )
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
         await ensure_pool_is_in_sync(nodes_num=11)

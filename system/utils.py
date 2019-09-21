@@ -405,14 +405,14 @@ async def check_pool_performs_read(pool_handle, wallet_handle, submitter_did, di
 
 
 async def check_pool_performs_write_read(
-    pool_handle, wallet_handle, trustee_did, nyms_count=1
+    pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     writes = await check_pool_performs_write(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
     )
     dids = [resp['result']['txn']['data']['dest'] for resp in writes]
     return await eventually(
-        check_pool_performs_read, pool_handle, wallet_handle, trustee_did, dids
+        check_pool_performs_read, pool_handle, wallet_handle, trustee_did, dids, timeout=timeout
     )
 
 

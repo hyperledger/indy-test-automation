@@ -5,24 +5,25 @@ import numpy as np
 
 sns.set()
 
+metrics = [
+    'ordered_batch_size_per_sec',
+    'backup_ordered_batch_size_per_sec',
+    'client_stack_messages_processed_per_sec',
+    'avg_monitor_avg_latency',
+    'avg_request_queue_size',
+    'avg_monitor_unordered_request_queue_size',
+    'max_view_change_in_progress',
+    'max_current_view',
+    'max_domain_ledger_size',
+    'avg_node_rss_size',
+    'avg_node_prod_time',
+    'max_node_prod_time',
+    'timestamp'
+]
+
 
 def plot_metrics(paths, save_path=None):  # takes list of paths to csv metrics files
     titles = [path.split('/')[-1].replace('.csv', '') for path in paths]
-    metrics = [
-        'ordered_batch_size_per_sec',
-        'backup_ordered_batch_size_per_sec',
-        'client_stack_messages_processed_per_sec',
-        'avg_monitor_avg_latency',
-        'avg_request_queue_size',
-        'avg_monitor_unordered_request_queue_size',
-        'max_view_change_in_progress',
-        'max_current_view',
-        'max_domain_ledger_size',
-        'avg_node_rss_size',
-        'avg_node_prod_time',
-        'max_node_prod_time',
-        'timestamp'
-    ]
     for path, title in zip(paths, titles):
         try:
             pd.read_csv(path).loc[:, metrics].plot(

@@ -16,7 +16,7 @@ async def docker_setup_and_teardown(docker_setup_and_teardown_function):
 @pytest.mark.asyncio
 async def test_misc_state_proof(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
-        initial_token_minting, nodes_num, wait_time
+        initial_token_minting, initial_fees_setting, nodes_num, wait_time
 ):
     libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee
@@ -106,6 +106,39 @@ async def test_misc_state_proof(
     assert json.loads(res_pay)['op'] == 'REPLY'
     receipts = json.loads(await payment.parse_payment_response(libsovtoken_payment_method, res_pay))
     receipt = receipts[0]
+
+    # set fees
+    print(initial_fees_setting)
+
+    # set auth rule for schema
+    req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
+                                               json.dumps({
+                                                           'constraint_id': 'ROLE',
+                                                           'role': '0',
+                                                           'sig_count': 1,
+                                                           'need_to_be_owner': False,
+                                                           'metadata': {'fees': 'add_schema_250'}
+                                                        }
+                                                    )
+                                               )
+    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res1['op'] == 'REPLY'
+
+    # write schema with fees as the last txn
+    source2 = await get_payment_sources(pool_handler, wallet_handler, address2)
+    schema_id, schema_json = await anoncreds.issuer_create_schema(
+        trustee_did, random_string(5), '1.0', json.dumps(['name', 'age'])
+    )
+    req = await ledger.build_schema_request(trustee_did, schema_json)
+    req_with_fees_json, _ = await payment.add_request_fees(
+        wallet_handler, trustee_did, req, json.dumps([source2]), json.dumps(
+            [{'recipient': address2, 'amount': 750 * 100000}]
+        ), None
+    )
+    res2 = json.loads(
+        await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req_with_fees_json)
+    )
+    assert res2['op'] == 'REPLY'
 
     await asyncio.sleep(wait_time)
 
