@@ -1049,3 +1049,16 @@ def run_external_cmd(cmd):
                          stderr=subprocess.PIPE,
                          timeout=5)
     return ret.stdout.decode().strip().splitlines()
+
+
+def update_config(string_to_push, nodes_num):
+    test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
+    path_to_config = '/etc/indy/indy_config.py'
+    separator = "echo ' '"
+    update_res = [
+        node.run("{} >> {} && echo {} >> {}".format(separator, path_to_config, string_to_push, path_to_config))
+        for node in test_nodes
+    ]
+    assert all(res == '' for res in update_res)
+    restart_res = [node.restart_service() for node in test_nodes]
+    assert all(res == '' for res in restart_res)
