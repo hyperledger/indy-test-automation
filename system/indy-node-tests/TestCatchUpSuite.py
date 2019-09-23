@@ -123,3 +123,31 @@ class TestCatchUpSuite:
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
+    @pytest.mark.nodes_num(9)
+    @pytest.mark.asyncio
+    async def test_case_switch_off_machines(
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+    ):
+        client = docker.from_env()
+        test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
+        trustee_did, _ = get_default_trustee
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+        await ensure_pool_is_in_sync(nodes_num=nodes_num)
+
+        client.containers.list(all=True, filters={'name': 'node9'})[0].stop()
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=100, timeout=60)
+
+        client.containers.list(all=True, filters={'name': 'node8'})[0].stop()
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=75, timeout=60)
+
+        client.containers.list(all=True, filters={'name': 'node8'})[0].start()
+        await eventually(test_nodes[-2].start_service, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=50, timeout=60)
+
+        client.containers.list(all=True, filters={'name': 'node9'})[0].start()
+        await eventually(test_nodes[-1].start_service, timeout=30)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25, timeout=60)
+
+        await ensure_pool_is_in_sync(nodes_num=nodes_num)
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
