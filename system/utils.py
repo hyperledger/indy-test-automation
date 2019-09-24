@@ -454,8 +454,10 @@ async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
     print('\nDOMAIN LEDGER SYNC: {}'.format([result for result in domain_results]))
     audit_results = [host.run('read_ledger --type=audit --count') for host in hosts]
     print('\nAUDIT LEDGER SYNC: {}'.format([result for result in audit_results]))
+    token_results = [host.run('read_ledger --type=sovtoken --count') for host in hosts]
+    print('\nTOKEN LEDGER SYNC: {}'.format([result for result in token_results]))
 
-    for res in (pool_results, config_results, domain_results, audit_results):
+    for res in (pool_results, config_results, domain_results, audit_results, token_results):
         assert len(set(res)) == 1
 
 
@@ -507,6 +509,12 @@ async def ensure_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trust
 async def get_validator_info(pool_handle, wallet_handle, trustee_did):
     req = await ledger.build_get_validator_info_request(trustee_did)
     results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+    # remove all timeout entries
+    try:
+        for i in range(len(results)):
+            results.pop(list(results.keys())[list(results.values()).index('timeout')])
+    except ValueError:
+        pass
     results = {k: json.loads(v) for k, v in results.items()}
     return results
 
@@ -1036,9 +1044,11 @@ async def get_payment_sources(pool_handle, wallet_handle, address):
     payment_method = 'sov'
     req, _ = await payment.build_get_payment_sources_request(wallet_handle, None, address)
     res = await ledger.submit_request(pool_handle, req)
-    source = json.loads(await payment.parse_get_payment_sources_response(payment_method, res))[0]['source']
+    res = json.loads(await payment.parse_get_payment_sources_response(payment_method, res))
+    source = res[0]['source']
+    amount = res[0]['amount']
 
-    return source
+    return source, amount
 
 
 # use it for shell commands with pipe
@@ -1062,3 +1072,23 @@ def update_config(string_to_push, nodes_num):
     assert all(res == '' for res in update_res)
     restart_res = [node.restart_service() for node in test_nodes]
     assert all(res == '' for res in restart_res)
+
+
+async def send_payments(pool_handle, wallet_handle, submitter_did, address_from, count):
+    payment_method = 'sov'
+
+    for i in range(1, count+1):
+        address_to = await payment.create_payment_address(wallet_handle, payment_method, json.dumps({}))
+        source, amount = await get_payment_sources(pool_handle, wallet_handle, address_from)
+        print(source, amount)
+        req, _ = await payment.build_payment_req(
+            wallet_handle, submitter_did, json.dumps([source]), json.dumps(
+                [
+                    {'recipient': address_to, 'amount': 100000},
+                    {'recipient': address_from, 'amount': amount - 100000}
+                ]
+            ), None
+        )
+        res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+        print(res)
+        assert res['op'] == 'REPLY'

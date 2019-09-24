@@ -1889,7 +1889,7 @@ async def test_misc_drop_states(
     assert res1['op'] == 'REPLY'
 
     # write schema with fees
-    source1 = await get_payment_sources(pool_handler, wallet_handler, address)
+    source1, _ = await get_payment_sources(pool_handler, wallet_handler, address)
     schema_id, schema_json = await anoncreds.issuer_create_schema(
         trustee_did, random_string(5), '1.0', json.dumps(['name', 'age'])
     )
@@ -1906,7 +1906,7 @@ async def test_misc_drop_states(
     assert res2['op'] == 'REPLY'
 
     # send payment
-    source2 = await get_payment_sources(pool_handler, wallet_handler, address)
+    source2, _ = await get_payment_sources(pool_handler, wallet_handler, address)
     req, _ = await payment.build_payment_req(
         wallet_handler, trustee_did, json.dumps([source2]), json.dumps(
             [{"recipient": address2, "amount": 500 * 100000}, {"recipient": address, "amount": 250 * 100000}]
@@ -1933,7 +1933,7 @@ async def test_misc_drop_states(
     await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
 
     # send another payment
-    source3 = await get_payment_sources(pool_handler, wallet_handler, address)
+    source3, _ = await get_payment_sources(pool_handler, wallet_handler, address)
     req, _ = await payment.build_payment_req(
         wallet_handler, trustee_did, json.dumps([source3]), json.dumps(
             [{"recipient": address2, "amount": 125 * 100000}, {"recipient": address, "amount": 125 * 100000}]
