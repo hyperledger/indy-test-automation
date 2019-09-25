@@ -41,6 +41,7 @@ class TestCatchUpSuiteExtended:
 
         test_nodes[-1].stop_service()
         await send_nodes(pool_handler, wallet_handler, trustee_did, 25)
+        await ensure_pool_is_in_sync(nodes_num=nodes_num-1)
 
         test_nodes[-1].start_service()
         await send_nodes(pool_handler, wallet_handler, trustee_did, 25)

@@ -1118,8 +1118,10 @@ async def send_nodes(pool_handle, wallet_handle, trustee_did, count):
 async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, count):
     if package_name == 'indy-node':
         version = '9.99.9.dev9999'
-    else:  # sovrin
+    elif package_name == 'sovrin':
         version = '9.9.999'
+    else:
+        raise NameError('Invalid package name!')
     dests = [
         'Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv', '8ECVSk179mjsjKRLWiQtssMLgp6EPhWXtaYyStWPSGAb',
         'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA',
