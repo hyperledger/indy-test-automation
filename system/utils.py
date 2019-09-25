@@ -1,12 +1,12 @@
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import os
 import string
 from typing import Optional
 import subprocess
 import base58
 import asyncio
-from random import sample, shuffle
+from random import sample, shuffle, randrange
 from collections import Counter
 from collections.abc import Iterable
 from inspect import isawaitable
@@ -17,6 +17,7 @@ from ctypes import CDLL
 import testinfra
 import json
 from json import JSONDecodeError
+import hashlib
 
 from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError, payment
 
@@ -1090,5 +1091,61 @@ async def send_payments(pool_handle, wallet_handle, submitter_did, address_from,
             ), None
         )
         res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+        assert res['op'] == 'REPLY'
+
+
+async def send_nodes(pool_handle, wallet_handle, trustee_did, count):
+    for i in range(1, count+1):
+        steward_did, steward_vk = await did.create_and_store_my_did(wallet_handle, '{}')
+        await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+        req = await ledger.build_node_request(
+            steward_did, steward_vk, json.dumps(
+                {
+                    'alias': '{}_{}'.format(random_string(10), i),
+                    'client_ip': '{}.{}.{}.{}'.format(randrange(1, 255), 0, 0, randrange(1, 255)),
+                    'client_port': randrange(1, 32767),
+                    'node_ip': '{}.{}.{}.{}'.format(randrange(1, 255), 0, 0, randrange(1, 255)),
+                    'node_port': randrange(1, 32767),
+                    'services': []
+                }
+            )
+        )
+        res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, steward_did, req))
+        print(res)
+        assert res['op'] == 'REPLY'
+
+
+async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, count):
+    if package_name == 'indy-node':
+        version = '9.99.9.dev9999'
+    else:  # sovrin
+        version = '9.9.999'
+    dests = [
+        'Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv', '8ECVSk179mjsjKRLWiQtssMLgp6EPhWXtaYyStWPSGAb',
+        'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA',
+        '4SWokCJWJc69Tn74VvLS6t2G2ucvXqM9FDMsWJjmsUxe', 'Cv1Ehj43DDM5ttNBmC6VPpEfwXWwfGktHwjDJsTV5Fz8',
+        'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
+    ]
+    docker_7_schedule = json.dumps(
+        dict(
+            {dest: datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=999+i*5), '%Y-%m-%dT%H:%M:%S%z')
+             for dest, i in zip(dests, range(len(dests)))}
+        )
+    )
+    for i in range(1, count+1):
+        req = await ledger.build_pool_upgrade_request(
+            trustee_did,
+            '{}_{}'.format(random_string(10), i),
+            version,
+            'start',
+            hashlib.sha256().hexdigest(),
+            5,
+            docker_7_schedule,
+            None,
+            True,
+            True,
+            package_name
+        )
+        res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
         print(res)
         assert res['op'] == 'REPLY'
