@@ -8,10 +8,12 @@ from system.docker_setup import NETWORK_NAME
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestCatchUpSuiteExtended:
 
+    @pytest.mark.parametrize('count', [1, 25, 50])
     @pytest.mark.nodes_num(8)
     @pytest.mark.asyncio
     async def test_case_token_ledger(
-            self, payment_init, initial_token_minting, pool_handler, wallet_handler, get_default_trustee, nodes_num
+            self, payment_init, initial_token_minting, pool_handler, wallet_handler, get_default_trustee, nodes_num,
+            count
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
@@ -20,19 +22,20 @@ class TestCatchUpSuiteExtended:
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         test_nodes[-1].stop_service()
-        await send_payments(pool_handler, wallet_handler, trustee_did, address1, 25)
+        await send_payments(pool_handler, wallet_handler, trustee_did, address1, count)
 
         test_nodes[-1].start_service()
-        await send_payments(pool_handler, wallet_handler, trustee_did, address1, 25)
+        await send_payments(pool_handler, wallet_handler, trustee_did, address1, count)
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
+    @pytest.mark.parametrize('count', [1, 25, 50])
     @pytest.mark.nodes_num(8)
     @pytest.mark.asyncio
     async def test_case_pool_ledger(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, count
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
@@ -40,20 +43,21 @@ class TestCatchUpSuiteExtended:
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         test_nodes[-1].stop_service()
-        await send_nodes(pool_handler, wallet_handler, trustee_did, 25)
+        await send_nodes(pool_handler, wallet_handler, trustee_did, count)
         await ensure_pool_is_in_sync(nodes_num=nodes_num-1)
 
         test_nodes[-1].start_service()
-        await send_nodes(pool_handler, wallet_handler, trustee_did, 25)
+        await send_nodes(pool_handler, wallet_handler, trustee_did, count)
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
+    @pytest.mark.parametrize('count', [1, 25, 50])
     @pytest.mark.nodes_num(8)
     @pytest.mark.asyncio
     async def test_case_config_ledger(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, count
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
@@ -61,10 +65,10 @@ class TestCatchUpSuiteExtended:
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         test_nodes[-1].stop_service()
-        await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', 25)
+        await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', count)
 
         test_nodes[-1].start_service()
-        await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', 25)
+        await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', count)
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
