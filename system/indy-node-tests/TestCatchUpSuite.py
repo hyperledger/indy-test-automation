@@ -12,7 +12,7 @@ ENSURE_TIMEOUT = 180
 class TestCatchUpSuite:
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 100])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_stopping(
@@ -49,7 +49,7 @@ class TestCatchUpSuite:
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 100])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_demoting(
@@ -91,7 +91,7 @@ class TestCatchUpSuite:
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 100])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_out_of_network(
@@ -128,7 +128,7 @@ class TestCatchUpSuite:
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 100])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_switch_off_machines(
