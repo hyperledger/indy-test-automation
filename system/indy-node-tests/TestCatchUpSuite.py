@@ -12,7 +12,7 @@ ENSURE_TIMEOUT = 180
 class TestCatchUpSuite:
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 10, 100])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_stopping(
@@ -20,7 +20,6 @@ class TestCatchUpSuite:
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         test_nodes[-1].stop_service()
@@ -50,7 +49,7 @@ class TestCatchUpSuite:
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 10, 100])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_demoting(
@@ -59,7 +58,6 @@ class TestCatchUpSuite:
         trustee_did, _ = get_default_trustee
         pool_info = get_pool_info('1')
         print('\nPOOL INFO:\n{}'.format(pool_info))
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         await eventually(demote_node, pool_handler, wallet_handler, trustee_did, 'Node9', pool_info['Node9'])
@@ -93,7 +91,7 @@ class TestCatchUpSuite:
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 10, 100])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_out_of_network(
@@ -101,8 +99,6 @@ class TestCatchUpSuite:
     ):
         client = docker.from_env()
         trustee_did, _ = get_default_trustee
-
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         client.networks.list(names=[NETWORK_NAME])[0].disconnect('node9')
@@ -132,7 +128,7 @@ class TestCatchUpSuite:
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [100])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_switch_off_machines(
@@ -141,7 +137,6 @@ class TestCatchUpSuite:
         client = docker.from_env()
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
         trustee_did, _ = get_default_trustee
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         client.containers.list(all=True, filters={'name': 'node9'})[0].stop()

@@ -18,14 +18,19 @@ class TestCatchUpSuiteExtended:
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
         address1 = initial_token_minting
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         test_nodes[-1].stop_service()
         await send_payments(pool_handler, wallet_handler, trustee_did, address1, count)
+        # await ensure_pool_is_in_sync(nodes_num=nodes_num-1)
 
         test_nodes[-1].start_service()
+        # await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await send_payments(pool_handler, wallet_handler, trustee_did, address1, count)
+
+        await ensure_pool_performs_write_read(
+            pool_handler, wallet_handler, trustee_did, nyms_count=200, timeout=240
+        )
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
@@ -39,16 +44,19 @@ class TestCatchUpSuiteExtended:
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         test_nodes[-1].stop_service()
         await send_nodes(pool_handler, wallet_handler, trustee_did, count)
-        await ensure_pool_is_in_sync(nodes_num=nodes_num-1)
+        # await ensure_pool_is_in_sync(nodes_num=nodes_num-1)
 
         test_nodes[-1].start_service()
-        await ensure_pool_is_in_sync(nodes_num=nodes_num)
+        # await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await send_nodes(pool_handler, wallet_handler, trustee_did, count)
+
+        await ensure_pool_performs_write_read(
+            pool_handler, wallet_handler, trustee_did, nyms_count=200, timeout=240
+        )
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
@@ -62,16 +70,19 @@ class TestCatchUpSuiteExtended:
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         test_nodes[-1].stop_service()
         await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', count)
-        await ensure_pool_is_in_sync(nodes_num=nodes_num-1)
+        # await ensure_pool_is_in_sync(nodes_num=nodes_num-1)
 
         test_nodes[-1].start_service()
-        await ensure_pool_is_in_sync(nodes_num=nodes_num)
+        # await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', count)
+
+        await ensure_pool_performs_write_read(
+            pool_handler, wallet_handler, trustee_did, nyms_count=200, timeout=240
+        )
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
