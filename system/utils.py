@@ -1,12 +1,12 @@
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import os
 import string
 from typing import Optional
 import subprocess
 import base58
 import asyncio
-from random import sample, shuffle
+from random import sample, shuffle, randrange
 from collections import Counter
 from collections.abc import Iterable
 from inspect import isawaitable
@@ -17,6 +17,7 @@ from ctypes import CDLL
 import testinfra
 import json
 from json import JSONDecodeError
+import hashlib
 
 from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError, payment
 
@@ -454,8 +455,10 @@ async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
     print('\nDOMAIN LEDGER SYNC: {}'.format([result for result in domain_results]))
     audit_results = [host.run('read_ledger --type=audit --count') for host in hosts]
     print('\nAUDIT LEDGER SYNC: {}'.format([result for result in audit_results]))
+    token_results = [host.run('read_ledger --type=sovtoken --count') for host in hosts]
+    print('\nTOKEN LEDGER SYNC: {}'.format([result for result in token_results]))
 
-    for res in (pool_results, config_results, domain_results, audit_results):
+    for res in (pool_results, config_results, domain_results, audit_results, token_results):
         assert len(set(res)) == 1
 
 
@@ -507,6 +510,12 @@ async def ensure_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trust
 async def get_validator_info(pool_handle, wallet_handle, trustee_did):
     req = await ledger.build_get_validator_info_request(trustee_did)
     results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+    # remove all timeout entries
+    try:
+        for i in range(len(results)):
+            results.pop(list(results.keys())[list(results.values()).index('timeout')])
+    except ValueError:
+        pass
     results = {k: json.loads(v) for k, v in results.items()}
     return results
 
@@ -1036,9 +1045,11 @@ async def get_payment_sources(pool_handle, wallet_handle, address):
     payment_method = 'sov'
     req, _ = await payment.build_get_payment_sources_request(wallet_handle, None, address)
     res = await ledger.submit_request(pool_handle, req)
-    source = json.loads(await payment.parse_get_payment_sources_response(payment_method, res))[0]['source']
+    res = json.loads(await payment.parse_get_payment_sources_response(payment_method, res))
+    source = res[0]['source']
+    amount = res[0]['amount']
 
-    return source
+    return source, amount
 
 
 # use it for shell commands with pipe
@@ -1049,3 +1060,94 @@ def run_external_cmd(cmd):
                          stderr=subprocess.PIPE,
                          timeout=5)
     return ret.stdout.decode().strip().splitlines()
+
+
+def update_config(string_to_push, nodes_num):
+    test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
+    path_to_config = '/etc/indy/indy_config.py'
+    separator = "echo ' '"
+    update_res = [
+        node.run("{} >> {} && echo {} >> {}".format(separator, path_to_config, string_to_push, path_to_config))
+        for node in test_nodes
+    ]
+    assert all(res == '' for res in update_res)
+    restart_res = [node.restart_service() for node in test_nodes]
+    assert all(res == '' for res in restart_res)
+
+
+async def send_payments(pool_handle, wallet_handle, submitter_did, address_from, count):
+    payment_method = 'sov'
+
+    for i in range(1, count+1):
+        address_to = await payment.create_payment_address(wallet_handle, payment_method, json.dumps({}))
+        source, amount = await get_payment_sources(pool_handle, wallet_handle, address_from)
+        print(source, amount)
+        req, _ = await payment.build_payment_req(
+            wallet_handle, submitter_did, json.dumps([source]), json.dumps(
+                [
+                    {'recipient': address_to, 'amount': 100000},
+                    {'recipient': address_from, 'amount': amount - 100000}
+                ]
+            ), None
+        )
+        res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+        assert res['op'] == 'REPLY'
+
+
+async def send_nodes(pool_handle, wallet_handle, trustee_did, count):
+    for i in range(1, count+1):
+        steward_did, steward_vk = await did.create_and_store_my_did(wallet_handle, '{}')
+        await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+        req = await ledger.build_node_request(
+            steward_did, steward_vk, json.dumps(
+                {
+                    'alias': '{}_{}'.format(random_string(10), i),
+                    'client_ip': '{}.{}.{}.{}'.format(randrange(1, 255), 0, 0, randrange(1, 255)),
+                    'client_port': randrange(1, 32767),
+                    'node_ip': '{}.{}.{}.{}'.format(randrange(1, 255), 0, 0, randrange(1, 255)),
+                    'node_port': randrange(1, 32767),
+                    'services': []
+                }
+            )
+        )
+        res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, steward_did, req))
+        print(res)
+        assert res['op'] == 'REPLY'
+
+
+async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, count):
+    if package_name == 'indy-node':
+        version = '9.99.9.dev9999'
+    elif package_name == 'sovrin':
+        version = '9.9.999'
+    else:
+        raise NameError('Invalid package name!')
+    dests = [
+        'Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv', '8ECVSk179mjsjKRLWiQtssMLgp6EPhWXtaYyStWPSGAb',
+        'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA',
+        '4SWokCJWJc69Tn74VvLS6t2G2ucvXqM9FDMsWJjmsUxe', 'Cv1Ehj43DDM5ttNBmC6VPpEfwXWwfGktHwjDJsTV5Fz8',
+        'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
+    ]
+    docker_7_schedule = json.dumps(
+        dict(
+            {dest: datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=999+i*5), '%Y-%m-%dT%H:%M:%S%z')
+             for dest, i in zip(dests, range(len(dests)))}
+        )
+    )
+    for i in range(1, count+1):
+        req = await ledger.build_pool_upgrade_request(
+            trustee_did,
+            '{}_{}'.format(random_string(10), i),
+            version,
+            'start',
+            hashlib.sha256().hexdigest(),
+            5,
+            docker_7_schedule,
+            None,
+            True,
+            True,
+            package_name
+        )
+        res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        print(res)
+        assert res['op'] == 'REPLY'

@@ -4,9 +4,6 @@ from system.utils import *
 from system.docker_setup import client, pool_builder, pool_starter,\
     DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME, NETWORK_SUBNET
 
-# import logging
-# logger = logging.getLogger(__name__)
-# logging.basicConfig(level=0, format='%(asctime)s %(message)s')
 
 EXTRA_NODE_NAME_BASE = 'extra_{}'.format(NODE_NAME_BASE)
 EXTRA_NODES_NUM = 7
@@ -177,7 +174,7 @@ class TestProductionSuite:
 
         # demote initial 1st node by trustee
         await eventually(demote_node, pool_handler, wallet_handler, trustee_did, 'Node1', pool_info['Node1'])
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25, timeout=240)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
 
         # demote initial 2nd node by trustee - VC
         primary3, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
@@ -186,7 +183,7 @@ class TestProductionSuite:
         )
         await pool.refresh_pool_ledger(pool_handler)
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary3)
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25, timeout=240)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
 
         # demote initial 3rd node by trustee
         await eventually(
@@ -248,5 +245,5 @@ class TestProductionSuite:
         await eventually(
             promote_node, pool_handler, wallet_handler, stewards['steward1'], 'Node1', pool_info['Node1']
         )
-        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=25)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
         await ensure_pool_is_in_sync(nodes_num=11)

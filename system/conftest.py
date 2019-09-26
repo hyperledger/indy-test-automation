@@ -114,8 +114,9 @@ async def initial_token_minting(payment_init, pool_handler, wallet_handler, get_
     trustee_did_third, trustee_vk_third = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_second, trustee_vk_second, None, 'TRUSTEE')
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_third, trustee_vk_third, None, 'TRUSTEE')
-    req, _ = await payment.build_mint_req(wallet_handler, trustee_did,
-                                          json.dumps([{'recipient': address, 'amount': 1000 * 100000}]), None)
+    req, _ = await payment.build_mint_req(
+        wallet_handler, trustee_did, json.dumps([{'recipient': address, 'amount': 1000 * 100000}]), None
+    )
     req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
     req = await ledger.multi_sign_request(wallet_handler, trustee_did_second, req)
     req = await ledger.multi_sign_request(wallet_handler, trustee_did_third, req)
@@ -133,19 +134,21 @@ async def initial_fees_setting(payment_init, pool_handler, wallet_handler, get_d
     trustee_did_third, trustee_vk_third = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_second, trustee_vk_second, None, 'TRUSTEE')
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_third, trustee_vk_third, None, 'TRUSTEE')
-    fees = {'trustee_0': 0 * 100000,
-            'steward_0': 0 * 100000,
-            'trust_anchor_0': 0 * 100000,
-            'network_monitor_0': 0 * 100000,
-            'add_identity_owner_50': 50 * 100000,
-            'edit_identity_owner_0': 0 * 100000,
-            'add_schema_250': 250 * 100000,
-            'add_cred_def_125': 125 * 100000,
-            'add_rrd_100': 100 * 100000,
-            'add_rre_0_5': int(0.5 * 100000)
-            }
-    req = await payment.build_set_txn_fees_req(wallet_handler, trustee_did, libsovtoken_payment_method,
-                                               json.dumps(fees))
+    fees = {
+        'trustee_0': 0 * 100000,
+        'steward_0': 0 * 100000,
+        'trust_anchor_0': 0 * 100000,
+        'network_monitor_0': 0 * 100000,
+        'add_identity_owner_50': 50 * 100000,
+        'edit_identity_owner_0': 0 * 100000,
+        'add_schema_250': 250 * 100000,
+        'add_cred_def_125': 125 * 100000,
+        'add_rrd_100': 100 * 100000,
+        'add_rre_0_5': int(0.5 * 100000)
+        }
+    req = await payment.build_set_txn_fees_req(
+        wallet_handler, trustee_did, libsovtoken_payment_method, json.dumps(fees)
+    )
     req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
     req = await ledger.multi_sign_request(wallet_handler, trustee_did_second, req)
     req = await ledger.multi_sign_request(wallet_handler, trustee_did_third, req)
