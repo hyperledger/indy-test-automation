@@ -47,6 +47,7 @@ class TestCatchUpSuiteExtended:
         await ensure_pool_is_in_sync(nodes_num=nodes_num-1)
 
         test_nodes[-1].start_service()
+        await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await send_nodes(pool_handler, wallet_handler, trustee_did, count)
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
@@ -66,8 +67,10 @@ class TestCatchUpSuiteExtended:
 
         test_nodes[-1].stop_service()
         await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', count)
+        await ensure_pool_is_in_sync(nodes_num=nodes_num-1)
 
         test_nodes[-1].start_service()
+        await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', count)
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
