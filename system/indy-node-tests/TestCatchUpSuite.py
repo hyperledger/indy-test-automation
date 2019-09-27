@@ -5,14 +5,14 @@ import docker
 from system.docker_setup import NETWORK_NAME
 
 
-ENSURE_TIMEOUT = 180
+WRITE_READ_TIMEOUT = 300
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestCatchUpSuite:
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 25, 100])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_stopping(
@@ -24,24 +24,24 @@ class TestCatchUpSuite:
 
         test_nodes[-1].stop_service()
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         test_nodes[-2].stop_service()
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         test_nodes[-2].start_service()
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         test_nodes[-1].start_service()
         if check_reachability:
             await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
@@ -49,7 +49,7 @@ class TestCatchUpSuite:
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 25, 100])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_demoting(
@@ -63,19 +63,19 @@ class TestCatchUpSuite:
         await eventually(demote_node, pool_handler, wallet_handler, trustee_did, 'Node9', pool_info['Node9'])
         await pool.refresh_pool_ledger(pool_handler)
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await eventually(demote_node, pool_handler, wallet_handler, trustee_did, 'Node8', pool_info['Node8'])
         await pool.refresh_pool_ledger(pool_handler)
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await eventually(promote_node, pool_handler, wallet_handler, trustee_did, 'Node8', pool_info['Node8'])
         await pool.refresh_pool_ledger(pool_handler)
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await eventually(promote_node, pool_handler, wallet_handler, trustee_did, 'Node9', pool_info['Node9'])
@@ -83,7 +83,7 @@ class TestCatchUpSuite:
         if check_reachability:
             await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
@@ -91,7 +91,7 @@ class TestCatchUpSuite:
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 25, 100])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_out_of_network(
@@ -103,24 +103,24 @@ class TestCatchUpSuite:
 
         client.networks.list(names=[NETWORK_NAME])[0].disconnect('node9')
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         client.networks.list(names=[NETWORK_NAME])[0].disconnect('node8')
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         client.networks.list(names=[NETWORK_NAME])[0].connect('node8')
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         client.networks.list(names=[NETWORK_NAME])[0].connect('node9')
         if check_reachability:
             await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
@@ -128,7 +128,7 @@ class TestCatchUpSuite:
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 25, 100])
+    @pytest.mark.parametrize('nyms_count', [1, 25, 50])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_switch_off_machines(
@@ -141,18 +141,18 @@ class TestCatchUpSuite:
 
         client.containers.list(all=True, filters={'name': 'node9'})[0].stop()
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         client.containers.list(all=True, filters={'name': 'node8'})[0].stop()
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         client.containers.list(all=True, filters={'name': 'node8'})[0].start()
         await eventually(test_nodes[-2].start_service, timeout=30)
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         client.containers.list(all=True, filters={'name': 'node9'})[0].start()
@@ -160,7 +160,7 @@ class TestCatchUpSuite:
         if check_reachability:
             await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
