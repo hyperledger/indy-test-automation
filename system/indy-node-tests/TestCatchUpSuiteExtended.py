@@ -5,7 +5,7 @@ import docker
 from system.docker_setup import NETWORK_NAME
 
 
-ENSURE_TIMEOUT = 240
+WRITE_READ_TIMEOUT = 300
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
@@ -39,7 +39,7 @@ class TestCatchUpSuiteExtended:
         await send_payments(pool_handler, wallet_handler, trustee_did, address1, main_txn_count)
 
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=extra_txn_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=extra_txn_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
@@ -73,7 +73,7 @@ class TestCatchUpSuiteExtended:
         await send_nodes(pool_handler, wallet_handler, trustee_did, main_txn_count)
 
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=extra_txn_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=extra_txn_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
@@ -108,7 +108,7 @@ class TestCatchUpSuiteExtended:
         await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', main_txn_count)
 
         await ensure_pool_performs_write_read(
-            pool_handler, wallet_handler, trustee_did, nyms_count=extra_txn_count, timeout=ENSURE_TIMEOUT
+            pool_handler, wallet_handler, trustee_did, nyms_count=extra_txn_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
