@@ -255,14 +255,18 @@ async def send_nym(
     return res
 
 
-async def send_attrib(pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None):
+async def send_attrib(
+        pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None
+):
     req = await ledger.build_attrib_request(submitter_did, target_did, xhash, raw, enc)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return res
 
 
-async def send_schema(pool_handle, wallet_handle, submitter_did, schema_name, schema_version, schema_attrs):
+async def send_schema(
+        pool_handle, wallet_handle, submitter_did, schema_name, schema_version, schema_attrs
+):
     schema_id, schema_json = await anoncreds.issuer_create_schema(
         submitter_did, schema_name, schema_version, schema_attrs
     )
@@ -272,38 +276,45 @@ async def send_schema(pool_handle, wallet_handle, submitter_did, schema_name, sc
     return schema_id, res
 
 
-async def send_cred_def(pool_handle, wallet_handle, submitter_did, schema_json, tag, signature_type, config_json):
-    cred_def_id, cred_def_json = \
-        await anoncreds.issuer_create_and_store_credential_def(wallet_handle, submitter_did, schema_json, tag,
-                                                               signature_type, config_json)
+async def send_cred_def(
+        pool_handle, wallet_handle, submitter_did, schema_json, tag, signature_type, config_json
+):
+    cred_def_id, cred_def_json = await anoncreds.issuer_create_and_store_credential_def(
+        wallet_handle, submitter_did, schema_json, tag, signature_type, config_json
+    )
     req = await ledger.build_cred_def_request(submitter_did, cred_def_json)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return cred_def_id, cred_def_json, res
 
 
-async def send_revoc_reg_def(pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json):
+async def send_revoc_reg_def(
+        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json
+):
     tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
     tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
-    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = \
-        await anoncreds.issuer_create_and_store_revoc_reg(wallet_handle, submitter_did, revoc_def_type, tag,
-                                                          cred_def_id, config_json, tails_writer_handle)
+    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await anoncreds.issuer_create_and_store_revoc_reg(
+        wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json, tails_writer_handle
+    )
     req = await ledger.build_revoc_reg_def_request(submitter_did, revoc_reg_def_json)
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, res
 
 
-async def send_revoc_reg_entry(pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json):
+async def send_revoc_reg_entry(
+        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json
+):
     tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
     tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
-    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = \
-        await anoncreds.issuer_create_and_store_revoc_reg(wallet_handle, submitter_did, revoc_def_type, tag,
-                                                          cred_def_id, config_json, tails_writer_handle)
+    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await anoncreds.issuer_create_and_store_revoc_reg(
+        wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json, tails_writer_handle
+    )
     req = await ledger.build_revoc_reg_def_request(submitter_did, revoc_reg_def_json)
     await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
-    req = await ledger.build_revoc_reg_entry_request(submitter_did, revoc_reg_def_id, revoc_def_type,
-                                                     revoc_reg_entry_json)
+    req = await ledger.build_revoc_reg_entry_request(
+        submitter_did, revoc_reg_def_id, revoc_def_type, revoc_reg_entry_json
+    )
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
     return revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, res
