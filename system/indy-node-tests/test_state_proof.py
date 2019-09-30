@@ -125,7 +125,7 @@ async def test_misc_state_proof(
     assert res1['op'] == 'REPLY'
 
     # write schema with fees as the last txn
-    source2 = await get_payment_sources(pool_handler, wallet_handler, address2)
+    source2, _ = await get_payment_sources(pool_handler, wallet_handler, address2)
     schema_id, schema_json = await anoncreds.issuer_create_schema(
         trustee_did, random_string(5), '1.0', json.dumps(['name', 'age'])
     )
