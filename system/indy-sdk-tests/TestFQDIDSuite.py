@@ -30,26 +30,25 @@ class TestFQDIDsSuite:
         did_2 = await did.qualify_did(wallet_handler, did_2, method_name)
         assert did_2.__contains__('did:{}:'.format(method_name))
 
+    @pytest.mark.parametrize('is_issuer_fq', [True, False])
+    @pytest.mark.parametrize('is_prover_fq', [True, False])
     @pytest.mark.asyncio
-    async def test_case_full_path(self, pool_handler, wallet_handler, get_default_trustee):
+    async def test_case_full_path(
+            self, pool_handler, wallet_handler, get_default_trustee, is_issuer_fq, is_prover_fq
+    ):
         trustee_did, trustee_vk = get_default_trustee
-        # 'method_name': method_name
+        issuer_param = {'method_name': method_name} if is_issuer_fq else {}
+        prover_param = {'method_name': method_name} if is_prover_fq else {}
 
-        issuer_did, issuer_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({'method_name': method_name}))
+        issuer_did, issuer_vk = await did.create_and_store_my_did(wallet_handler, json.dumps(issuer_param))
         res = await send_nym(
             pool_handler, wallet_handler, trustee_did, issuer_did, issuer_vk, 'ISSUER', 'ENDORSER'
         )
         assert res['op'] == 'REPLY'
 
-        prover_did, prover_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({'method_name': method_name}))
+        prover_did, prover_vk = await did.create_and_store_my_did(wallet_handler, json.dumps(prover_param))
         res = await send_nym(
             pool_handler, wallet_handler, trustee_did, prover_did, prover_vk, 'PROVER', 'ENDORSER'
-        )
-        assert res['op'] == 'REPLY'
-
-        verifier_did, verifier_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({'method_name': method_name}))
-        res = await send_nym(
-            pool_handler, wallet_handler, trustee_did, verifier_did, verifier_vk, 'VERIFIER', 'ENDORSER'
         )
         assert res['op'] == 'REPLY'
 
@@ -117,7 +116,9 @@ class TestFQDIDsSuite:
                     }
             }
         )
-        credentials_json = await anoncreds.prover_get_credentials_for_proof_req(wallet_handler, proof_request)
+        credentials_json = json.loads(
+            await anoncreds.prover_get_credentials_for_proof_req(wallet_handler, proof_request)
+        )
         search_handle = await anoncreds.prover_search_credentials_for_proof_req(wallet_handler, proof_request, None)
 
         creds_for_attr1 = await anoncreds.prover_fetch_credentials_for_proof_req(
@@ -155,10 +156,10 @@ class TestFQDIDsSuite:
         )
 
         schemas_json = json.dumps(
-            {schema_id: json.loads(schema_json)}
+            {cred_for_attr1['schema_id']: json.loads(schema_json)}
         )
         cred_defs_json = json.dumps(
-            {cred_def_id: json.loads(cred_def_json)}
+            {cred_for_attr1['cred_def_id']: json.loads(cred_def_json)}
         )
 
         proof = await anoncreds.prover_create_proof(
