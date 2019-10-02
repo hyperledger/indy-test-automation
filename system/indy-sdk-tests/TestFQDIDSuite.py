@@ -30,11 +30,12 @@ class TestFQDIDsSuite:
         did_2 = await did.qualify_did(wallet_handler, did_2, method_name)
         assert did_2.__contains__('did:{}:'.format(method_name))
 
+    @pytest.mark.parametrize('ver', ['1.0', '2.0'])
     @pytest.mark.parametrize('is_issuer_fq', [True, False])
     @pytest.mark.parametrize('is_prover_fq', [True, False])
     @pytest.mark.asyncio
     async def test_case_full_path(
-            self, pool_handler, wallet_handler, get_default_trustee, is_issuer_fq, is_prover_fq
+            self, pool_handler, wallet_handler, get_default_trustee, is_issuer_fq, is_prover_fq, ver
     ):
         trustee_did, trustee_vk = get_default_trustee
         issuer_param = {'method_name': method_name} if is_issuer_fq else {}
@@ -52,9 +53,8 @@ class TestFQDIDsSuite:
         )
         assert res['op'] == 'REPLY'
 
-        # TODO return space in schema name
         schema_id, res1 = await send_schema(
-            pool_handler, wallet_handler, issuer_did, 'Passport', '1.0', json.dumps(['Name', 'Age'])
+            pool_handler, wallet_handler, issuer_did, 'Passport Schema', '1.0', json.dumps(['Name', 'Age'])
         )
         assert res1['op'] == 'REPLY'
 
@@ -99,7 +99,7 @@ class TestFQDIDsSuite:
                 "nonce": "123432421212",
                 "name": "proof_req_1",
                 "version": "0.1",
-                "ver": "2.0",
+                "ver": ver,
                 "requested_attributes":
                     {
                         "attr1_referent":
@@ -162,9 +162,15 @@ class TestFQDIDsSuite:
             {cred_for_attr1['cred_def_id']: json.loads(cred_def_json)}
         )
 
+        # TODO analyze schema_ids and cred_def_ids in the proof according to `ver` field
         proof = await anoncreds.prover_create_proof(
             wallet_handler, proof_request, requested_credentials_json, ms_id, schemas_json, cred_defs_json, '{}'
         )
+        print(proof)
 
         assert 'Pyotr' == json.loads(proof)['requested_proof']['revealed_attrs']['attr1_referent']['raw']
         assert await anoncreds.verifier_verify_proof(proof_request, proof, schemas_json, cred_defs_json, '{}', '{}')
+
+    @pytest.mark.asyncio
+    async def test_case_special(self, pool_handler, wallet_handler):
+        pass
