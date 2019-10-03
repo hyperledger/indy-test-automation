@@ -169,6 +169,21 @@ class TestFQDIDsSuite:
         )
         proof_as_dict = json.loads(proof)
 
+        if is_issuer_fq and ver == '2.0':  # the only condition for fq ids
+            assert proof_as_dict['identifiers'][0]['schema_id'].__contains__(
+                'schema:{0}:did:{0}'.format(method_name)
+            )
+            assert proof_as_dict['identifiers'][0]['cred_def_id'].__contains__(
+                'creddef:{0}:did:{0}'.format(method_name)
+            )
+        else:  # all other cases have uq ids
+            assert not proof_as_dict['identifiers'][0]['schema_id'].__contains__(
+                'schema:{0}:did:{0}'.format(method_name)
+            )
+            assert not proof_as_dict['identifiers'][0]['cred_def_id'].__contains__(
+                'creddef:{0}:did:{0}'.format(method_name)
+            )
+
         # generate this entities again according to new logic
         schemas_json = json.dumps(
             {proof_as_dict['identifiers'][0]['schema_id']: json.loads(schema_json)}
@@ -265,7 +280,9 @@ class TestFQDIDsSuite:
         assert not _cred_offer_as_dict['cred_def_id'].__contains__('creddef:{0}:did:{0}'.format(method_name))
 
         ms_id = await anoncreds.prover_create_master_secret(wallet_handler, 'Master secret 2')
+        # use uq cred_offer
         cred_req_json, cred_req_metadata_json = await anoncreds.prover_create_credential_req(
             wallet_handler, prover_did, _cred_offer_json, cred_def_json, ms_id
         )
-        print(cred_req_json)
+        cred_req_as_dict = json.loads(cred_req_json)
+        assert not cred_req_as_dict['cred_def_id'].__contains__('creddef:{0}:did:{0}'.format(method_name))

@@ -21,7 +21,7 @@ async def test_vcx_mint_token():
     initializer = 'nullpay_init'
     config = json.dumps(json.loads(open('./config.json').read()))
     await payment_initializer(library, initializer)
-    os.system('cd /home/indy/indy-sdk/vcx/dummy-cloud-agent; cargo run sample-config.json &')
+    os.system('cd /home/indy/indy-sdk/vcx/dummy-cloud-agent; cargo run config/sample-config.json &')
     await asyncio.sleep(60)
     """ Mint tokens to send """
     # Create the connection to before processing the credential
