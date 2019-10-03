@@ -2017,7 +2017,7 @@ async def test_misc_order_during_rolling_upgrade(
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
 
-@pytest.mark.nodes_num(4)
+@pytest.mark.nodes_num(10)
 @pytest.mark.asyncio
 # staging net issue (INDY-2233)
 async def test_misc_rotate_bls_and_get_txn(
@@ -2030,7 +2030,7 @@ async def test_misc_rotate_bls_and_get_txn(
     )
     await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=3)
 
-    for i in range(10):
+    for i in range(25):
         # rotate bls keys for Node4
         res1 = docker_client.containers.list(
             filters={'name': 'node4'}
