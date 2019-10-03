@@ -148,7 +148,7 @@ class TestAuditSuite:
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
-    @pytest.mark.parametrize('node_num_shift', [0, 1])
+    @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
     @pytest.mark.asyncio
     async def test_case_demote_master_backup_non_primary(
             self, pool_handler, wallet_handler, get_default_trustee, node_num_shift, nodes_num,

@@ -163,7 +163,6 @@ class TestFQDIDsSuite:
             {cred_for_attr1['cred_def_id']: json.loads(cred_def_json)}
         )
 
-        # TODO analyze schema_ids and cred_def_ids in the proof according to `ver` field !!!
         proof = await anoncreds.prover_create_proof(
             wallet_handler, proof_request, requested_credentials_json, ms_id, schemas_json, cred_defs_json, '{}'
         )
@@ -227,7 +226,6 @@ class TestFQDIDsSuite:
         # unqualify schema_id from anoncreds
         _schema_id = await anoncreds.to_unqualified(schema_id)
         # schema is uq
-        print(_schema_id)
         assert not _schema_id.__contains__('schema:{0}:did:{0}'.format(method_name))
 
         res = await get_schema(pool_handler, wallet_handler, issuer_did, schema_id)
