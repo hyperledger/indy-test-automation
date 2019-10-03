@@ -2015,3 +2015,49 @@ async def test_misc_order_during_rolling_upgrade(
 
     await ensure_pool_is_in_sync(nodes_num=nodes_num)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.nodes_num(10)
+@pytest.mark.asyncio
+# staging net issue (INDY-2233)
+async def test_misc_rotate_bls_and_get_txn(
+    docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num
+):
+    docker_client = docker.from_env()
+    trustee_did, _ = get_default_trustee
+    steward_did, steward_vk = await did.create_and_store_my_did(
+        wallet_handler, json.dumps({'seed': '000000000000000000000000Steward4'})
+    )
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=3)
+
+    for i in range(25):
+        # rotate bls keys for Node4
+        res1 = docker_client.containers.list(
+            filters={'name': 'node4'}
+        )[0].exec_run(
+            ['init_bls_keys', '--name', 'Node4'], user='indy'
+        )
+        bls_key, bls_key_pop = res1.output.decode().splitlines()
+        bls_key, bls_key_pop = bls_key.split()[-1], bls_key_pop.split()[-1]
+        data = json.dumps(
+            {
+                'alias': 'Node4',
+                'blskey': bls_key,
+                'blskey_pop': bls_key_pop
+            }
+        )
+        req = await ledger.build_node_request(steward_did, '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA', data)
+        res2 = json.loads(
+            await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req)
+        )
+        print(res2)
+        assert res2['op'] == 'REPLY'
+
+        # write txn
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did)
+
+        # get txn
+        req = await ledger.build_get_txn_request(None, 'DOMAIN', 10)
+        res3 = json.loads(await ledger.submit_request(pool_handler, req))
+        print(res3)
+        assert res3['result']['seqNo'] is not None

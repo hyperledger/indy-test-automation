@@ -176,4 +176,4 @@ class TestAuditSuite:
         )
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary3)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, timeout=360)
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
