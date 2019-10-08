@@ -111,9 +111,10 @@ def pool_initializer(node_containers):
 
 
 def pool_stop():
-    containers = subprocess.check_output([
-        'docker', 'ps', '-a', '-q', '-f', "name={}*".format(NODE_NAME_BASE)
-    ]).decode().strip().split()
+    print('\n---------------')
+    containers = subprocess.check_output(
+        ['docker', 'ps', '-a', '-q', '-f', "name={}*".format(NODE_NAME_BASE)]
+    ).decode().strip().split()
     outputs = [subprocess.check_call(['docker', 'rm', container, '-f']) for container in containers]
     assert outputs is not None
     # Uncomment to destroy all images too
@@ -127,15 +128,15 @@ def pool_stop():
 
 def main(nodes_num=None):
     nodes_num = NODES_NUM if nodes_num is None else nodes_num
-    print(pool_initializer(
-            pool_starter(
-                pool_builder(
-                    DOCKER_BUILD_CTX_PATH,
-                    DOCKER_IMAGE_NAME,
-                    NODE_NAME_BASE,
-                    network_builder(NETWORK_SUBNET,
-                                    NETWORK_NAME),
-                    nodes_num))))
+    pool_initializer(
+        pool_starter(
+            pool_builder(
+                DOCKER_BUILD_CTX_PATH,
+                DOCKER_IMAGE_NAME,
+                NODE_NAME_BASE,
+                network_builder(NETWORK_SUBNET,
+                                NETWORK_NAME),
+                nodes_num)))
 
 
 async def wait_until_pool_is_ready():
