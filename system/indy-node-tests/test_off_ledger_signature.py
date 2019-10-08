@@ -1,18 +1,10 @@
 import pytest
 import asyncio
-from async_generator import async_generator, yield_
-from indy import payment
 from system.utils import *
 
 
-@pytest.fixture(scope='function', autouse=True)
-@async_generator
-async def docker_setup_and_teardown(docker_setup_and_teardown_function):
-    await yield_()
-
-
 @pytest.mark.asyncio
-async def test_misc_off_ledger_signature(
+async def test_off_ledger_signature(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
         initial_token_minting
 ):

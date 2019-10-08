@@ -21,7 +21,7 @@ async def test_pool_upgrade_positive(docker_setup_and_teardown):
         'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
     ]
     init_time = 1
-    version = '1.1.57'
+    version = '1.1.58'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'

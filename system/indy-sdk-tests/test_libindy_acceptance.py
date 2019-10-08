@@ -4,11 +4,12 @@ import testinfra
 
 
 def test_libindy():
-    indy_plenum_ver = '1.9.2'
-    indy_node_ver = '1.9.2~rc1'
+    indy_plenum_ver = '1.10.0~rc1'
+    indy_node_ver = '1.10.0~rc1'
+    pyzmq_ver = '18.1.0'
     indy_sdk_deb_path = 'https://repo.sovrin.org/sdk/lib/apt/xenial/rc/'
-    indy_sdk_deb_ver = 'libindy_1.11.1~85_amd64.deb'
-    indy_sdk_ver = '1.11.1-rc-85'
+    indy_sdk_deb_ver = 'libindy_1.12.0~96_amd64.deb'
+    indy_sdk_ver = '1.12.0-rc-96'
     os.chdir('/home/indy/indy-sdk')
     subprocess.check_call(['git', 'stash'])
     subprocess.check_call(['git', 'fetch'])
@@ -17,6 +18,8 @@ def test_libindy():
     subprocess.check_call(['sed', '-i', '27c\\ARG indy_plenum_ver={}'.format(indy_plenum_ver),
                            './ci/indy-pool.dockerfile'])
     subprocess.check_call(['sed', '-i', '28c\\ARG indy_node_ver={}'.format(indy_node_ver),
+                           './ci/indy-pool.dockerfile'])
+    subprocess.check_call(['sed', '-i', '31c\\ARG python3_pyzmq_ver={}'.format(pyzmq_ver),
                            './ci/indy-pool.dockerfile'])
     # set version of `indy` dependency in `pom.xml` to libindy version
     subprocess.check_call(['sed', '-i', '112c\\\t\t\t<version>{}</version>'.format(indy_sdk_ver),
