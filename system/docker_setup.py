@@ -16,7 +16,7 @@ from .utils import (
 
 import logging
 logger = logging.getLogger(__name__)
-# set logging here
+# >>>>> set logging here <<<<<
 # logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
 
 DOCKER_BUILD_CTX_PATH = os.path.join(
