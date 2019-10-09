@@ -19,22 +19,28 @@ RUN pip3 install -U \
 	setuptools
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88
-ARG indy_stream=rc
+ARG indy_stream=master
 RUN echo "deb https://repo.sovrin.org/deb xenial $indy_stream" >> /etc/apt/sources.list
 
 RUN useradd -ms /bin/bash -u $uid indy
 
-ARG indy_plenum_ver=1.9.1
-ARG indy_node_ver=1.9.1~rc1
-ARG python3_indy_crypto_ver=0.4.5
-ARG indy_crypto_ver=0.4.5
+ARG indy_plenum_ver
+ARG indy_node_ver
+ARG python3_indy_crypto_ver
+ARG indy_crypto_ver
+ARG python3_pyzmq_ver
+ENV indy_plenum_ver=${indy_plenum_ver:-1.10.0~dev921}
+ENV indy_node_ver=${indy_node_ver:-1.11.0~dev1101}
+ENV python3_indy_crypto_ver=${python3_indy_crypto_ver:-0.4.5}
+ENV indy_crypto_ver=${indy_crypto_ver:-0.4.5}
+ENV python3_pyzmq_ver=${python3_pyzmq_ver:-18.1.0}
 
 RUN apt-get update -y && apt-get install -y \
         indy-plenum=${indy_plenum_ver} \
         indy-node=${indy_node_ver} \
         python3-indy-crypto=${python3_indy_crypto_ver} \
         libindy-crypto=${indy_crypto_ver} \
-		python3-pyzmq=17.0.0 \
+		python3-pyzmq=${python3_pyzmq_ver} \
         vim
 
 RUN echo "[supervisord]\n\

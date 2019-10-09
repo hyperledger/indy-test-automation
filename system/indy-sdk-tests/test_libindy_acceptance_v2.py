@@ -12,6 +12,10 @@ def test_libindy():
 
     try:
         client.containers.get(client_name).remove(force=True)
+    except docker.errors.NotFound:
+        pass
+
+    try:
         client.containers.get(pool_name).remove(force=True)
     except docker.errors.NotFound:
         pass
@@ -19,20 +23,22 @@ def test_libindy():
     # pool setup
     pool_image, output = client.images.build(
         path='.', dockerfile='_libindy_acceptance_pool.dockerfile', tag=pool_name
-    )
+    )  # use `buildargs` (dict): A dictionary of build arguments
     print('\nBuild logs:')
     for line in output:
         print(line)
+    # use `environment` (dict or list): Environment variables to set inside the container
     pool_container = client.containers.run(pool_image, name=pool_name, network='host', detach=True, tty=True)
     pool_container.start()
 
     # client setup
     client_image, output = client.images.build(
         path='.', dockerfile='_libindy_acceptance_client.dockerfile', tag=client_name
-    )
+    )  # use `buildargs` (dict): A dictionary of build arguments
     print('\nBuild logs:')
     for line in output:
         print(line)
+    # use `environment` (dict or list): Environment variables to set inside the container
     client_container = client.containers.run(client_image, name=client_name, network='host', detach=True, tty=True)
     client_container.start()
 
@@ -43,6 +49,7 @@ def test_libindy():
          '/indy-sdk/samples/java/pom.xml']
     )
     assert pom_update.exit_code == 0
+
     setup_update = client_container.exec_run(
         ['sed',
          '-i',
