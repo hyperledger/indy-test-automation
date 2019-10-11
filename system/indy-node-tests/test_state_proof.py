@@ -140,6 +140,7 @@ async def test_misc_state_proof(
     print([host.stop_service() for host in hosts[:-1]])
 
     # read all txns written from the single node
+    # TODO add GET_AUTH_RULE GET_FEES GET_TAA GET_TAA_AML here
     req1 = await ledger.build_get_nym_request(None, random_did)
     res1 = json.loads(await ledger.submit_request(pool_handler, req1))
     assert res1['result']['seqNo'] is not None

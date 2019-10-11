@@ -824,6 +824,13 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
                 return None
             return replica_name[len('Node'):-len(':0')]
 
+        def get_vc_status_from_info(info: str) -> Optional[bool]:
+            parsed_info = json.loads(info)
+            if parsed_info['op'] != 'REPLY':
+                return None
+            vc_status = parsed_info['result']['data']['Node_info']['View_change_status']['VC_in_progress']
+            return vc_status
+
         req = await ledger.build_get_validator_info_request(trustee_did)
         results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
         # get n
@@ -843,6 +850,8 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         res, votes = primaries.most_common()[0]
         assert res is not None
         assert votes >= (n - f)
+        # check that VC is not in progress (status `False`)
+        assert not all([get_vc_status_from_info(info) for _, info in results.items()])
         return res
 
     primary = await eventually(_get_primary, retry_wait=20, timeout=480)
