@@ -23,7 +23,8 @@ class TestCatchUpSuiteExtended:
     @pytest.mark.asyncio
     async def test_case_token_ledger(
             self, payment_init, initial_token_minting, pool_handler, wallet_handler, get_default_trustee, nodes_num,
-            wait_catchup_before_ordering, main_txn_count, extra_txn_count
+            wait_catchup_before_ordering, main_txn_count, extra_txn_count,
+            check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
@@ -58,7 +59,8 @@ class TestCatchUpSuiteExtended:
     @pytest.mark.asyncio
     async def test_case_pool_ledger(
             self, pool_handler, wallet_handler, get_default_trustee, nodes_num,
-            wait_catchup_before_ordering, main_txn_count, extra_txn_count
+            wait_catchup_before_ordering, main_txn_count, extra_txn_count,
+            check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
@@ -93,7 +95,8 @@ class TestCatchUpSuiteExtended:
     @pytest.mark.asyncio
     async def test_case_config_ledger(
             self, pool_handler, wallet_handler, get_default_trustee, nodes_num,
-            wait_catchup_before_ordering, main_txn_count, extra_txn_count
+            wait_catchup_before_ordering, main_txn_count, extra_txn_count,
+            check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]

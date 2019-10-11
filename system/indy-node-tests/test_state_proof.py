@@ -8,7 +8,7 @@ from system.utils import *
 @pytest.mark.asyncio
 async def test_misc_state_proof(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
-        initial_token_minting, initial_fees_setting, nodes_num, wait_time
+        initial_token_minting, initial_fees_setting, nodes_num, wait_time, check_no_failures_fixture
 ):
     libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee

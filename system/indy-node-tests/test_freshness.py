@@ -10,7 +10,7 @@ import logging
 
 
 @pytest.mark.asyncio
-async def test_misc_freshness(payment_init, docker_setup_and_teardown):
+async def test_misc_freshness(payment_init, docker_setup_and_teardown, check_no_failures_fixture):
     await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()

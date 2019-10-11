@@ -16,7 +16,8 @@ class TestCatchUpSuite:
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_stopping(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_reachability, nyms_count
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_reachability, nyms_count,
+            check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
@@ -53,7 +54,8 @@ class TestCatchUpSuite:
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_demoting(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_reachability, nyms_count
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_reachability, nyms_count,
+            check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         pool_info = get_pool_info('1')
@@ -95,7 +97,8 @@ class TestCatchUpSuite:
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_out_of_network(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_reachability, nyms_count
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_reachability, nyms_count,
+            check_no_failures_fixture
     ):
         client = docker.from_env()
         trustee_did, _ = get_default_trustee
@@ -132,7 +135,8 @@ class TestCatchUpSuite:
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_switch_off_machines(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_reachability, nyms_count
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_reachability, nyms_count,
+            check_no_failures_fixture
     ):
         client = docker.from_env()
         test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]

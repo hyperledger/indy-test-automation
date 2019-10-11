@@ -11,7 +11,7 @@ class TestAuditSuite:
 
     @pytest.mark.asyncio
     async def test_case_restart_one_node(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
@@ -41,7 +41,8 @@ class TestAuditSuite:
     @pytest.mark.parametrize('node_num_shift', [0, 1, 5])
     @pytest.mark.asyncio
     async def test_case_restart_master_backup_non_primary(
-            self, pool_handler, wallet_handler, get_default_trustee, node_num_shift, nodes_num
+            self, pool_handler, wallet_handler, get_default_trustee, node_num_shift, nodes_num,
+            check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         primary1, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
@@ -58,7 +59,7 @@ class TestAuditSuite:
 
     @pytest.mark.asyncio
     async def test_case_restart_all_nodes_at_the_same_time(
-        self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+        self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
@@ -92,7 +93,7 @@ class TestAuditSuite:
 
     @pytest.mark.asyncio
     async def test_case_restart_f_nodes(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
@@ -111,7 +112,7 @@ class TestAuditSuite:
 
     @pytest.mark.asyncio
     async def test_case_restart_n_minus_f_minus_one_nodes(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
@@ -130,7 +131,7 @@ class TestAuditSuite:
 
     @pytest.mark.asyncio
     async def test_case_restart_all_nodes_one_by_one(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
@@ -156,24 +157,32 @@ class TestAuditSuite:
     ):
         trustee_did, _ = get_default_trustee
         primary1, alias1, target_did1 = await get_primary(pool_handler, wallet_handler, trustee_did)
+        print('Primary at the beginning is {}'.format(primary1))
         p1 = NodeHost(primary1)
         p1.stop_service()
         primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
+        print('Primary after service stop is {}'.format(primary2))
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
         p1.start_service()
+        primary, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        print('Primary after service start is {}'.format(primary))
         # demote master primary / backup primary / non primary here
         alias_for_demotion = 'Node{}'.format(int(primary2)+node_num_shift)
         print(alias_for_demotion)
         target_did_for_demotion = get_pool_info(primary2)[alias_for_demotion]
         print(target_did_for_demotion)
+        primary, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+        print('Primary before demotion is {}'.format(primary))
         await eventually(
             demote_node, pool_handler, wallet_handler, trustee_did, alias_for_demotion, target_did_for_demotion
         )
         primary3 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
+        print('Primary after demotion is {}'.format(primary3))
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
         await eventually(
             promote_node, pool_handler, wallet_handler, trustee_did, alias_for_demotion, target_did_for_demotion
         )
-        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary3)
+        primary4 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary3)
+        print('Primary after promotion is {}'.format(primary4))
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
