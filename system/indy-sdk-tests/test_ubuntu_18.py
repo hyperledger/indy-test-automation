@@ -8,7 +8,9 @@ def test_ubuntu18():
         client.containers.get(name).remove(force=True)
     except docker.errors.NotFound:
         pass
-    image, output = client.images.build(path='.', tag='ubuntu1804')
+    image, output = client.images.build(
+        path='.', dockerfile='_ubuntu18.dockerfile', tag=name
+    )
     print('\nBuild logs:')
     for line in output:
         print(line)

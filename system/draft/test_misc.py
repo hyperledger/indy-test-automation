@@ -2017,7 +2017,7 @@ async def test_misc_order_during_rolling_upgrade(
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
 
-@pytest.mark.nodes_num(10)
+@pytest.mark.nodes_num(4)
 @pytest.mark.asyncio
 # staging net issue (INDY-2233)
 async def test_misc_rotate_bls_and_get_txn(
@@ -2050,7 +2050,6 @@ async def test_misc_rotate_bls_and_get_txn(
         res2 = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req)
         )
-        print(res2)
         assert res2['op'] == 'REPLY'
 
         # write txn
@@ -2059,5 +2058,4 @@ async def test_misc_rotate_bls_and_get_txn(
         # get txn
         req = await ledger.build_get_txn_request(None, 'DOMAIN', 10)
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
-        print(res3)
         assert res3['result']['seqNo'] is not None

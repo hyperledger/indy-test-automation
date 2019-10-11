@@ -1,22 +1,14 @@
 import pytest
 import asyncio
-from async_generator import async_generator, yield_
-from indy import payment
 from random import randrange as rr
 from system.utils import *
-
-
-@pytest.fixture(scope='function', autouse=True)
-@async_generator
-async def docker_setup_and_teardown(docker_setup_and_teardown_function):
-    await yield_()
 
 
 @pytest.mark.parametrize('wait_time', [0, 600])  # 0 - common proof reading, 600 - freshness proof reading
 @pytest.mark.asyncio
 async def test_misc_state_proof(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
-        initial_token_minting, initial_fees_setting, nodes_num, wait_time
+        initial_token_minting, initial_fees_setting, nodes_num, wait_time, check_no_failures_fixture
 ):
     libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee
@@ -72,7 +64,6 @@ async def test_misc_state_proof(
     assert res_sch['op'] == 'REPLY'
 
     await asyncio.sleep(5)
-    timestamp0 = int(time.time())
 
     res = json.dumps(await get_schema(pool_handler, wallet_handler, trustee_did, schema_id))
     schema_id, schema_json = await ledger.parse_get_schema_response(res)
@@ -83,14 +74,14 @@ async def test_misc_state_proof(
     )
     assert res_cred_def['op'] == 'REPLY'
 
+    timestamp0 = int(time.time())
+
     revoc_reg_def_id, _, _, res_entry = await send_revoc_reg_entry(
         pool_handler, wallet_handler, trustee_did, 'CL_ACCUM', random_string(3), cred_def_id, json.dumps(
             {'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}
         )
     )
     assert res_entry['op'] == 'REPLY'
-
-    timestamp1 = int(time.time())
 
     req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address)
     res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
@@ -109,6 +100,8 @@ async def test_misc_state_proof(
 
     # set fees
     print(initial_fees_setting)
+
+    timestamp1 = int(time.time())
 
     # set auth rule for schema
     req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',

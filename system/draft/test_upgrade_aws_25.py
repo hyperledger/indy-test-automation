@@ -28,7 +28,7 @@ async def test_pool_upgrade_positive():
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
     init_time = 1
-    version = '1.1.56'
+    version = '1.1.57'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -152,6 +152,11 @@ async def test_pool_upgrade_positive():
         get_nym_after_res, get_attrib_after_res, get_schema_after_res, get_cred_def_after_res,
         get_revoc_reg_def_after_res, get_revoc_reg_after_res, get_revoc_reg_delta_after_res
     ]
+
+    # get all auth rules
+    req = await ledger.build_get_auth_rule_request(None, None, None, None, None, None)
+    res = json.loads(await ledger.submit_request(pool_handle, req))
+    assert res['op'] == 'REPLY'
 
     assert all([res['op'] == 'REPLY' for res in add_before_results])
     assert all([res['result']['seqNo'] is not None for res in get_after_results])
