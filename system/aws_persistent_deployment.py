@@ -90,21 +90,21 @@ def create_volumes_from_snapshots():
 
 def switch_volumes_for_upgrade():
     operate_instances('stop', get_instances(PERSISTENT_INSTANCES))
-    time.sleep(15)  # FIXME use EC2.Waiter.InstanceStopped
+    time.sleep(60)  # FIXME use EC2.Waiter.InstanceStopped
     operate_volumes('detach_volume', get_instances(PERSISTENT_INSTANCES), ORIGINAL_MAPPING)
     # FIXME use EC2.Waiter.VolumeAvailable
     operate_volumes('attach_volume', get_instances(PERSISTENT_INSTANCES), UPGRADE_MAPPING)
-    time.sleep(15)  # FIXME use EC2.Waiter.VolumeInUse
+    time.sleep(60)  # FIXME use EC2.Waiter.VolumeInUse
     operate_instances('start', get_instances(PERSISTENT_INSTANCES))
 
 
 def switch_volumes_for_load():
     operate_instances('stop', get_instances(PERSISTENT_INSTANCES))
-    time.sleep(15)  # FIXME use EC2.Waiter.InstanceStopped
+    time.sleep(60)  # FIXME use EC2.Waiter.InstanceStopped
     operate_volumes('detach_volume', get_instances(PERSISTENT_INSTANCES), UPGRADE_MAPPING)
     # FIXME use EC2.Waiter.VolumeAvailable
     operate_volumes('attach_volume', get_instances(PERSISTENT_INSTANCES), ORIGINAL_MAPPING)
-    time.sleep(15)  # FIXME use EC2.Waiter.VolumeInUse
+    time.sleep(60)  # FIXME use EC2.Waiter.VolumeInUse
     operate_instances('start', get_instances(PERSISTENT_INSTANCES))
 
 
