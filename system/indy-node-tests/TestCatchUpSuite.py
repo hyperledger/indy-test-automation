@@ -45,9 +45,9 @@ class TestCatchUpSuite:
             pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=100)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
     @pytest.mark.parametrize('nyms_count', [1, 25, 50])
@@ -88,9 +88,9 @@ class TestCatchUpSuite:
             pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=100)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
     @pytest.mark.parametrize('nyms_count', [1, 25, 50])
@@ -126,9 +126,9 @@ class TestCatchUpSuite:
             pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=100)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.parametrize('check_reachability', [False, True])
     @pytest.mark.parametrize('nyms_count', [1, 25, 50])
@@ -167,6 +167,6 @@ class TestCatchUpSuite:
             pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count, timeout=WRITE_READ_TIMEOUT
         )
 
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=100)
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
-        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)

@@ -2059,3 +2059,22 @@ async def test_misc_rotate_bls_and_get_txn(
         req = await ledger.build_get_txn_request(None, 'DOMAIN', 10)
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
         assert res3['result']['seqNo'] is not None
+
+
+@pytest.mark.asyncio
+async def test_misc_multiple_vc(
+    docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture
+):
+    trustee_did, _ = get_default_trustee
+
+    for i in range(10):
+        primary, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+        p = NodeHost(primary)
+        p.stop_service()
+        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5)
+        p.start_service()
+
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=100)
+    await ensure_pool_is_in_sync()
+    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)

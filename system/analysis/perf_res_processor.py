@@ -5,8 +5,7 @@ import json
 import re
 import pandas as pd
 import matplotlib.pyplot as plt
-from system.perf_res_plotter import plot_metrics
-from system.perf_res_plotter import metrics
+from system.analysis.perf_res_plotter import plot_metrics
 from system.utils import run_external_cmd
 
 
