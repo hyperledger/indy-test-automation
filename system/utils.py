@@ -391,7 +391,10 @@ async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did=Non
 # TODO make that async
 def check_no_failures(hosts):
     for host in hosts:
-        result = host.run('journalctl -u indy-node.service -b -p info')
+        try:
+            result = host.run('journalctl -u indy-node.service -b -p info')
+        except AssertionError:
+            result = ''
         assert result.find("indy-node.service: Failed") == -1, (
             "Node service on host{} failed:\n{}".format(host.id, result)
         )
