@@ -394,6 +394,7 @@ def check_no_failures(hosts):
         try:
             result = host.run('journalctl -u indy-node.service -b -p info')
         except AssertionError:
+            print('Node is unreachable!')
             result = ''
         assert result.find("indy-node.service: Failed") == -1, (
             "Node service on host{} failed:\n{}".format(host.id, result)
