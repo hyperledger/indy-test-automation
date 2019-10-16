@@ -1,0 +1,59 @@
+- hosts: pool
+  gather_facts: no
+
+  vars:
+    pool_prefix: persistent_node
+
+  tasks:
+  - name: Save journalctl log
+    shell: "journalctl > /tmp/jctl"
+
+  - name: Compress journalctl log
+    shell: "xz -f /tmp/jctl"
+
+  - name: Fetch journalctl log
+    fetch:
+      src: "/tmp/jctl.xz"
+      dest: "./logs/jctl/{{ inventory_hostname }}.jctl.xz"
+      flat: yes
+
+  - name: Delete journalctl log
+    file:
+      path: "/tmp/jctl.xz"
+      state: absent
+
+  - name: Fetch node info
+    synchronize:
+      src: /var/lib/indy/sandbox/node*.json
+      dest: ./logs/node_info
+      mode: pull
+
+  - name: Fetch node logs
+    synchronize:
+      src: /var/log/indy/sandbox/
+      dest: ./logs
+      mode: pull
+
+  - name: Stop service
+    shell: "systemctl stop indy-node"
+    become: yes
+
+  - name: Process metrics
+    shell: "cd /usr/local/bin && python3 get_metrics --data_dir /var/lib/indy/sandbox/data/{{ inventory_hostname|replace(pool_prefix,'Node') }}/metrics_db --output /home/ubuntu/metrics{{ inventory_hostname|replace(pool_prefix,'') }}.csv > /home/ubuntu/metrics_summary{{ inventory_hostname|replace(pool_prefix,'') }}.txt"
+    become: yes
+
+  - name: Fetch metrics
+    fetch:
+      src: "/home/ubuntu/metrics{{ inventory_hostname|replace(pool_prefix,'') }}.csv"
+      dest: "./logs/metrics/metrics{{ inventory_hostname|replace(pool_prefix,'') }}.csv"
+      flat: yes
+
+  - name: Fetch metrics summary
+    fetch:
+      src: "/home/ubuntu/metrics_summary{{ inventory_hostname|replace(pool_prefix,'') }}.txt"
+      dest: "./logs/metrics/metrics_summary{{ inventory_hostname|replace(pool_prefix,'') }}.txt"
+      flat: yes
+
+  - name: Start service
+    shell: "systemctl start indy-node"
+    become: yes
