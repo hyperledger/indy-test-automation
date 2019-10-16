@@ -14,8 +14,8 @@ class TestCatchUpSuiteExtended:
     @pytest.mark.parametrize(
         'wait_catchup_before_ordering, main_txn_count, extra_txn_count',
         [
-            # (True, 55, 0),  # wait for catchup subcase
-            # (False, 10, 0),  # less than 100 requests total subcase
+            (True, 55, 0),  # wait for catchup subcase
+            # (False, 10, 0),  # less than 100 requests total subcase - uncomment after catchup improvements
             (False, 55, 200)  # send extra requests to force catchup subcase
         ]
     )
@@ -50,8 +50,8 @@ class TestCatchUpSuiteExtended:
     @pytest.mark.parametrize(
         'wait_catchup_before_ordering, main_txn_count, extra_txn_count',
         [
-            # (True, 55, 0),  # wait for catchup subcase
-            # (False, 10, 0),  # less than 100 requests total subcase
+            (True, 55, 0),  # wait for catchup subcase
+            # (False, 10, 0),  # less than 100 requests total subcase - uncomment after catchup improvements
             (False, 55, 200)  # send extra requests to force catchup subcase
         ]
     )
@@ -85,8 +85,8 @@ class TestCatchUpSuiteExtended:
     @pytest.mark.parametrize(
         'wait_catchup_before_ordering, main_txn_count, extra_txn_count',
         [
-            # (True, 55, 0),  # wait for catchup subcase
-            # (False, 10, 0),  # less than 100 requests total subcase
+            (True, 55, 0),  # wait for catchup subcase
+            # (False, 10, 0),  # less than 100 requests total subcase - uncomment after catchup improvements
             (False, 55, 200),  # send extra requests to force catchup subcase
             # (False, 55, 0)  # special subcase for config !!!
         ]
