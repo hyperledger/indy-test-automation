@@ -33,6 +33,6 @@ ENABLED_PLUGINS.append('sovtoken')
 
 ENABLED_PLUGINS.append('sovtokenfees')
 
-ForceViewChangeFreq = 10800
+# ForceViewChangeFreq = 10800
 
 # logLevel = 10

@@ -27,7 +27,7 @@ LOG_PATTERNS = [
 
 class PathReg:
     def __init__(
-            self, base_dir='/home/indy/indy-node/scripts/ansible/logs/', output_dir='/home/indy/performance_results/'
+            self, base_dir='/tmp/logs/', output_dir='/home/indy/performance_results/'
     ):
         self._base_dir = base_dir
         self._output_dir = output_dir
@@ -234,8 +234,9 @@ class PerformanceReport:
 
     @staticmethod
     def process_metrics(path_from=path_reg.metrics_dir, paths_to=sub_dirs):
+        ignore_list = ['summary', 'db']
         metric_file_names = sorted(
-                [x for x in os.listdir(path_from) if not x.__contains__('summary')],
+                [x for x in os.listdir(path_from) if not any(map(x.__contains__, ignore_list))],
                 key=NATURAL_SORTING
             )
 
