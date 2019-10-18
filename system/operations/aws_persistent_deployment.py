@@ -109,4 +109,6 @@ def switch_volumes_for_load():
 
 
 if __name__ == '__main__':
-    switch_volumes_for_load()
+    operate_instances('stop', get_instances(PERSISTENT_INSTANCES))
+    time.sleep(60)
+    operate_instances('start', get_instances(PERSISTENT_INSTANCES))

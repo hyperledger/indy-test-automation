@@ -491,7 +491,7 @@ async def check_primary_changed(pool_handler, wallet_handler, trustee_did, prima
 
 async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary_before):
     return await eventually(
-        check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before, retry_wait=20, timeout=480
+        check_primary_changed, pool_handler, wallet_handler, trustee_did, primary_before, retry_wait=20, timeout=600
     )
 
 
@@ -858,7 +858,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         assert not all([get_vc_status_from_info(info) for _, info in results.items()])
         return res
 
-    primary = await eventually(_get_primary, retry_wait=20, timeout=480)
+    primary = await eventually(_get_primary, retry_wait=20, timeout=300)
     alias = get_node_alias(primary)
     return primary, alias, get_node_did(alias)
 

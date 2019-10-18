@@ -147,8 +147,7 @@ async def test_demotion_of_backup_primary_with_restart_without_vc(
     host2.stop_service()
 
     logger.info("3 Demote Node3: it will trigger a view change to viewNo=1")
-    # which in turn will trigger a view change timeout since Node2 (the next primary)
-    # has been stopped
+    # which in turn will trigger a view change timeout since Node2 (the next primary) has been stopped
     primary_r2_alias = get_node_alias(R2_PRIMARY_ID)
     primary_r2_did = get_node_did(primary_r2_alias, pool_info=pool_info)
     await eventually(
@@ -159,6 +158,7 @@ async def test_demotion_of_backup_primary_with_restart_without_vc(
     restart_pool(hosts)
 
     logger.info("5 Make sure that the pool restarted correctly, and can order txns")
+
     logger.info("5.1 ensure that pool is in sync")
     # TODO timeouts
     await ensure_pool_is_in_sync(node_ids=[h.id for h in hosts if h.id != R2_PRIMARY_ID])
