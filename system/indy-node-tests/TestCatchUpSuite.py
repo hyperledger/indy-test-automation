@@ -12,7 +12,7 @@ WRITE_READ_TIMEOUT = 360
 class TestCatchUpSuite:
 
     @pytest.mark.parametrize('check_reachability', [False, True])
-    @pytest.mark.parametrize('nyms_count', [1, 25])
+    @pytest.mark.parametrize('nyms_count', [25])
     @pytest.mark.nodes_num(9)
     @pytest.mark.asyncio
     async def test_case_stopping(
@@ -47,7 +47,7 @@ class TestCatchUpSuite:
 
         if not check_reachability:  # send extra nyms to force catchup if don't check reachability
             await ensure_pool_is_functional(
-                pool_handler, wallet_handler, trustee_did, nyms_count=300, timeout=WRITE_READ_TIMEOUT
+                pool_handler, wallet_handler, trustee_did, nyms_count=360, timeout=WRITE_READ_TIMEOUT
             )
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
@@ -93,7 +93,7 @@ class TestCatchUpSuite:
 
         if not check_reachability:  # send extra nyms to force catchup if don't check reachability
             await ensure_pool_is_functional(
-                pool_handler, wallet_handler, trustee_did, nyms_count=300, timeout=WRITE_READ_TIMEOUT
+                pool_handler, wallet_handler, trustee_did, nyms_count=360, timeout=WRITE_READ_TIMEOUT
             )
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
@@ -134,7 +134,7 @@ class TestCatchUpSuite:
 
         if not check_reachability:  # send extra nyms to force catchup if don't check reachability
             await ensure_pool_is_functional(
-                pool_handler, wallet_handler, trustee_did, nyms_count=300, timeout=WRITE_READ_TIMEOUT
+                pool_handler, wallet_handler, trustee_did, nyms_count=360, timeout=WRITE_READ_TIMEOUT
             )
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
@@ -178,7 +178,7 @@ class TestCatchUpSuite:
 
         if not check_reachability:  # send extra nyms to force catchup if don't check reachability
             await ensure_pool_is_functional(
-                pool_handler, wallet_handler, trustee_did, nyms_count=300, timeout=WRITE_READ_TIMEOUT
+                pool_handler, wallet_handler, trustee_did, nyms_count=360, timeout=WRITE_READ_TIMEOUT
             )
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
