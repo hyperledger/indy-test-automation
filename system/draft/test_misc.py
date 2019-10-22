@@ -2094,11 +2094,11 @@ async def test_misc_vc(
     p = NodeHost(primary)
 
     p.stop_service()
-    client.networks.list(names=[NETWORK_NAME])[0].disconnect('node4')
     await asyncio.sleep(60)
-
     p.start_service()
-    await asyncio.sleep(60)
+
+    client.networks.list(names=[NETWORK_NAME])[0].disconnect('node4')
+    await asyncio.sleep(120)
     client.networks.list(names=[NETWORK_NAME])[0].connect('node4')
 
     await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
@@ -2107,7 +2107,7 @@ async def test_misc_vc(
 
 
 @pytest.mark.nodes_num(4)
-@settings(deadline=None, max_examples=10)
+@settings(deadline=None, max_examples=100)
 @given(extra=strategies.text(min_size=0, max_size=100))
 @pytest.mark.asyncio
 # IS-1379

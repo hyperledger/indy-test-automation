@@ -8,7 +8,7 @@ import hashlib
 import copy
 import os
 import sys
-from indy import payment
+from indy import payment, error
 
 max_size = 1e+17
 
@@ -56,18 +56,16 @@ class TestPropertyBasedSuite:
         print(var_dt_lists)
         print('-'*25)
 
-    @settings(deadline=None, max_examples=100, verbosity=Verbosity.verbose, phases=[Phase.generate])
-    @given(reqid=strategies.integers(min_value=2, max_value=max_size),
+    # bad behaviour with verkey field - hypothesis resend txns with the same verkey that cause rejects
+    @settings(deadline=None, max_examples=250, verbosity=Verbosity.debug)
+    @given(reqid=strategies.integers(min_value=1, max_value=max_size),
            dest=strategies.text(ascii_letters, min_size=16, max_size=16),
-           verkey=strategies.text(ascii_letters, min_size=32, max_size=32),
            alias=strategies.text(min_size=1, max_size=10000))
     @pytest.mark.asyncio
     async def test_case_nym(
-            self, pool_handler, wallet_handler, get_default_trustee, reqid, dest, verkey, alias
+            self, pool_handler, wallet_handler, get_default_trustee, reqid, dest, alias
     ):
-        await asyncio.sleep(1)
         trustee_did, trustee_vk = get_default_trustee
-        roles = ['0', '2', '101', '201']
         req = {
                'protocolVersion': 2,
                'reqId': reqid,
@@ -75,14 +73,15 @@ class TestPropertyBasedSuite:
                'operation': {
                              'type': '1',
                              'dest': base58.b58encode(dest).decode(),
-                             'verkey': base58.b58encode(verkey).decode(),
-                             'role': random.choice(roles),
+                             'role': '201',
                              'alias': alias
                             }
                 }
+        print(req)
         res = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
         )
+        print(res)
         assert res['op'] == 'REPLY'
 
     @settings(deadline=None, max_examples=250)
