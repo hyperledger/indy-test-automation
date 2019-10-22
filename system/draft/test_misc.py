@@ -2061,9 +2061,10 @@ async def test_misc_rotate_bls_and_get_txn(
         assert res3['result']['seqNo'] is not None
 
 
+@pytest.mark.nodes_num(4)
 @pytest.mark.asyncio
 async def test_misc_multiple_vc(
-    docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture
+    docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
 ):
     trustee_did, _ = get_default_trustee
 
@@ -2075,6 +2076,59 @@ async def test_misc_multiple_vc(
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5)
         p.start_service()
 
-    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=100)
-    await ensure_pool_is_in_sync()
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=200, timeout=300)
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.nodes_num(4)
+@pytest.mark.asyncio
+# INDY-2224
+async def test_misc_vc(
+    docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num
+):
+    client = docker.from_env()
+    trustee_did, _ = get_default_trustee
+
+    primary, alias, target_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+    p = NodeHost(primary)
+
+    p.stop_service()
+    await asyncio.sleep(60)
+    p.start_service()
+
+    client.networks.list(names=[NETWORK_NAME])[0].disconnect('node4')
+    await asyncio.sleep(120)
+    client.networks.list(names=[NETWORK_NAME])[0].connect('node4')
+
+    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+
+
+@pytest.mark.nodes_num(4)
+@settings(deadline=None, max_examples=100)
+@given(extra=strategies.text(min_size=0, max_size=100))
+@pytest.mark.asyncio
+# IS-1379
+async def test_misc_payment_extra(
+    docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee, initial_token_minting,
+    extra
+):
+    payment_method = 'sov'
+    trustee_did, _ = get_default_trustee
+    address_from = initial_token_minting
+    address_to = await payment.create_payment_address(wallet_handler, payment_method, json.dumps({}))
+    source, amount = await get_payment_sources(pool_handler, wallet_handler, address_from)
+    req, _ = await payment.build_payment_req(
+        wallet_handler, trustee_did, json.dumps([source]), json.dumps(
+            [
+                {'recipient': address_to, 'amount': 100000},
+                {'recipient': address_from, 'amount': amount - 100000}
+            ]
+        ), extra
+    )
+    print(req)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res)
+    assert res['op'] == 'REPLY'
