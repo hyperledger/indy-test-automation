@@ -13,7 +13,7 @@ async def docker_setup_and_teardown(docker_setup_and_teardown_function):
 
 @pytest.mark.asyncio
 async def test_consensus_restore_after_f_plus_one(
-        pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture
+        pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture, nodes_num
 ):
     trustee_did, _ = get_default_trustee
     did1, _ = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -47,8 +47,8 @@ async def test_consensus_restore_after_f_plus_one(
     # 5/7 online - can w+r
     for node in test_nodes[3:5]:
         node.start_service()
-    await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
-    await ensure_pool_is_in_sync()
+    await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did, unreached=2)
+    await ensure_pool_is_in_sync(nodes_num=nodes_num-2)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
     # 7/7 online - can w+r
     for node in test_nodes[-2:]:
