@@ -39,6 +39,8 @@ class TestViewChangeSuite:
         # 5/7 online - can w+r
         for node in test_nodes[3:5]:
             node.start_service()
+        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+        await ensure_pool_is_in_sync()
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did)
 
         # 7/7 online - can w+r

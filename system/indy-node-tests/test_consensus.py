@@ -47,6 +47,8 @@ async def test_consensus_restore_after_f_plus_one(
     # 5/7 online - can w+r
     for node in test_nodes[3:5]:
         node.start_service()
+    await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_in_sync()
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
     # 7/7 online - can w+r
     for node in test_nodes[-2:]:
