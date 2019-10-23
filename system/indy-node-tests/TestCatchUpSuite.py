@@ -16,7 +16,7 @@ class TestCatchUpSuite:
         'check_reachability, wait_catchup_before_ordering, main_txn_count, extra_txn_count',
         [
             (True, False, 25, 0),
-            (False, True, 25, 100),
+            (False, True, 25, 200),
             (False, False, 25, 200)
         ]
     )
@@ -70,7 +70,7 @@ class TestCatchUpSuite:
         'check_reachability, wait_catchup_before_ordering, main_txn_count, extra_txn_count',
         [
             (True, False, 25, 0),
-            (False, True, 25, 100),
+            (False, True, 25, 200),
             (False, False, 25, 200)
         ]
     )
@@ -129,7 +129,7 @@ class TestCatchUpSuite:
         'check_reachability, wait_catchup_before_ordering, main_txn_count, extra_txn_count',
         [
             (True, False, 25, 0),
-            (False, True, 25, 100),
+            (False, True, 25, 200),
             (False, False, 25, 200)
         ]
     )
@@ -183,7 +183,7 @@ class TestCatchUpSuite:
         'check_reachability, wait_catchup_before_ordering, main_txn_count, extra_txn_count',
         [
             (True, False, 25, 0),
-            (False, True, 25, 100),
+            (False, True, 25, 200),
             (False, False, 25, 200)
         ]
     )

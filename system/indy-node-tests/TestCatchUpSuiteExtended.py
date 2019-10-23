@@ -15,9 +15,9 @@ class TestCatchUpSuiteExtended:
     @pytest.mark.parametrize(
         'check_reachability, wait_catchup_before_ordering, main_txn_count, extra_txn_count',
         [
-            (True, False, 55, 0),
-            (False, True, 55, 100),
-            (False, False, 55, 200)
+            (True, False, 25, 0),
+            (False, True, 25, 200),
+            (False, False, 25, 200)
         ]
     )
     @pytest.mark.nodes_num(8)
@@ -53,9 +53,9 @@ class TestCatchUpSuiteExtended:
     @pytest.mark.parametrize(
         'check_reachability, wait_catchup_before_ordering, main_txn_count, extra_txn_count',
         [
-            (True, False, 55, 0),
-            (False, True, 55, 100),
-            (False, False, 55, 200)
+            (True, False, 25, 0),
+            (False, True, 25, 200),
+            (False, False, 25, 200)
         ]
     )
     @pytest.mark.nodes_num(8)
@@ -90,9 +90,9 @@ class TestCatchUpSuiteExtended:
     @pytest.mark.parametrize(
         'check_reachability, wait_catchup_before_ordering, main_txn_count, extra_txn_count',
         [
-            (True, False, 55, 0),
-            (False, True, 55, 100),
-            (False, False, 55, 200)
+            (True, False, 25, 0),
+            (False, True, 25, 200),
+            (False, False, 25, 200)
         ]
     )
     @pytest.mark.nodes_num(8)
