@@ -495,13 +495,15 @@ async def ensure_primary_changed(pool_handler, wallet_handler, trustee_did, prim
     )
 
 
-async def check_all_nodes_online(pool_handle, wallet_handle, trustee_did):
+async def check_all_nodes_online(pool_handle, wallet_handle, trustee_did, unreached=0):
     results = await get_validator_info(pool_handle, wallet_handle, trustee_did)
-    assert all([v['result']['data']['Pool_info']['Unreachable_nodes_count'] == 0 for k, v in results.items()])
+    assert all([v['result']['data']['Pool_info']['Unreachable_nodes_count'] == unreached for k, v in results.items()])
 
 
-async def ensure_all_nodes_online(pool_handle, wallet_handle, trustee_did):
-    await eventually(check_all_nodes_online, pool_handle, wallet_handle, trustee_did, retry_wait=10, timeout=100)
+async def ensure_all_nodes_online(pool_handle, wallet_handle, trustee_did, unreached=0):
+    await eventually(
+        check_all_nodes_online, pool_handle, wallet_handle, trustee_did, unreached, retry_wait=10, timeout=100
+    )
 
 
 async def check_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trustee_did):
