@@ -1117,7 +1117,10 @@ async def send_payments(pool_handle, wallet_handle, submitter_did, address_from,
             ), None
         )
         res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
-        assert res['op'] == 'REPLY'
+        if res['op'] == 'REJECT' and 'InvalidFundsError' in res['reason']:
+            pass  # handle bad payment source from lagged node due to state proof reading
+        else:
+            assert res['op'] == 'REPLY'
 
 
 async def send_nodes(pool_handle, wallet_handle, trustee_did, count):
