@@ -100,7 +100,7 @@ class TestCatchUpSuite:
         await eventually(promote_node, pool_handler, wallet_handler, trustee_did, 'Node8', pool_info['Node8'])
         await pool.refresh_pool_ledger(pool_handler)
         if check_reachability:
-            await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did, unreached=1)
+            await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         if wait_catchup_before_ordering:
             await ensure_pool_is_in_sync(nodes_num=nodes_num-1)
         await ensure_pool_performs_write_read(

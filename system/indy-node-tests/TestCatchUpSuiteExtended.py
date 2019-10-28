@@ -53,7 +53,8 @@ class TestCatchUpSuiteExtended:
     @pytest.mark.parametrize(
         'check_reachability, wait_catchup_before_ordering, main_txn_count, extra_txn_count',
         [
-            (True, False, 25, 0),
+            #(True, False, 25, 0), skipped because of INDY-1960
+            (True, False, 25, 200),
             (False, True, 25, 200),
             (False, False, 25, 200)
         ]
