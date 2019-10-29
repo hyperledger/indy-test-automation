@@ -1123,14 +1123,21 @@ async def send_payments(pool_handle, wallet_handle, submitter_did, address_from,
             assert res['op'] == 'REPLY'
 
 
-async def send_nodes(pool_handle, wallet_handle, trustee_did, count):
+async def send_nodes(pool_handle, wallet_handle, trustee_did, count, alias=None):
+    # create single STEWARD to add ALIAS node once and change it by NODE txns
+    steward_did, steward_vk = await did.create_and_store_my_did(
+        wallet_handle, json.dumps({'seed': '00000000000000000000000Steward99'})
+    )
+    await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+
     for i in range(1, count+1):
-        steward_did, steward_vk = await did.create_and_store_my_did(wallet_handle, '{}')
-        await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+        if not alias:  # create new STEWARD for each NODE txn
+            steward_did, steward_vk = await did.create_and_store_my_did(wallet_handle, '{}')
+            await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
         req = await ledger.build_node_request(
             steward_did, steward_vk, json.dumps(
                 {
-                    'alias': '{}_{}'.format(random_string(10), i),
+                    'alias': alias if alias else '{}_{}'.format(random_string(10), i),
                     'client_ip': '{}.{}.{}.{}'.format(randrange(1, 255), 0, 0, randrange(1, 255)),
                     'client_port': randrange(1, 32767),
                     'node_ip': '{}.{}.{}.{}'.format(randrange(1, 255), 0, 0, randrange(1, 255)),
@@ -1178,7 +1185,6 @@ async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, c
             package_name
         )
         res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-        print(res)
         assert res['op'] == 'REPLY'
 
 
