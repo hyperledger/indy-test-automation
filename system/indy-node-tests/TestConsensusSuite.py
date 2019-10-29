@@ -9,7 +9,7 @@ class TestViewChangeSuite:
 
     @pytest.mark.asyncio
     async def test_consensus_restore_after_f_plus_one(
-            self, pool_handler, wallet_handler, get_default_trustee
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]

@@ -4,12 +4,13 @@
   vars:
     pool_prefix: persistent_node
     pool_size: "{{ groups['pool']|count }}"
-    sovrin_ver: 1.1.150
-    node_ver: 1.11.0~dev1107
-    plenum_ver: 1.11.0~dev931
-    python_indy_crypto_ver: 0.4.5
+    sovrin_ver: 1.1.158
+    node_ver: 1.11.0~dev1119
+    plenum_ver: 1.11.0~dev943
     libindy_crypto_ver: 0.4.5
-    plugin_ver: 1.0.4~dev105
+    python_indy_crypto_ver: 0.4.5
+    python_pyzmq_ver: 18.1.0
+    plugin_ver: 1.0.4~dev110
 
   tasks:
     - name: Identify node number
@@ -31,7 +32,7 @@
       run_once: yes
 
     - name: Install indy-node
-      apt: "name=sovrin={{ sovrin_ver}},indy-node={{ node_ver }},indy-plenum={{ plenum_ver }},libindy-crypto={{ libindy_crypto_ver }},python3-indy-crypto={{ python_indy_crypto_ver }},sovtoken={{ plugin_ver }},sovtokenfees={{ plugin_ver }} force=yes update_cache=yes"
+      apt: "name=sovrin={{ sovrin_ver}},indy-node={{ node_ver }},indy-plenum={{ plenum_ver }},libindy-crypto={{ libindy_crypto_ver }},python3-indy-crypto={{ python_indy_crypto_ver }},python3-pyzmq={{ python_pyzmq_ver }},sovtoken={{ plugin_ver }},sovtokenfees={{ plugin_ver }} force=yes update_cache=yes"
       become: yes
     
     - name: Make indy config dir

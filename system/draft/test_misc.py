@@ -2108,7 +2108,7 @@ async def test_misc_vc(
 
 @pytest.mark.nodes_num(4)
 @settings(deadline=None, max_examples=100)
-@given(extra=strategies.text(min_size=0, max_size=100))
+@given(extra=strategies.text(min_size=1, max_size=1000))
 @pytest.mark.asyncio
 # IS-1379
 async def test_misc_payment_extra(

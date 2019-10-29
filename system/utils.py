@@ -1180,3 +1180,9 @@ async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, c
         res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
         print(res)
         assert res['op'] == 'REPLY'
+
+
+async def ensure_get_something(func_name, *args):
+    res = await eventually(func_name, *args)
+    assert res['result']['seqNo'] is not None
+    return res
