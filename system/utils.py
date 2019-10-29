@@ -811,9 +811,8 @@ def get_node_alias(node_num):
     return 'Node{}'.format(node_num)
 
 
-def get_node_did(node_alias, pool_info=None):
-    if pool_info is None:
-        pool_info = get_pool_info('1')
+def get_node_did(node_alias, primary):
+    pool_info = get_pool_info(primary)
     return pool_info[node_alias]
 
 
@@ -862,7 +861,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
 
     primary = await eventually(_get_primary, retry_wait=20, timeout=300)
     alias = get_node_alias(primary)
-    return primary, alias, get_node_did(alias)
+    return primary, alias, get_node_did(alias, primary)
 
 
 async def demote_random_node(pool_handle, wallet_handle, trustee_did):
