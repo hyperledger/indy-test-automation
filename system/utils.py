@@ -1188,7 +1188,12 @@ async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, c
         assert res['op'] == 'REPLY'
 
 
-async def ensure_get_something(func_name, *args):
-    res = await eventually(func_name, *args)
+async def check_get_something(func_name, *args):
+    res = await func_name(*args)
     assert res['result']['seqNo'] is not None
+    return res
+
+
+async def ensure_get_something(func_name, *args):
+    res = await eventually(check_get_something, func_name, *args)
     return res
