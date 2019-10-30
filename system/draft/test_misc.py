@@ -2108,7 +2108,7 @@ async def test_misc_vc(
 
 @pytest.mark.nodes_num(4)
 @settings(deadline=None, max_examples=100)
-@given(extra=strategies.text(min_size=0, max_size=100))
+@given(extra=strategies.text(min_size=1, max_size=1000))
 @pytest.mark.asyncio
 # IS-1379
 async def test_misc_payment_extra(
@@ -2132,3 +2132,32 @@ async def test_misc_payment_extra(
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     print(res)
     assert res['op'] == 'REPLY'
+
+
+@pytest.mark.nodes_num(4)
+@pytest.mark.asyncio
+# INDY-2235
+async def test_misc_restore_from_audit(
+    docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num
+):
+    client = docker.from_env()
+    test_nodes = [NodeHost(i) for i in range(1, nodes_num + 1)]
+    trustee_did, _ = get_default_trustee
+
+    primary1, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+    client.networks.list(names=[NETWORK_NAME])[0].disconnect('node1')
+    primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=25)
+
+    for node in test_nodes[1:]:
+        node.restart_service()
+    client.networks.list(names=[NETWORK_NAME])[0].connect('node1')
+
+    p2 = NodeHost(primary2)
+    p2.stop_service()
+    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
+    p2.start_service()
+
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
