@@ -21,7 +21,7 @@ async def test_pool_upgrade_positive(docker_setup_and_teardown):
         'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
     ]
     init_time = 1
-    version = '1.1.58'
+    version = '1.1.59'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -29,11 +29,11 @@ async def test_pool_upgrade_positive(docker_setup_and_teardown):
     _timeout = 5
     docker_7_schedule = json.dumps(dict(
         {dest:
-            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
+            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+0*5), '%Y-%m-%dT%H:%M:%S%z')
          for dest, i in zip(dests, range(len(dests)))}
     ))
     reinstall = False
-    force = False
+    force = True
     package = 'sovrin'
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
@@ -103,7 +103,7 @@ async def test_pool_upgrade_positive(docker_setup_and_teardown):
     # print(res)
     # assert res['op'] == 'REPLY'
 
-    await asyncio.sleep(7*5*60)
+    await asyncio.sleep(5*60)
 
     docker_7_hosts = [
         testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)
