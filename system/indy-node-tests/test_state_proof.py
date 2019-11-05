@@ -133,6 +133,17 @@ async def test_misc_state_proof(
     )
     assert res2['op'] == 'REPLY'
 
+    req = await ledger.build_acceptance_mechanisms_request(
+        trustee_did, json.dumps({'aml_key': 'AML text'}), 'AML version', None
+    )
+    res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res3)
+    assert res3['op'] == 'REPLY'
+    req = await ledger.build_txn_author_agreement_request(trustee_did, 'TAA text', 'TAA version')
+    res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res4)
+    assert res4['op'] == 'REPLY'
+
     await asyncio.sleep(wait_time)
 
     # stop all nodes except one
@@ -140,7 +151,7 @@ async def test_misc_state_proof(
     print([host.stop_service() for host in hosts[:-1]])
 
     # read all txns written from the single node
-    # TODO add GET_AUTH_RULE GET_FEES GET_TAA GET_TAA_AML here
+
     req1 = await ledger.build_get_nym_request(None, random_did)
     res1 = json.loads(await ledger.submit_request(pool_handler, req1))
     assert res1['result']['seqNo'] is not None
@@ -196,3 +207,28 @@ async def test_misc_state_proof(
     res10 = json.loads(await ledger.submit_request(pool_handler, req10))
     print(res10)
     assert res10['result']['seqNo'] is not None
+
+    # no seqno returned for this txn type
+    req11 = await ledger.build_get_auth_rule_request(None, '101', 'ADD', '*', None, '*')
+    res11 = json.loads(await ledger.submit_request(pool_handler, req11))
+    print(res11)
+    assert res11['op'] == 'REPLY'
+
+    # failed with PoolLedgerTimeout
+    req12 = await payment.build_get_txn_fees_req(wallet_handler, None, libsovtoken_payment_method)
+    res12 = json.loads(await ledger.submit_request(pool_handler, req12))
+    print(res12)
+    assert res12['op'] == 'REPLY'
+    assert res12['result']['seqNo'] is not None
+
+    req13 = await ledger.build_get_acceptance_mechanisms_request(None, None, 'AML version')
+    res13 = json.loads(await ledger.submit_request(pool_handler, req13))
+    print(res13)
+    assert res13['op'] == 'REPLY'
+    assert res13['result']['seqNo'] is not None
+
+    req14 = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': 'TAA version'}))
+    res14 = json.loads(await ledger.submit_request(pool_handler, req14))
+    print(res14)
+    assert res14['op'] == 'REPLY'
+    assert res14['result']['seqNo'] is not None
