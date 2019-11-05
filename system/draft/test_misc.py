@@ -2164,9 +2164,9 @@ async def test_misc_restore_from_audit(
 
 @pytest.mark.parametrize(
     'node_txns_count, loops_count', [
-        (10, 1),  # more extra node txns
-        (5, 5),
-        (1, 10)  # more view changes
+        (30, 5),  # more extra node txns
+        (20, 10),
+        (10, 15)  # more view changes
     ]
 )
 @pytest.mark.nodes_num(5)

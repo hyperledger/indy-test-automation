@@ -25,16 +25,13 @@ class TestTAASuite:
         trustee_did, _ = get_default_trustee
         req = await ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version_set, context)
         res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res1)
         assert res1['op'] == 'REPLY'
         # aml with the same version should be rejected
         req = await ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version_set, context)
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res2)
         assert res2['op'] == 'REJECT'
         req = await ledger.build_get_acceptance_mechanisms_request(None, timestamp, version_get)
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
-        print(res3)
         assert res3['op'] == 'REPLY'
 
     @pytest.mark.parametrize('taa_text, taa_ver', [
@@ -47,57 +44,87 @@ class TestTAASuite:
         # no aml in ledger - should be rejected
         req = await ledger.build_txn_author_agreement_request(trustee_did, taa_text, taa_ver)
         res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res1)
         assert res1['op'] == 'REJECT'
         aml_key = 'aml_key'
+        # add AML
         req = await ledger.build_acceptance_mechanisms_request(
             trustee_did, json.dumps({aml_key: random_string(5)}), random_string(10), None
         )
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res2)
         assert res2['op'] == 'REPLY'
+        # add non-latest TAA
+        req = await ledger.build_txn_author_agreement_request(trustee_did, 'non-latest-text', 'non-latest-version')
+        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        assert res['op'] == 'REPLY'
+        # add the latest TAA
         req = await ledger.build_txn_author_agreement_request(trustee_did, taa_text, taa_ver)
         res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res3)
         assert res3['op'] == 'REPLY'
         # no taa in nym request
         res4 = await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
-        print(res4)
         assert res4['op'] == 'REJECT'
         # no taa in schema request
         _, res5 = await send_schema(
             pool_handler, wallet_handler, trustee_did, random_string(5), '1.0', json.dumps([random_string(10)])
         )
-        print(res5)
         assert res5['op'] == 'REJECT'
+        # add non-latest taa to nym
+        req66 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+        req66 = await ledger.append_txn_author_agreement_acceptance_to_request(
+            req66, 'non-latest-text', 'non-latest-version', None, aml_key, int(time.time())
+        )
+        res66 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req66))
+        assert res66['op'] == 'REJECT'
         # add taa to nym
         req6 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
         req6 = await ledger.append_txn_author_agreement_acceptance_to_request(
-            req6, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY
+            req6, taa_text, taa_ver, None, aml_key, int(time.time())
         )
         res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req6))
-        print(res6)
         assert res6['op'] == 'REPLY'
+        # add non-latest taa to schema
+        schema_id, schema_json = await anoncreds.issuer_create_schema(
+            trustee_did, random_string(5), '1.0', json.dumps([random_string(10)])
+        )
+        req77 = await ledger.build_schema_request(trustee_did, schema_json)
+        req77 = await ledger.append_txn_author_agreement_acceptance_to_request(
+            req77, 'non-latest-text', 'non-latest-version', None, aml_key, int(time.time())
+        )
+        res77 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req77))
+        assert res77['op'] == 'REJECT'
         # add taa to schema
         schema_id, schema_json = await anoncreds.issuer_create_schema(
             trustee_did, random_string(5), '1.0', json.dumps([random_string(10)])
         )
-        req = await ledger.build_schema_request(trustee_did, schema_json)
-        req = await ledger.append_txn_author_agreement_acceptance_to_request(
-            req, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY
+        req7 = await ledger.build_schema_request(trustee_did, schema_json)
+        req7 = await ledger.append_txn_author_agreement_acceptance_to_request(
+            req7, taa_text, taa_ver, None, aml_key, int(time.time())
         )
-        res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res7)
+        res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req7))
         assert res7['op'] == 'REPLY'
         # special positive case
         req8 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
         req8 = await ledger.append_txn_author_agreement_acceptance_to_request(
-            req8, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY
+            req8, taa_text, taa_ver, None, aml_key, int(time.time())
         )
         await asyncio.sleep(181)
         res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req8))
-        print(res8)
         assert res8['op'] == 'REPLY'
+        # get the latest TAA
+        req9 = await ledger.build_get_txn_author_agreement_request(None, None)
+        res9 = json.loads(await ledger.submit_request(pool_handler, req9))
+        assert res9['op'] == 'REPLY'
+        assert res9['result']['seqNo'] is not None
+        # get non-latest TAA by version
+        req10 = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': 'non-latest-version'}))
+        res10 = json.loads(await ledger.submit_request(pool_handler, req10))
+        assert res10['op'] == 'REPLY'
+        assert res10['result']['seqNo'] is not None
+        # get nonexistent TAA
+        req11 = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': 'some version'}))
+        res11 = json.loads(await ledger.submit_request(pool_handler, req11))
+        assert res11['op'] == 'REPLY'
+        assert res11['result']['seqNo'] is None
 
     @pytest.mark.asyncio
     async def test_aml_taa_negative_cases(self, pool_handler, wallet_handler, get_default_trustee):
@@ -115,27 +142,22 @@ class TestTAASuite:
                 'version': '1'
                 }
             }
-        print(json.dumps(req))
         res1 = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
         )
-        print(res1)
         assert res1['op'] == 'REQNACK'
         req = await ledger.build_txn_author_agreement_request(trustee_did, 'text', '1')
         res2 = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         )
-        print(res2)
         assert res2['op'] == 'REJECT'
         req = await ledger.build_acceptance_mechanisms_request(
             trustee_did, json.dumps({aml_key: aml_val}), aml_ver, None
         )
         res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res3)
         assert res3['op'] == 'REPLY'
         req = await ledger.build_txn_author_agreement_request(trustee_did, taa_text, taa_ver)
         res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res4)
         assert res4['op'] == 'REPLY'
         # send txn with taa with precise timestamp - it doesn't work with libindy fixes so fix time manually
         req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
@@ -155,7 +177,6 @@ class TestTAASuite:
             req, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY - SEC_PER_DAY
         )
         res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res7)
         assert res7['op'] == 'REJECT'
         # send txn with taa with timestamp from tomorrow
         req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
@@ -163,7 +184,6 @@ class TestTAASuite:
             req, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY + SEC_PER_DAY
         )
         res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res8)
         assert res8['op'] == 'REJECT'
 
     @pytest.mark.asyncio
@@ -191,17 +211,14 @@ class TestTAASuite:
             json.dumps([{"recipient": address2, "amount": 100*100000}, {"recipient": address1, "amount": 900*100000}]),
             extra)
         res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res1)
         assert res1['op'] == 'REJECT'
         req = await ledger.build_acceptance_mechanisms_request(
             trustee_did, json.dumps({aml_key: random_string(5)}), random_string(10), None
         )
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res2)
         assert res2['op'] == 'REPLY'
         req = await ledger.build_txn_author_agreement_request(trustee_did, taa_text, taa_ver)
         res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res3)
         assert res3['op'] == 'REPLY'
         extra = await payment.prepare_payment_extra_with_acceptance_data(
             None, taa_text, taa_ver, None, aml_key, int(time.time()) // SEC_PER_DAY * SEC_PER_DAY
@@ -211,7 +228,6 @@ class TestTAASuite:
             json.dumps([{"recipient": address2, "amount": 100*100000}, {"recipient": address1, "amount": 900*100000}]),
             extra)
         res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res4)
         assert res4['op'] == 'REPLY'
         # try to send xfer without taa to ledger with aml and taa - should be failed
         req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
@@ -224,5 +240,4 @@ class TestTAASuite:
             json.dumps([{"recipient": address2, "amount": 200*100000}, {"recipient": address1, "amount": 700*100000}]),
             None)
         res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        print(res5)
         assert res5['op'] == 'REJECT'
