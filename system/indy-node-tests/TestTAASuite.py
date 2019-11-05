@@ -1,13 +1,7 @@
 import pytest
 from system.utils import *
 from indy import payment
-# from hypothesis import strategies, settings, given
-import logging
 SEC_PER_DAY = 24 * 60 * 60
-
-
-# logger = logging.getLogger(__name__)
-# logging.basicConfig(level=0, format='%(asctime)s %(message)s')
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
