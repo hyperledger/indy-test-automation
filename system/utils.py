@@ -310,8 +310,6 @@ async def send_revoc_reg_entry(
     revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await anoncreds.issuer_create_and_store_revoc_reg(
         wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json, tails_writer_handle
     )
-    req = await ledger.build_revoc_reg_def_request(submitter_did, revoc_reg_def_json)
-    await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
     req = await ledger.build_revoc_reg_entry_request(
         submitter_did, revoc_reg_def_id, revoc_def_type, revoc_reg_entry_json
     )
