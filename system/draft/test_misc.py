@@ -17,6 +17,7 @@ from hypothesis import errors, settings, Verbosity, given, strategies
 import pprint
 import itertools
 import docker
+from string import ascii_letters
 from system.docker_setup import client, pool_builder, pool_starter,\
     DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME
 
@@ -2107,8 +2108,8 @@ async def test_misc_vc(
 
 
 @pytest.mark.nodes_num(4)
-@settings(deadline=None, max_examples=100)
-@given(extra=strategies.text(min_size=1, max_size=1000))
+@settings(deadline=None, max_examples=250)
+@given(extra=strategies.text(ascii_letters, min_size=1, max_size=1000).filter(lambda x: not x.isspace()))
 @pytest.mark.asyncio
 # IS-1379
 async def test_misc_payment_extra(
@@ -2128,9 +2129,7 @@ async def test_misc_payment_extra(
             ]
         ), extra
     )
-    print(req)
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    print(res)
     assert res['op'] == 'REPLY'
 
 
@@ -2159,5 +2158,49 @@ async def test_misc_restore_from_audit(
     p2.start_service()
 
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.parametrize(
+    'node_txns_count, loops_count', [
+        (30, 5),  # more extra node txns
+        (20, 10),
+        (10, 15)  # more view changes
+    ]
+)
+@pytest.mark.nodes_num(5)
+@pytest.mark.asyncio
+# INDY-2262
+async def test_misc_node_and_vc_interleaved(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num,
+        node_txns_count, loops_count
+):
+    trustee_did, _ = get_default_trustee
+    pool_info = get_pool_info('1')
+
+    NODE_TXNS_COUNT = node_txns_count
+    LOOPS_COUNT = loops_count
+
+    for i in range(LOOPS_COUNT):
+        # find primary
+        primary, primary_alias, primary_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+        # demote it to force VC
+        await eventually(
+            demote_node, pool_handler, wallet_handler, trustee_did,
+            'Node{}'.format(primary), pool_info['Node{}'.format(primary)]
+        )
+        await pool.refresh_pool_ledger(pool_handler)
+        # check VC status
+        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
+        # send extra node txns
+        await eventually(
+            send_nodes, pool_handler, wallet_handler, trustee_did, count=NODE_TXNS_COUNT, alias='INACTIVE_NODE'
+        )
+        # promote ex-primary back
+        await eventually(promote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
+
+    await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=10)
     await ensure_pool_is_in_sync(nodes_num=nodes_num)
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
