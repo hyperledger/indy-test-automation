@@ -15,7 +15,6 @@ GENESIS_PATH = '/var/lib/indy/sandbox/'
 NYMS_COUNT = 10
 
 
-# TODO ADD REACHABILITY CHECKERS
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestProductionSuite:
 

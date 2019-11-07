@@ -1,12 +1,9 @@
 import pytest
-import time
-import logging
 import asyncio
 from indy import *
 from indy.error import *
 from system.utils import *
 import testinfra
-import os
 import subprocess
 import numpy as np
 from random import randrange as rr
@@ -781,17 +778,18 @@ async def test_case_nym_special_case(docker_setup_and_teardown, pool_handler, wa
 
 
 @settings(deadline=None, max_examples=100)
-@given(target_alias=strategies.text(alphabet=strategies.characters(whitelist_categories=('L', 'N', 'S')),
-                                    min_size=1,
-                                    max_size=100))
+@given(
+    target_alias=strategies.text(
+        alphabet=strategies.characters(whitelist_categories=('L', 'N', 'S')), min_size=1, max_size=1000
+    )
+)
 @pytest.mark.asyncio
-async def test_misc_nym_alias(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
-                              target_alias):
+async def test_misc_nym_alias(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, target_alias
+):
     trustee_did, _ = get_default_trustee
     new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-    res = await send_nym(pool_handler, wallet_handler, trustee_did,
-                         new_did, None, target_alias, None)
-    print(res)
+    res = await send_nym(pool_handler, wallet_handler, trustee_did, new_did, None, target_alias, None)
     assert res['op'] == 'REPLY'
 
 
@@ -800,7 +798,6 @@ async def test_misc_mint_to_aws(payment_init):
     await pool.set_protocol_version(2)
     libsovtoken_payment_method = 'sov'
     pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
-    # pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
         {'seed': str('000000000000000000000000Trustee1')}))
@@ -840,10 +837,12 @@ async def test_misc_mint_manually(
     libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee
     try:
-        trustee_did2, trustee_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps(
-            {"seed": str('000000000000000000000000Trustee2')}))
-        trustee_did3, trustee_vk3 = await did.create_and_store_my_did(wallet_handler, json.dumps(
-            {"seed": str('000000000000000000000000Trustee3')}))
+        trustee_did2, trustee_vk2 = await did.create_and_store_my_did(
+            wallet_handler, json.dumps({"seed": str('000000000000000000000000Trustee2')})
+        )
+        trustee_did3, trustee_vk3 = await did.create_and_store_my_did(
+            wallet_handler, json.dumps({"seed": str('000000000000000000000000Trustee3')})
+        )
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
         await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
     except IndyError:
@@ -851,14 +850,23 @@ async def test_misc_mint_manually(
         trustee_did3, trustee_vk3 = 'PNQm3CwyXbN5e39Rw3dXYx', 'DC8gEkb1cb4T9n3FcZghTkSp1cGJaZjhsPdxitcu6LUj'
     address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps({}))
     req = json.dumps(
-        {"operation":
-             {"type": "10000",
-              "outputs":
-                  [{"address": address.split(':')[-1],
-                    "amount": amount}]},
-         "reqId": int(time.time()),
-         "protocolVersion": 2,
-         "identifier": "V4SGRU86Z58d6TV7PBUe6f"})
+        {
+            "operation":
+                {
+                    "type": "10000",
+                    "outputs":
+                        [
+                            {
+                                "address": address.split(':')[-1],
+                                "amount": amount
+                            }
+                        ]
+                },
+            "reqId": int(time.time()),
+            "protocolVersion": 2,
+            "identifier": "V4SGRU86Z58d6TV7PBUe6f"
+        }
+    )
     req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
     req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
     req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
@@ -1126,102 +1134,6 @@ async def test_misc_slow_pool_valid_response_live():
     res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, builder_did, req1))
     print(res)
     assert res['op'] == 'REJECT'
-
-
-@pytest.mark.asyncio
-#  INDY-2171
-async def test_misc_off_ledger_signature(
-        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
-        initial_token_minting
-):
-    libsovtoken_payment_method = 'sov'
-    trustee_did, _ = get_default_trustee
-    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-    other_did, other_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-    trustee_did_second, trustee_vk_second = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-    trustee_did_third, trustee_vk_third = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-    await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_second, trustee_vk_second, None, 'TRUSTEE')
-    await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_third, trustee_vk_third, None, 'TRUSTEE')
-    address = initial_token_minting
-    fees = {'off_ledger_nym': 100 * 100000}
-    req = await payment.build_set_txn_fees_req(
-        wallet_handler, trustee_did, libsovtoken_payment_method, json.dumps(fees)
-    )
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did_second, req)
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did_third, req)
-    res = json.loads(await ledger.submit_request(pool_handler, req))
-    assert res['op'] == 'REPLY'
-    req0 = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
-                                                json.dumps({
-                                                   'constraint_id': 'ROLE',
-                                                   'role': '*',
-                                                   'sig_count': 1,
-                                                   'need_to_be_owner': False,
-                                                   'off_ledger_signature': True,
-                                                   'metadata': {}
-                                                }))
-    res0 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req0))
-    print(res0)
-    assert res0['op'] == 'REPLY'
-    req1 = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
-                                                json.dumps({
-                                                   'constraint_id': 'ROLE',
-                                                   'role': '0',
-                                                   'sig_count': 1,
-                                                   'need_to_be_owner': False,
-                                                   'off_ledger_signature': True,
-                                                   'metadata': {}
-                                                }))
-    res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
-    print(res1)
-    assert res1['op'] == 'REQNACK'
-    req2 = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
-                                                json.dumps({
-                                                    'constraint_id': 'OR',
-                                                    'auth_constraints': [
-                                                           {
-                                                               'constraint_id': 'ROLE',
-                                                               'role': '0',
-                                                               'sig_count': 1,
-                                                               'need_to_be_owner': False,
-                                                               'metadata': {}
-                                                           },
-                                                           {
-                                                               'constraint_id': 'ROLE',
-                                                               'role': '*',
-                                                               'sig_count': 0,
-                                                               'need_to_be_owner': False,
-                                                               'off_ledger_signature': True,
-                                                               'metadata': {'fees': 'off_ledger_nym'}
-                                                           }
-                                                    ]
-                                                }))
-    res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
-    print(res2)
-    assert res2['op'] == 'REPLY'
-    res3 = await send_nym(pool_handler, wallet_handler, new_did, other_did, other_vk, 'not my own nym', None)
-    print(res3)
-    assert res3['op'] == 'REQNACK'
-    res4 = await send_schema(pool_handler, wallet_handler, new_did, 'schema', '1.0', json.dumps(['attr']))
-    print(res4)
-    assert res4[1]['op'] == 'REQNACK'
-    req, _ = await payment.build_get_payment_sources_request(wallet_handler, new_did, address)
-    res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, new_did, req)
-    source = json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res))[0]['source']
-    req5 = await ledger.build_nym_request(new_did, new_did, new_vk, 'my own did', None)
-    req5, _ = await payment.add_request_fees(
-        wallet_handler, new_did, req5, json.dumps([source]), json.dumps(
-            [{'recipient': address, 'amount': 900 * 100000}]
-        ), None
-    )
-    res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, new_did, req5))
-    print(res5)
-    assert res5['op'] == 'REPLY'
-    req = await ledger.build_get_auth_rule_request(None, None, None, None, None, None)
-    res6 = json.loads(await ledger.submit_request(pool_handler, req))
-    assert res6['op'] == 'REPLY'
-    print(res6)
 
 
 @pytest.mark.asyncio
