@@ -5,7 +5,7 @@ from system.utils import *
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 @pytest.mark.usefixtures('check_no_failures_fixture')
-class TestViewChangeSuite:
+class TestConsensusSuite:
 
     @pytest.mark.asyncio
     async def test_consensus_restore_after_f_plus_one(
