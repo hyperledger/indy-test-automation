@@ -902,7 +902,7 @@ async def test_misc_plug_req_handlers_regression(
 @pytest.mark.asyncio
 # ST-600 / ST-604
 async def test_get_utxo_pagination_and_state_proof(
-        payment_init, pool_handler, wallet_handler, get_default_trustee
+        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee
 ):
     hosts = [NodeHost(i) for i in range(1, 8)]
     libsovtoken_payment_method = 'sov'
@@ -926,13 +926,11 @@ async def test_get_utxo_pagination_and_state_proof(
     addresses = []
     outputs = []
 
-    for i in range(1):
+    for i in range(2):
         addresses.append([])
         outputs.append([])
         for j in range(1500):
-            address = await payment.create_payment_address(
-                wallet_handler, libsovtoken_payment_method, json.dumps({})
-            )
+            address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps({}))
             addresses[i].append(address)
             output = {"recipient": address, "amount": 1}
             outputs[i].append(output)
@@ -954,14 +952,20 @@ async def test_get_utxo_pagination_and_state_proof(
         )[0]['source']
         sources.append(source)
 
+    tasks = []
     for source in sources:
         req, _ = await payment.build_payment_req(
             wallet_handler, trustee_did, json.dumps([source]), json.dumps(
                 [{"recipient": address0, "amount": 1}]
             ), None
         )
-        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        assert res['op'] == 'REPLY'
+        # one by one sending
+        # res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        task = ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        tasks.append(task)
+
+    # concurrent sending
+    await asyncio.gather(*tasks, return_exceptions=True)
 
     # default check
     req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address0)
@@ -2000,3 +2004,25 @@ async def test_misc_node_and_vc_interleaved(
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=10)
     await ensure_pool_is_in_sync(nodes_num=nodes_num)
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.asyncio
+async def test_async(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    trustee_did, _ = get_default_trustee
+
+    t0 = time.perf_counter()
+    for i in range(10):
+        await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
+    t1 = time.perf_counter()
+    print(t1 - t0)
+
+    t2 = time.perf_counter()
+    tasks = []
+    for i in range(10):
+        task = send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
+        tasks.append(task)
+    await asyncio.gather(*tasks)
+    t3 = time.perf_counter()
+    print(t3 - t2)
