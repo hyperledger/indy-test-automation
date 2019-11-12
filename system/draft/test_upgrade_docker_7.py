@@ -70,11 +70,6 @@ async def test_pool_upgrade_positive(
         user='root'
     ).exit_code == 0
 
-    # start
-    assert new_node.exec_run(
-        ['systemctl', 'start', 'indy-node'],
-        user='root'
-    ).exit_code == 0
     # ------------------------------------------------------------------------------------------------------------------
 
     dests = [
@@ -202,7 +197,13 @@ async def test_pool_upgrade_positive(
     status_checks = [output.stdout.find(status) for output in status_outputs]
     print(status_checks)
 
-    # add node
+    # start new node
+    assert new_node.exec_run(
+        ['systemctl', 'start', 'indy-node'],
+        user='root'
+    ).exit_code == 0
+
+    # add new node
     res = await send_node(
         pool_handler, wallet_handler, ['VALIDATOR'], steward_did, EXTRA_DESTS[3], new_alias,
         EXTRA_BLSKEYS[3], EXTRA_BLSKEY_POPS[3], new_ip, int(PORT_2), new_ip, int(PORT_1)
