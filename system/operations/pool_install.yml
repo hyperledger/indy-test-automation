@@ -4,13 +4,13 @@
   vars:
     pool_prefix: persistent_node
     pool_size: "{{ groups['pool']|count }}"
-    sovrin_ver: 1.1.158
-    node_ver: 1.11.0~dev1119
-    plenum_ver: 1.11.0~dev943
+    sovrin_ver: 1.1.59
+    node_ver: 1.11.0~rc1
+    plenum_ver: 1.11.0
     libindy_crypto_ver: 0.4.5
     python_indy_crypto_ver: 0.4.5
     python_pyzmq_ver: 18.1.0
-    plugin_ver: 1.0.4~dev110
+    plugin_ver: 1.0.4~rc22
 
   tasks:
     - name: Identify node number
@@ -62,6 +62,11 @@
         dest: ./
         flat: yes
       run_once: yes
+
+    - name: Push plotter script
+      copy:
+        src: /home/indy/indy-node/scripts/build_graph_from_csv
+        dest: /tmp/build_graph_from_csv
 
     - name: Start node service
       service: name=indy-node state=started
