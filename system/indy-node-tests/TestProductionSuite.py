@@ -225,6 +225,7 @@ class TestProductionSuite:
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary5)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
+        await ensure_pool_is_in_sync(node_ids=list(range(5, 12)))
 
         # promote initial 4th node by owner
         await eventually(
@@ -232,6 +233,7 @@ class TestProductionSuite:
         )
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
+        await ensure_pool_is_in_sync(node_ids=list(range(4, 12)))
 
         # promote initial 3rd node by owner
         await eventually(
@@ -239,6 +241,7 @@ class TestProductionSuite:
         )
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
+        await ensure_pool_is_in_sync(node_ids=list(range(3, 12)))
 
         # promote initial 2nd node by owner - VC
         primary6, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
@@ -248,6 +251,7 @@ class TestProductionSuite:
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary6)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
+        await ensure_pool_is_in_sync(node_ids=list(range(2, 12)))
 
         # promote initial 1st node by owner
         await eventually(
