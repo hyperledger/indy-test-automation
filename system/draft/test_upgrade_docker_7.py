@@ -183,7 +183,13 @@ async def test_pool_upgrade_positive(
     # print(res)
     # assert res['op'] == 'REPLY'
 
-    await asyncio.sleep(5*60)
+    # start new node
+    assert new_node.exec_run(
+        ['systemctl', 'start', 'indy-node'],
+        user='root'
+    ).exit_code == 0
+
+    await asyncio.sleep(7*60)
 
     docker_7_hosts = [
         testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)
@@ -196,12 +202,6 @@ async def test_pool_upgrade_positive(
     print(version_checks)
     status_checks = [output.stdout.find(status) for output in status_outputs]
     print(status_checks)
-
-    # start new node
-    assert new_node.exec_run(
-        ['systemctl', 'start', 'indy-node'],
-        user='root'
-    ).exit_code == 0
 
     # add new node
     res = await send_node(
