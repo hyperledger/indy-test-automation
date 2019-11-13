@@ -96,7 +96,6 @@ class TestProductionSuite:
         assert res5['op'] == 'REPLY'
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(nodes_num=5)
 
         # add 6th node
         res = await send_node(
@@ -114,7 +113,6 @@ class TestProductionSuite:
         assert res6['op'] == 'REPLY'
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(nodes_num=6)
 
         # add 7th node - f will be changed - VC
         primary1, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
@@ -128,7 +126,6 @@ class TestProductionSuite:
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(nodes_num=7)
 
         # add 8th node
         res8 = await send_node(
@@ -139,7 +136,6 @@ class TestProductionSuite:
         assert res8['op'] == 'REPLY'
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(nodes_num=8)
 
         # add 9th node
         res9 = await send_node(
@@ -150,7 +146,6 @@ class TestProductionSuite:
         assert res9['op'] == 'REPLY'
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(nodes_num=9)
 
         # add 10th node - f will be changed - VC
         primary2, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
@@ -164,7 +159,6 @@ class TestProductionSuite:
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(nodes_num=10)
 
         # add 11th node
         res11 = await send_node(
@@ -175,7 +169,6 @@ class TestProductionSuite:
         assert res11['op'] == 'REPLY'
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(nodes_num=11)
 
         pool_info = get_pool_info(primary2)
         print(pool_info)
@@ -231,7 +224,6 @@ class TestProductionSuite:
         await pool.refresh_pool_ledger(pool_handler)
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary5)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
-        await ensure_pool_is_in_sync(node_ids=list(range(5, 12)))
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
 
         # promote initial 4th node by owner
@@ -239,7 +231,6 @@ class TestProductionSuite:
             promote_node, pool_handler, wallet_handler, stewards['steward4'], 'Node4', pool_info['Node4']
         )
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
-        await ensure_pool_is_in_sync(node_ids=list(range(4, 12)))
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
 
         # promote initial 3rd node by owner
@@ -247,7 +238,6 @@ class TestProductionSuite:
             promote_node, pool_handler, wallet_handler, stewards['steward3'], 'Node3', pool_info['Node3']
         )
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
-        await ensure_pool_is_in_sync(node_ids=list(range(3, 12)))
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
 
         # promote initial 2nd node by owner - VC
@@ -257,7 +247,6 @@ class TestProductionSuite:
         )
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary6)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
-        await ensure_pool_is_in_sync(node_ids=list(range(2, 12)))
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
 
         # promote initial 1st node by owner
@@ -265,8 +254,6 @@ class TestProductionSuite:
             promote_node, pool_handler, wallet_handler, stewards['steward1'], 'Node1', pool_info['Node1']
         )
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
-        await ensure_pool_is_in_sync(nodes_num=11)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-
         await ensure_pool_is_in_sync(nodes_num=11)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
