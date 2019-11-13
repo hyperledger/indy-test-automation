@@ -7,30 +7,36 @@
   tasks:
     - name: Filter journalctl
       shell: "journalctl | sed -n '/Traceback/,/Error/p' > /tmp/jctl_exceptions.txt"
+      ignore_errors: yes
 
     - name: Fetch journalctl exceptions
       fetch:
         src: "/tmp/jctl_exceptions.txt"
         dest: "/tmp/summary/jctl/{{ inventory_hostname }}.jctl_exceptions.txt"
         flat: yes
+      ignore_errors: yes
 
     - name: Filter logs for errors
       shell: "xzgrep -n ERROR /var/log/indy/sandbox/* > /tmp/log_errors.txt"
+      ignore_errors: yes
 
     - name: Fetch log errors
       fetch:
         src: "/tmp/log_errors.txt"
         dest: "/tmp/summary/logs/{{ inventory_hostname }}.log_errors.txt"
         flat: yes
+      ignore_errors: yes
 
     - name: Filter logs for patterns
-      shell: "xzgrep -n 'blacklisting\|invalid BLS signature\|request digest is incorrect\|has incorrect digest\|time not acceptable\|incorrect state trie root\|incorrect transaction tree root' /var/log/indy/sandbox/* > /tmp/log_patterns.txt"
+      shell: "xzgrep -n 'blacklisting\\|invalid BLS signature\\|request digest is incorrect\\|has incorrect digest\\|time not acceptable\\|incorrect state trie root\\|incorrect transaction tree root' /var/log/indy/sandbox/* > /tmp/log_patterns.txt"
+      ignore_errors: yes
 
     - name: Fetch log patterns
       fetch:
         src: "/tmp/log_patterns.txt"
         dest: "/tmp/summary/logs/{{ inventory_hostname }}.log_patterns.txt"
         flat: yes
+      ignore_errors: yes
 
     - name: Stop service
       service: name=indy-node state=stopped
