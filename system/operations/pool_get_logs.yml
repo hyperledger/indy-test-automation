@@ -35,7 +35,7 @@
       mode: pull
 
   - name: Stop service
-    shell: "systemctl stop indy-node"
+    service: name=indy-node state=stopped
     become: yes
 
   - name: Compress metrics db
@@ -69,5 +69,5 @@
       flat: yes
 
   - name: Start service
-    shell: "systemctl start indy-node"
+    service: name=indy-node state=started
     become: yes

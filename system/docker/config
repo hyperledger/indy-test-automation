@@ -33,3 +33,23 @@ Host node7
         User root
 	IdentityFile /home/indy/.ssh/test_key
         StrictHostKeyChecking no
+Host node8
+        HostName 10.0.0.9
+        User root
+        IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no
+Host node9
+        HostName 10.0.0.10
+        User root
+        IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no
+Host node10
+        HostName 10.0.0.11
+        User root
+        IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no
+Host node11
+        HostName 10.0.0.12
+        User root
+        IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no

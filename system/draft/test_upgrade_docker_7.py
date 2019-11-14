@@ -70,11 +70,6 @@ async def test_pool_upgrade_positive(
         user='root'
     ).exit_code == 0
 
-    # start
-    assert new_node.exec_run(
-        ['systemctl', 'start', 'indy-node'],
-        user='root'
-    ).exit_code == 0
     # ------------------------------------------------------------------------------------------------------------------
 
     dests = [
@@ -188,7 +183,13 @@ async def test_pool_upgrade_positive(
     # print(res)
     # assert res['op'] == 'REPLY'
 
-    await asyncio.sleep(5*60)
+    # start new node
+    assert new_node.exec_run(
+        ['systemctl', 'start', 'indy-node'],
+        user='root'
+    ).exit_code == 0
+
+    await asyncio.sleep(7*60)
 
     docker_7_hosts = [
         testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)
@@ -202,7 +203,7 @@ async def test_pool_upgrade_positive(
     status_checks = [output.stdout.find(status) for output in status_outputs]
     print(status_checks)
 
-    # add node
+    # add new node
     res = await send_node(
         pool_handler, wallet_handler, ['VALIDATOR'], steward_did, EXTRA_DESTS[3], new_alias,
         EXTRA_BLSKEYS[3], EXTRA_BLSKEY_POPS[3], new_ip, int(PORT_2), new_ip, int(PORT_1)
