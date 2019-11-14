@@ -14,6 +14,7 @@ from system.docker_setup import client, pool_builder, pool_starter,\
 # TODO dynamic install of old version to upgrade from
 # TODO INDY-2132 and INDY-2125
 @pytest.mark.asyncio
+# RUN IT 3 TIMES: 1.7.1 (1.1.41) -> latest, 1.9.1 (1.1.52) -> latest, previous -> latest
 async def test_pool_upgrade_positive(
         docker_setup_and_teardown, payment_init, initial_token_minting, pool_handler, wallet_handler,
         check_no_failures_fixture
@@ -189,7 +190,7 @@ async def test_pool_upgrade_positive(
         user='root'
     ).exit_code == 0
 
-    await asyncio.sleep(7*60)
+    await asyncio.sleep(5*60)
 
     docker_7_hosts = [
         testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)
@@ -257,8 +258,21 @@ async def test_pool_upgrade_positive(
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
 
+    # set rule for revoc reg def adding without off ledger parameters
+    req = await ledger.build_auth_rule_request(trustee_did, '113', 'ADD', '*', None, '*',
+                                               json.dumps({
+                                                   'constraint_id': 'ROLE',
+                                                   'role': '2',
+                                                   'sig_count': 1,
+                                                   'need_to_be_owner': False,
+                                                   'metadata': {}
+                                               }))
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res)
+    assert res['op'] == 'REPLY'
+
     # write and read NYM after the upgrade
-    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
 
     add_before_results = [
         nym_before_res, attrib_before_res, schema_before_res, cred_def_before_res, revoc_reg_def_before_res,
