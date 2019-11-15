@@ -811,9 +811,19 @@ def get_node_alias(node_num):
     return 'Node{}'.format(node_num)
 
 
+# noinspection PyUnusedLocal
 def get_node_did(node_alias, pool_info=None, primary=None):
     if pool_info is None:
-        pool_info = get_pool_info(primary)
+        try:
+            pool_info = get_pool_info(primary)
+            temp = pool_info[node_alias]
+        except KeyError:
+            try:
+                pool_info = get_pool_info(str(int(primary) + 1))
+                temp = pool_info[node_alias]
+            except KeyError:
+                pool_info = get_pool_info(str(int(primary) - 1))
+
     return pool_info[node_alias]
 
 
@@ -849,6 +859,8 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
                 results.pop(list(results.keys())[list(results.values()).index('timeout')])
         except ValueError:
             pass
+        # check that VC is not in progress at all nodes first
+        assert not all([get_vc_status_from_info(info) for _, info in results.items()])
         # remove all not REPLY and empty (not selected) primaries entries
         primaries = [get_primary_from_info(info, name) for name, info in results.items()]
         # count the same entries
@@ -857,7 +869,6 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         assert res is not None
         assert votes >= (n - f)
         # check that VC is not in progress (status `False`)
-        assert not all([get_vc_status_from_info(info) for _, info in results.items()])
         return res
 
     primary = await eventually(_get_primary, retry_wait=20, timeout=300)
