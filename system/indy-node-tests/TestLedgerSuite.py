@@ -321,7 +321,7 @@ class TestLedgerSuite:
         assert all([v['op'] == 'REPLY' for k, v in res.items()])
 
     @pytest.mark.parametrize('timeout', [5, 3600])
-    @pytest.mark.parametrize('justification', [None, random_string(1), random_string(1024)])
+    @pytest.mark.parametrize('justification', [None, random_string(1), random_string(1000)])
     @pytest.mark.parametrize('reinstall', [False, True])
     @pytest.mark.parametrize('force', [False, True])
     @pytest.mark.parametrize('package', ['indy-node', 'sovrin'])
@@ -363,6 +363,7 @@ class TestLedgerSuite:
             package
         )
         res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
+        print(res1)
         assert res1['op'] == 'REPLY'
 
         req2 = await ledger.build_pool_upgrade_request(
@@ -379,14 +380,15 @@ class TestLedgerSuite:
             package
         )
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
+        print(res2)
         assert res2['op'] == 'REPLY'
 
-    @pytest.mark.parametrize('alias', [random_string(1), random_string(256), random_string(1024)])
+    @pytest.mark.parametrize('alias_length', [1, 256])
     @pytest.mark.parametrize('services', [[], ['VALIDATOR']])
     @pytest.mark.asyncio
     # NODE
     async def test_node(
-            self, pool_handler, wallet_handler, get_default_trustee, alias, services
+            self, pool_handler, wallet_handler, get_default_trustee, alias_length, services
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
@@ -398,7 +400,7 @@ class TestLedgerSuite:
         req = await ledger.build_node_request(
             target_did, target_vk, json.dumps(
                 {
-                    'alias': alias,
+                    'alias': random_string(alias_length),
                     'client_ip': '{}.{}.{}.{}'.format(
                         randrange(1, 255), randrange(1, 255), randrange(1, 255), randrange(1, 255)
                     ),
@@ -412,6 +414,7 @@ class TestLedgerSuite:
             )
         )
         res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, req))
+        print(res)
         assert res['op'] == 'REPLY'
 
     @pytest.mark.parametrize('key', [random_string(1), random_string(1024), random_string(4096)])
