@@ -38,6 +38,12 @@
         flat: yes
       ignore_errors: yes
 
+    - name: Fetch node info
+      synchronize:
+        src: /var/lib/indy/sandbox/node*.json
+        dest: /tmp/summary/node_info
+        mode: pull
+
     - name: Stop service
       service: name=indy-node state=stopped
       become: yes

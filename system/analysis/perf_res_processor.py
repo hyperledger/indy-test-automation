@@ -27,7 +27,7 @@ LOG_PATTERNS = [
 
 class PathReg:
     def __init__(
-            self, base_dir='/tmp/logs/', output_dir='/home/indy/performance_results/'
+            self, base_dir='/tmp/summary/', output_dir='/tmp/summary/'
     ):
         self._base_dir = base_dir
         self._output_dir = output_dir
@@ -65,17 +65,19 @@ class PerformanceReport:
             'TOKEN_TXNS_WRITTEN',
             # 'TOKEN_TXNS_EXPECTED',
             'VIEW_NO',
-            'JCTL_EXCEPTIONS',
-            'LOG_ERRORS',
-            'PATTERN_MATCHES'
+            'VC_IN_PROGRESS',
+            'HAS_WRITE_CONSENSUS'
+            # 'JCTL_EXCEPTIONS',
+            # 'LOG_ERRORS',
+            # 'PATTERN_MATCHES'
         ]
         self._rows = rows if rows else list(range(1, NODES_NUM+1))
         self._report = pd.DataFrame(columns=self._columns, index=self._rows)
-        self.create_dirs()
+        # self.create_dirs()
         self.process_node_info()
-        self.process_journal_exceptions()
-        self.process_log_errors()
-        self.process_metrics()
+        # self.process_journal_exceptions()
+        # self.process_log_errors()
+        # self.process_metrics()
         self.save_report()
 
     @property
@@ -130,20 +132,30 @@ class PerformanceReport:
 
         for i, result in enumerate(get_node_info_as_dicts(), start=1):
             try:
-                self._report.loc[[i], ['DOMAIN_TXNS_WRITTEN']] =\
+                self._report.loc[[i], ['DOMAIN_TXNS_WRITTEN']] = \
                     result['Node_info']['Metrics']['transaction-count']['ledger']
             except KeyError:
                 self._report.loc[[i], ['DOMAIN_TXNS_WRITTEN']] = None
             try:
-                self._report.loc[[i], ['TOKEN_TXNS_WRITTEN']] =\
+                self._report.loc[[i], ['TOKEN_TXNS_WRITTEN']] = \
                     result['Node_info']['Metrics']['transaction-count']['1001']
             except KeyError:
                 self._report.loc[[i], ['TOKEN_TXNS_WRITTEN']] = None
             try:
-                self._report.loc[[i], ['VIEW_NO']] =\
+                self._report.loc[[i], ['VIEW_NO']] = \
                     result['Node_info']['View_change_status']['View_No']
             except KeyError:
                 self._report.loc[[i], ['VIEW_NO']] = None
+            try:
+                self._report.loc[[i], ['VC_IN_PROGRESS']] = \
+                    result['Node_info']['View_change_status']['VC_in_progress']
+            except KeyError:
+                self._report.loc[[i], ['VC_IN_PROGRESS']] = None
+            try:
+                self._report.loc[[i], ['HAS_WRITE_CONSENSUS']] = \
+                    result['Node_info']['Freshness_status']['0']['Has_write_consensus']
+            except KeyError:
+                self._report.loc[[i], ['HAS_WRITE_CONSENSUS']] = None
 
     def process_journal_exceptions(self, path=path_reg.jctl_dir):
 
