@@ -1158,7 +1158,6 @@ async def send_nodes(pool_handle, wallet_handle, trustee_did, count, alias=None)
             )
         )
         res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, steward_did, req))
-        print(res)
         assert res['op'] == 'REPLY'
 
 
@@ -1207,4 +1206,15 @@ async def check_get_something(func_name, *args):
 
 async def ensure_get_something(func_name, *args):
     res = await eventually(check_get_something, func_name, *args)
+    return res
+
+
+async def check_cant_get_something(func_name, *args):
+    res = await func_name(*args)
+    assert res['result']['seqNo'] is None
+    return res
+
+
+async def ensure_cant_get_something(func_name, *args):
+    res = await eventually(check_cant_get_something, func_name, *args)
     return res
