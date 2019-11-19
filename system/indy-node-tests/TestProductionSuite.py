@@ -146,6 +146,7 @@ class TestProductionSuite:
         assert res9['op'] == 'REPLY'
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
+        await ensure_pool_is_in_sync(nodes_num=9)  # new check to debug
 
         # add 10th node - f will be changed - VC
         primary2, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)

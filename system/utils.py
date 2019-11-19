@@ -824,6 +824,7 @@ def get_node_did(node_alias, pool_info=None, primary=None):
             except KeyError:
                 pool_info = get_pool_info(str(int(primary) - 1))
 
+    print(pool_info)  # print pool info to debug
     return pool_info[node_alias]
 
 
