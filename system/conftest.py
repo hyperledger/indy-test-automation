@@ -172,7 +172,7 @@ async def nodes_num_module(request):
 #   - use template
 #   - use docker connection
 @pytest.fixture(scope='function', autouse=True)
-async def ssh_config(nodes_num):
+async def ssh_config():
     if os.environ.get('IN_DOCKER_ENV') != 'yes':
         return
 
@@ -185,7 +185,7 @@ async def ssh_config(nodes_num):
     )
     config = '\n'.join([
         config_entry.format(node_id=(i + 1), node_ip_part=(i + 2))
-        for i in range(nodes_num)
+        for i in range(25)  # get rid of nodes_num consuming and always create ssh config for 25 nodes
     ])
     with open(os.path.expanduser('~/.ssh/config'), 'w') as f:
         f.write(config)
