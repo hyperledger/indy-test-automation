@@ -65,6 +65,8 @@ class TestConsensusSuite:
         # Start all
         for node in test_nodes:
             node.start_service()
+
+        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
     # @pytest.mark.skip(reason='INDY-2059, INDY-2023')

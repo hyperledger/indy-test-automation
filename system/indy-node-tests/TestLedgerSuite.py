@@ -15,23 +15,87 @@ async def docker_setup_and_teardown(docker_setup_and_teardown_module):
 @pytest.mark.usefixtures('check_no_failures_fixture')
 class TestLedgerSuite:
 
-    @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'ENDORSER', 'NETWORK_MONITOR', None])
+    @pytest.mark.parametrize(
+        'target_role, nym_role',  # who writes, who is written
+        [
+            ('TRUSTEE', 'TRUSTEE'),
+            ('TRUSTEE', 'STEWARD'),
+            ('TRUSTEE', 'ENDORSER'),
+            ('TRUSTEE', 'NETWORK_MONITOR'),
+            ('TRUSTEE', None),
+            # ----------------------------
+            ('STEWARD', 'ENDORSER'),
+            ('STEWARD', 'NETWORK_MONITOR'),
+            ('STEWARD', None),
+            # ----------------------------
+            ('ENDORSER', None),
+        ]
+    )
     @pytest.mark.parametrize('alias', [None, random_string(1), random_string(256)])
     @pytest.mark.asyncio
     # NYM						GET_NYM
     async def test_nym(
-            self, pool_handler, wallet_handler, get_default_trustee, target_role, alias
+            self, pool_handler, wallet_handler, get_default_trustee, target_role, nym_role, alias
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
         target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        nym_did, nym_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        await send_nym(
+            pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
+        )
         # --------------------------------------------------------------------------------------------------------------
         res = await send_nym(
-            pool_handler, wallet_handler, trustee_did, target_did, target_vk, alias, target_role
+            pool_handler, wallet_handler, target_did, nym_did, nym_vk, alias, nym_role
         )
         assert res['op'] == 'REPLY'
 
-        await ensure_get_something(get_nym, pool_handler, wallet_handler, trustee_did, target_did)
+        await ensure_get_something(get_nym, pool_handler, wallet_handler, trustee_did, nym_did)
+
+    @pytest.mark.parametrize(
+        'target_role, nym_role, alias, result',
+        [
+            ('TRUSTEE', 'TRUSTEE', random_string(0), 'REQNACK'),
+            ('TRUSTEE', None, random_string(257), 'REQNACK'),
+            # ----------------------------
+            ('STEWARD', 'TRUSTEE', None, 'REJECT'),
+            # ----------------------------
+            ('ENDORSER', 'TRUSTEE', None, 'REJECT'),
+            ('ENDORSER', 'STEWARD', None, 'REJECT'),
+            ('ENDORSER', 'NETWORK_MONITOR', None, 'REJECT'),
+            # ----------------------------
+            ('NETWORK_MONITOR', 'TRUSTEE', None, 'REJECT'),
+            ('NETWORK_MONITOR', 'STEWARD', None, 'REJECT'),
+            ('NETWORK_MONITOR', 'ENDORSER', None, 'REJECT'),
+            ('NETWORK_MONITOR', 'NETWORK_MONITOR', None, 'REJECT'),
+            ('NETWORK_MONITOR', None, None, 'REJECT'),
+            # ----------------------------
+            (None, 'TRUSTEE', None, 'REJECT'),
+            (None, 'STEWARD', None, 'REJECT'),
+            (None, 'ENDORSER', None, 'REJECT'),
+            (None, 'NETWORK_MONITOR', None, 'REJECT'),
+            (None, None, None, 'REJECT'),
+        ]
+    )
+    @pytest.mark.asyncio
+    # NYM						GET_NYM
+    async def test_nym_negative(
+            self, pool_handler, wallet_handler, get_default_trustee, target_role, nym_role, alias, result
+    ):
+        # SETUP---------------------------------------------------------------------------------------------------------
+        trustee_did, _ = get_default_trustee
+        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        nym_did, nym_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        await send_nym(
+            pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
+        )
+        # --------------------------------------------------------------------------------------------------------------
+        res = await send_nym(
+            pool_handler, wallet_handler, target_did, nym_did, nym_vk, alias, nym_role
+        )
+        assert res['op'] == result
+
+        await ensure_cant_get_something(get_nym, pool_handler, wallet_handler, trustee_did, nym_did)
 
     @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'ENDORSER', 'NETWORK_MONITOR', None])
     @pytest.mark.parametrize(
@@ -124,7 +188,7 @@ class TestLedgerSuite:
 
     @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'ENDORSER'])
     @pytest.mark.parametrize('tag', [random_string(1), random_string(256)])
-    @pytest.mark.parametrize('max_cred_num', [1, 4096, 65536])
+    @pytest.mark.parametrize('max_cred_num', [1, 65536])
     @pytest.mark.parametrize('issuance_type', ['ISSUANCE_BY_DEFAULT', 'ISSUANCE_ON_DEMAND'])
     @pytest.mark.asyncio
     # REV_REG_DEF				GET_REV_REG_DEF + PARSE_GET_REV_REG_DEF
@@ -166,7 +230,7 @@ class TestLedgerSuite:
 
     @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'ENDORSER'])
     @pytest.mark.parametrize('tag', [random_string(1), random_string(256)])
-    @pytest.mark.parametrize('max_cred_num', [1, 1024])
+    @pytest.mark.parametrize('max_cred_num', [1, 65536])
     @pytest.mark.parametrize('issuance_type', ['ISSUANCE_BY_DEFAULT', 'ISSUANCE_ON_DEMAND'])
     @pytest.mark.asyncio
     # REV_REG_ENTRY			    GET_REV_REG + PARSE_GET_REV_REG | GET_REV_REG_DELTA + PARSE_GET_REV_REG_DELTA
@@ -325,10 +389,12 @@ class TestLedgerSuite:
     @pytest.mark.parametrize('reinstall', [False, True])
     @pytest.mark.parametrize('force', [False, True])
     @pytest.mark.parametrize('package', ['indy-node', 'sovrin'])
+    @pytest.mark.parametrize('name_length', [2, 256])
     @pytest.mark.asyncio
     # POOL_UPGRADE
     async def test_pool_upgrade(
-            self, pool_handler, wallet_handler, get_default_trustee, timeout, justification, reinstall, force, package
+            self, pool_handler, wallet_handler, get_default_trustee,
+            timeout, justification, reinstall, force, package, name_length
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
@@ -347,7 +413,7 @@ class TestLedgerSuite:
                 }
             )
         )
-        name = random_string(256)  # should be the same for start and cancel
+        name = random_string(name_length)  # should be the same for start and cancel
         # --------------------------------------------------------------------------------------------------------------
         req1 = await ledger.build_pool_upgrade_request(
             trustee_did,
@@ -380,7 +446,6 @@ class TestLedgerSuite:
             package
         )
         res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
-        print(res2)
         assert res2['op'] == 'REPLY'
 
     @pytest.mark.parametrize('alias_length', [1, 256])

@@ -94,6 +94,10 @@ class TestProductionSuite:
             ips[0], int(PORT_2), ips[0], int(PORT_1)
         )
         assert res5['op'] == 'REPLY'
+        # DEBUG
+        node5 = NodeHost(5)
+        print(node5.run('systemctl status indy-node'))
+        # END DEBUG
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
 
@@ -111,6 +115,10 @@ class TestProductionSuite:
             ips[1], int(PORT_2), ips[1], int(PORT_1)
         )
         assert res6['op'] == 'REPLY'
+        # DEBUG
+        node6 = NodeHost(6)
+        print(node6.run('systemctl status indy-node'))
+        # END DEBUG
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
 
@@ -122,6 +130,10 @@ class TestProductionSuite:
             ips[2], int(PORT_2), ips[2], int(PORT_1)
         )
         assert res7['op'] == 'REPLY'
+        # DEBUG
+        node7 = NodeHost(7)
+        print(node7.run('systemctl status indy-node'))
+        # END DEBUG
         await pool.refresh_pool_ledger(pool_handler)
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
@@ -134,6 +146,10 @@ class TestProductionSuite:
             ips[3], int(PORT_2), ips[3], int(PORT_1)
         )
         assert res8['op'] == 'REPLY'
+        # DEBUG
+        node8 = NodeHost(8)
+        print(node8.run('systemctl status indy-node'))
+        # END DEBUG
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
 
@@ -144,8 +160,13 @@ class TestProductionSuite:
             ips[4], int(PORT_2), ips[4], int(PORT_1)
         )
         assert res9['op'] == 'REPLY'
+        # DEBUG
+        node9 = NodeHost(9)
+        print(node9.run('systemctl status indy-node'))
+        # END DEBUG
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
+        await ensure_pool_is_in_sync(nodes_num=9)  # new check to debug
 
         # add 10th node - f will be changed - VC
         primary2, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
