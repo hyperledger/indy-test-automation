@@ -1964,12 +1964,12 @@ async def test_misc_restore_from_audit(
 
 @pytest.mark.parametrize(
     'node_txns_count, loops_count, concurrency', [
-        # (30, 5, False),  # more extra node txns
-        # (20, 10, False),
-        # (10, 15, False),  # more view changes
-        (100, 1, True),
-        (100, 3, True),
-        (100, 5, True)
+        (15, 5, False),
+        (10, 10, False),
+        (5, 15, False),
+        (150, 5, True),
+        (100, 10, True),
+        (50, 15, True)
     ]
 )
 @pytest.mark.nodes_num(5)
@@ -1998,7 +1998,7 @@ async def test_misc_node_and_vc_interleaved(
             tasks = []
             for _ in range(node_txns_count):
                 task = send_nodes(
-                    pool_handler, wallet_handler, trustee_did, count=node_txns_count, alias='INACTIVE_NODE'
+                    pool_handler, wallet_handler, trustee_did, count=1, alias='INACTIVE_NODE'
                 )
                 tasks.append(task)
             await asyncio.gather(*tasks, return_exceptions=True)
