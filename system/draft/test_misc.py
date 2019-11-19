@@ -1717,7 +1717,7 @@ async def test_misc_drop_states(
     print(res3)
     assert res3['op'] == 'REPLY'
 
-    # stop Node7 -> drop token state -> start Node7
+    # stop Node7 -> drop all states -> start Node7
     node7 = NodeHost(7)
     node7.stop_service()
     time.sleep(3)

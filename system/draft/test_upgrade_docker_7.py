@@ -293,5 +293,14 @@ async def test_pool_upgrade_positive(
     assert all([check is not -1 for check in version_checks])
     assert all([check is not -1 for check in status_checks])
 
+    # stop Node7 -> drop all states -> start Node7
+    node7 = NodeHost(7)
+    node7.stop_service()
+    time.sleep(3)
+    for _ledger in ['pool', 'domain', 'config', 'sovtoken']:
+        print(node7.run('rm -rf /var/lib/indy/sandbox/data/Node7/{}_state'.format(_ledger)))
+    time.sleep(3)
+    node7.start_service()
+
     await ensure_pool_is_in_sync(nodes_num=8)
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
