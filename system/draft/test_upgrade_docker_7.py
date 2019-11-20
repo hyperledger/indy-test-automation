@@ -14,7 +14,7 @@ from system.docker_setup import client, pool_builder, pool_starter,\
 # TODO dynamic install of old version to upgrade from
 # TODO INDY-2132 and INDY-2125
 @pytest.mark.asyncio
-# RUN IT 3 TIMES: 1.7.1 (1.1.41) -> latest, 1.9.1 (1.1.52) -> latest, previous -> latest
+# RUN IT 3 TIMES: 1.7.1 (1.1.41 / 0.9.11) -> latest, 1.9.1 (1.1.52) -> latest, previous -> latest
 async def test_pool_upgrade_positive(
         docker_setup_and_teardown, payment_init, initial_token_minting, pool_handler, wallet_handler,
         check_no_failures_fixture
@@ -49,13 +49,19 @@ async def test_pool_upgrade_positive(
     ).exit_code == 0
 
     # upgrade it to the target version of pool upgrade command
-    plenum_ver = '1.11.0'
+    plenum_ver = '1.12.0~dev957'
     plenum_pkg = 'indy-plenum'
-    node_ver = '1.11.0'
+    node_ver = '1.12.0~dev1135'
     node_pkg = 'indy-node'
-    sovrin_ver = '1.1.60'
+    sovrin_ver = '1.1.165'
     sovrin_pkg = 'sovrin'
-    plugin_ver = '1.0.4'
+    plugin_ver = '1.0.5~dev116'
+    # use it only for master upgrade -----------------------------------------------------------------------------------
+    assert new_node.exec_run(
+        ['echo', 'deb https://repo.sovrin.org/deb xenial master', '>>', '/etc/apt/sources.list'],
+        user='root'
+    ).exit_code == 0
+    # ------------------------------------------------------------------------------------------------------------------
     assert new_node.exec_run(
         ['apt', 'update'],
         user='root'
@@ -169,12 +175,48 @@ async def test_pool_upgrade_positive(
 
     await send_payments(pool_handler, wallet_handler, trustee_did, address, 5)
 
-    # schedule pool upgrade
-    req = await ledger.build_pool_upgrade_request(
-        trustee_did, name, version, action, _sha256, _timeout, docker_7_schedule, None, reinstall, force, package
-    )
-    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    assert res['op'] == 'REPLY'
+    # # schedule pool upgrade - for STABLE to STABLE upgrade
+    # req = await ledger.build_pool_upgrade_request(
+    #     trustee_did, name, version, action, _sha256, _timeout, docker_7_schedule, None, reinstall, force, package
+    # )
+    # res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    # assert res['op'] == 'REPLY'
+
+    # perform upgrade manually - for STABLE to MASTER upgrade
+    containers = [client.containers.get('node{}'.format(i)) for i in range(1, 8)]
+    print(containers)
+
+    for container in containers:
+
+        assert container.exec_run(
+            ['echo', 'deb https://repo.sovrin.org/deb xenial master', '>>', '/etc/apt/sources.list'],
+            user='root'
+        ).exit_code == 0
+
+        assert container.exec_run(
+            ['systemctl', 'stop', 'indy-node'],
+            user='root'
+        ).exit_code == 0
+
+        assert container.exec_run(
+            ['apt', 'update'],
+            user='root'
+        ).exit_code == 0
+        assert container.exec_run(
+            ['apt', 'install',
+             '{}={}'.format(sovrin_pkg, sovrin_ver),
+             '{}={}'.format(node_pkg, node_ver),
+             '{}={}'.format(plenum_pkg, plenum_ver),
+             '{}={}'.format('sovtoken', plugin_ver),
+             '{}={}'.format('sovtokenfees', plugin_ver),
+             '-y'],
+            user='root'
+        ).exit_code == 0
+
+        assert container.exec_run(
+            ['systemctl', 'start', 'indy-node'],
+            user='root'
+        ).exit_code == 0
 
     # # cancel pool upgrade - optional
     # req = await ledger.build_pool_upgrade_request(
