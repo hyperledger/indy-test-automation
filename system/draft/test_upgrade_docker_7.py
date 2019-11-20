@@ -56,12 +56,6 @@ async def test_pool_upgrade_positive(
     sovrin_ver = '1.1.165'
     sovrin_pkg = 'sovrin'
     plugin_ver = '1.0.5~dev116'
-    # use it only for master upgrade -----------------------------------------------------------------------------------
-    assert new_node.exec_run(
-        ['echo', 'deb https://repo.sovrin.org/deb xenial master', '>>', '/etc/apt/sources.list'],
-        user='root'
-    ).exit_code == 0
-    # ------------------------------------------------------------------------------------------------------------------
     assert new_node.exec_run(
         ['apt', 'update'],
         user='root'
@@ -73,7 +67,7 @@ async def test_pool_upgrade_positive(
          '{}={}'.format(plenum_pkg, plenum_ver),
          '{}={}'.format('sovtoken', plugin_ver),
          '{}={}'.format('sovtokenfees', plugin_ver),
-         '-y'],
+         '-y', '--allow-change-held-packages'],
         user='root'
     ).exit_code == 0
 
@@ -189,29 +183,31 @@ async def test_pool_upgrade_positive(
     for container in containers:
 
         assert container.exec_run(
-            ['echo', 'deb https://repo.sovrin.org/deb xenial master', '>>', '/etc/apt/sources.list'],
-            user='root'
-        ).exit_code == 0
-
-        assert container.exec_run(
             ['systemctl', 'stop', 'indy-node'],
             user='root'
         ).exit_code == 0
+
+    for container in containers:
 
         assert container.exec_run(
             ['apt', 'update'],
             user='root'
         ).exit_code == 0
-        assert container.exec_run(
+
+        res = container.exec_run(
             ['apt', 'install',
              '{}={}'.format(sovrin_pkg, sovrin_ver),
              '{}={}'.format(node_pkg, node_ver),
              '{}={}'.format(plenum_pkg, plenum_ver),
              '{}={}'.format('sovtoken', plugin_ver),
              '{}={}'.format('sovtokenfees', plugin_ver),
-             '-y'],
+             '-y', '--allow-change-held-packages'],
             user='root'
-        ).exit_code == 0
+        )
+        print(res.output)
+        assert res.exit_code == 0
+
+    for container in containers:
 
         assert container.exec_run(
             ['systemctl', 'start', 'indy-node'],
