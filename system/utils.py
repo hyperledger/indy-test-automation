@@ -1219,3 +1219,38 @@ async def check_cant_get_something(func_name, *args):
 async def ensure_cant_get_something(func_name, *args):
     res = await eventually(check_cant_get_something, func_name, *args)
     return res
+
+
+def upgrade_nodes_manually(containers, sovrin_ver, node_ver, plenum_ver, plugin_ver):
+
+    for container in containers:
+
+        assert container.exec_run(
+            ['systemctl', 'stop', 'indy-node'],
+            user='root'
+        ).exit_code == 0
+
+    for container in containers:
+
+        assert container.exec_run(
+            ['apt', 'update'],
+            user='root'
+        ).exit_code == 0
+
+        assert container.exec_run(
+            ['apt', 'install',
+             '{}={}'.format('sovrin', sovrin_ver),
+             '{}={}'.format('indy-node', node_ver),
+             '{}={}'.format('indy-plenum', plenum_ver),
+             '{}={}'.format('sovtoken', plugin_ver),
+             '{}={}'.format('sovtokenfees', plugin_ver),
+             '-y', '--allow-change-held-packages'],
+            user='root'
+        ).exit_code == 0
+
+    for container in containers:
+
+        assert container.exec_run(
+            ['systemctl', 'start', 'indy-node'],
+            user='root'
+        ).exit_code == 0

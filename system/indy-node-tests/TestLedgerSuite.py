@@ -183,6 +183,39 @@ class TestLedgerSuite:
         assert schema_id_local == schema_id_ledger
         assert res2['result']['seqNo'] == json.loads(schema_json)['seqNo']
 
+    @pytest.mark.parametrize(
+        'target_role, name, result',
+        [
+            ('ENDORSER', random_string(257), 'REQNACK'),
+            ('NETWORK_MONITOR', random_string(256), 'REJECT'),
+            (None, random_string(256), 'REJECT')
+        ]
+    )
+    @pytest.mark.asyncio
+    # SCHEMA					GET_SCHEMA + PARSE_GET_SCHEMA
+    async def test_schema_negative(
+            self, pool_handler, wallet_handler, get_default_trustee, target_role, name, result
+    ):
+        # SETUP---------------------------------------------------------------------------------------------------------
+        trustee_did, _ = get_default_trustee
+        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        await send_nym(
+            pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
+        )
+        # --------------------------------------------------------------------------------------------------------------
+        schema_id_local, res1 = await send_schema(
+            pool_handler, wallet_handler, target_did, name, '1.0', json.dumps(
+                [random_string(1), random_string(256)]
+            )
+        )
+        assert res1['op'] == result
+
+        if result == 'REQNACK':
+            res2 = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id_local)
+            assert res2['op'] == result
+        else:
+            await ensure_cant_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
+
     @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'ENDORSER'])
     @pytest.mark.parametrize('tag', [random_string(1), random_string(256)])
     @pytest.mark.parametrize('revocation', [False, True])
