@@ -18,6 +18,7 @@ import logging
 logger = logging.getLogger(__name__)
 # >>>>> set logging here <<<<<
 # logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(message)s')
+# logging.basicConfig(level=logging.CRITICAL)
 
 DOCKER_BUILD_CTX_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 'docker', 'node'
@@ -156,7 +157,10 @@ def gather_logs(hosts, target_dir):
     try:
         for host in hosts:
             logs_path = host.generate_logs()
-            bits, stat = client.containers.get(host.name).get_archive(logs_path)
+            try:
+                bits, stat = client.containers.get(host.name).get_archive(logs_path)
+            except docker.errors.NotFound:  # fix for prod case
+                bits, stat = client.containers.get('extra_{}'.format(host.name)).get_archive(logs_path)
             with open(str(tmp_tar), 'w+b') as f:
                 for chunk in bits:
                     f.write(chunk)

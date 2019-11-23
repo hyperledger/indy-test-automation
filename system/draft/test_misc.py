@@ -2045,12 +2045,11 @@ async def test_do_not_restore_primaries(
 ):
     # initial version for this case is 1.11.0 stable, final version is the latest master
     trustee_did, _ = get_default_trustee
-    # FIXME fill this dict with the right versions
     versions = {
-        'sovrin_ver': '',
-        'node_ver': '',
-        'plenum_ver': '',
-        'plugin_ver': ''
+        'sovrin_ver': '1.1.167',
+        'node_ver': '1.12.0~dev1138',
+        'plenum_ver': '1.12.0~dev962',
+        'plugin_ver': '1.0.5~dev118'
     }
 
     primary1, alias, node_did = await get_primary(pool_handler, wallet_handler, trustee_did)

@@ -199,6 +199,11 @@ def _docker_teardown(session_name):
         if (request.node.nodeid in _failed_nodes) and request.config.getoption("gatherlogs"):
             logs_dir = os.path.join(request.config.getoption("logsdir"), session_name, request.node.nodeid)
 
+        # fix for prod case
+        if request.node.name == 'test_case_complex_pool_operations':
+            nodes_num = 11
+        # -----------------
+
         teardown(nodes_num, logs_dir)
     return wrapped
 

@@ -479,7 +479,7 @@ async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
 
 async def ensure_pool_is_in_sync(node_ids=None, nodes_num=7):
     await eventually(
-        check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num, retry_wait=20, timeout=200
+        check_pool_is_in_sync, node_ids=node_ids, nodes_num=nodes_num, retry_wait=10, timeout=200
     )
 
 
@@ -520,7 +520,7 @@ async def check_state_root_hashes_are_in_sync(pool_handle, wallet_handle, truste
 
 async def ensure_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trustee_did):
     await eventually(
-        check_state_root_hashes_are_in_sync, pool_handle, wallet_handle, trustee_did, retry_wait=20, timeout=200
+        check_state_root_hashes_are_in_sync, pool_handle, wallet_handle, trustee_did, retry_wait=10, timeout=200
     )
 
 
@@ -1037,8 +1037,7 @@ class NodeHost:
         return self.run('systemctl restart indy-node')
 
     def generate_logs(self):
-        # TODO might fail in case of running nodes since tar complaints when
-        # files are changed during archiving
+        # TODO might fail in case of running nodes since tar complaints when files are changed during archiving
         archive_path = "/tmp/{}.{}.tgz".format(self.name, datetime.now().strftime("%Y-%m-%dT%H%M%S"))
         self.run(
             "find /var/log/indy/sandbox/ /var/lib/indy/sandbox/ -maxdepth 1 -type f -not -name data "
