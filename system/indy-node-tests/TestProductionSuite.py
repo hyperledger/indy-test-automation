@@ -267,3 +267,10 @@ class TestProductionSuite:
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
         await ensure_pool_is_in_sync(nodes_num=11)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+    # TODO implement upgrade chain test case
+    @pytest.mark.asyncio
+    async def test_case_upgrade_chain(
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+    ):
+        pass

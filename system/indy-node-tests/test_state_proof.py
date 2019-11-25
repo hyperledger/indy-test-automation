@@ -205,12 +205,12 @@ async def test_misc_state_proof(
     req11 = await ledger.build_get_auth_rule_request(None, '101', 'ADD', '*', None, '*')
     res11 = json.loads(await ledger.submit_request(pool_handler, req11))
     assert res11['op'] == 'REPLY'
+    assert res11['result']['data'] is not None
 
-    # failed with PoolLedgerTimeout
     req12 = await payment.build_get_txn_fees_req(wallet_handler, None, libsovtoken_payment_method)
     res12 = json.loads(await ledger.submit_request(pool_handler, req12))
     assert res12['op'] == 'REPLY'
-    assert res12['result']['seqNo'] is not None
+    assert res12['result']['fees'] is not None
 
     req13 = await ledger.build_get_acceptance_mechanisms_request(None, None, 'AML version')
     res13 = json.loads(await ledger.submit_request(pool_handler, req13))

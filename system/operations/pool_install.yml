@@ -4,13 +4,13 @@
   vars:
     pool_prefix: persistent_node
     pool_size: "{{ groups['pool']|count }}"
-    sovrin_ver: 1.1.59
-    node_ver: 1.11.0~rc1
-    plenum_ver: 1.11.0
+    sovrin_ver: 1.1.162
+    node_ver: 1.12.0~dev1132
+    plenum_ver: 1.12.0~dev954
     libindy_crypto_ver: 0.4.5
     python_indy_crypto_ver: 0.4.5
     python_pyzmq_ver: 18.1.0
-    plugin_ver: 1.0.4~rc22
+    plugin_ver: 1.0.5~dev115
 
   tasks:
     - name: Identify node number
@@ -70,4 +70,8 @@
 
     - name: Start node service
       service: name=indy-node state=started
+      become: yes
+
+    - name: Reload daemon
+      shell: "systemctl daemon-reload"
       become: yes

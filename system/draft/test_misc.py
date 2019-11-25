@@ -1717,7 +1717,7 @@ async def test_misc_drop_states(
     print(res3)
     assert res3['op'] == 'REPLY'
 
-    # stop Node7 -> drop token state -> start Node7
+    # stop Node7 -> drop all states -> start Node7
     node7 = NodeHost(7)
     node7.stop_service()
     time.sleep(3)
@@ -2035,3 +2035,37 @@ async def test_async(
     await asyncio.gather(*tasks)
     t3 = time.perf_counter()
     print(t3 - t2)
+
+
+@pytest.mark.nodes_num(4)
+@pytest.mark.asyncio
+# INDY-2298
+async def test_do_not_restore_primaries(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num
+):
+    # initial version for this case is 1.11.0 stable, final version is the latest master
+    trustee_did, _ = get_default_trustee
+    versions = {
+        'sovrin_ver': '1.1.167',
+        'node_ver': '1.12.0~dev1138',
+        'plenum_ver': '1.12.0~dev962',
+        'plugin_ver': '1.0.5~dev118'
+    }
+
+    primary1, alias, node_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+    await demote_node(pool_handler, wallet_handler, trustee_did, alias, node_did)
+    primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
+    await promote_node(pool_handler, wallet_handler, trustee_did, alias, node_did)
+    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
+
+    containers = [client.containers.get('node{}'.format(i)) for i in range(1, 5)]
+
+    upgrade_nodes_manually(containers[:-1], **versions)
+
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=3)
+
+    upgrade_nodes_manually(containers[-1], **versions)
+
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=3)
+    await ensure_pool_is_in_sync(nodes_num=nodes_num)
+    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)

@@ -125,6 +125,37 @@ class TestLedgerSuite:
             get_attrib, pool_handler, wallet_handler, trustee_did, target_did, xhash, raw_key, enc
         )
 
+    @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'ENDORSER', 'NETWORK_MONITOR', None])
+    @pytest.mark.parametrize(
+        'xhash, raw, enc',
+        [
+            (hashlib.sha256().hexdigest(), json.dumps({'key': random_string(256)}), None),
+            (None, json.dumps({'key': random_string(256)}), random_string(256)),
+            (hashlib.sha256().hexdigest(), None, random_string(256)),
+            (hashlib.sha256().hexdigest(), json.dumps({'key': random_string(256)}), random_string(256))
+        ]
+    )
+    @pytest.mark.asyncio
+    # ATTRIB					GET_ATTRIB
+    async def test_attrib_negative(
+            self, pool_handler, wallet_handler, get_default_trustee, target_role, xhash, raw, enc
+    ):
+        # SETUP---------------------------------------------------------------------------------------------------------
+        trustee_did, _ = get_default_trustee
+        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        await send_nym(
+            pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
+        )
+        # --------------------------------------------------------------------------------------------------------------
+        res = await send_attrib(pool_handler, wallet_handler, target_did, target_did, xhash, raw, enc)
+        assert res['op'] == 'REQNACK'
+
+        if xhash and raw and enc:
+            for _xhash, _raw, _enc in [(xhash, None, None), (None, 'key', None), (None, None, enc)]:
+                await ensure_cant_get_something(
+                    get_attrib, pool_handler, wallet_handler, trustee_did, target_did, _xhash, _raw, _enc
+                )
+
     @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'ENDORSER'])
     @pytest.mark.parametrize('name', [random_string(1), random_string(256)])
     @pytest.mark.asyncio
@@ -151,6 +182,39 @@ class TestLedgerSuite:
         schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
         assert schema_id_local == schema_id_ledger
         assert res2['result']['seqNo'] == json.loads(schema_json)['seqNo']
+
+    @pytest.mark.parametrize(
+        'target_role, name, result',
+        [
+            ('ENDORSER', random_string(257), 'REQNACK'),
+            ('NETWORK_MONITOR', random_string(256), 'REJECT'),
+            (None, random_string(256), 'REJECT')
+        ]
+    )
+    @pytest.mark.asyncio
+    # SCHEMA					GET_SCHEMA + PARSE_GET_SCHEMA
+    async def test_schema_negative(
+            self, pool_handler, wallet_handler, get_default_trustee, target_role, name, result
+    ):
+        # SETUP---------------------------------------------------------------------------------------------------------
+        trustee_did, _ = get_default_trustee
+        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        await send_nym(
+            pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
+        )
+        # --------------------------------------------------------------------------------------------------------------
+        schema_id_local, res1 = await send_schema(
+            pool_handler, wallet_handler, target_did, name, '1.0', json.dumps(
+                [random_string(1), random_string(256)]
+            )
+        )
+        assert res1['op'] == result
+
+        if result == 'REQNACK':
+            res2 = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id_local)
+            assert res2['op'] == result
+        else:
+            await ensure_cant_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
 
     @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'ENDORSER'])
     @pytest.mark.parametrize('tag', [random_string(1), random_string(256)])
