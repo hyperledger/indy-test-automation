@@ -47,7 +47,7 @@ def network_builder(network_subnet, network_name):
                                       ipam=ipam_config).name
 
 
-def pool_builder(docker_build_ctx_path, node_image_name, node_name_base, network_name, nodes_num):
+def pool_builder(docker_build_ctx_path, node_image_name, node_name_base, network_name, nodes_num, start_from=0):
     try:
         image = client.images.get(node_image_name)
     except docker.errors.ImageNotFound:
@@ -82,7 +82,7 @@ def pool_builder(docker_build_ctx_path, node_image_name, node_name_base, network
                                   security_opt=['seccomp=unconfined'],
                                   tmpfs={'/run': '',
                                          '/run/lock': ''})
-            for i in range(1, nodes_num+1)]
+            for i in range(start_from+1, start_from+nodes_num+1)]
 
 
 def pool_starter(node_containers):
@@ -157,11 +157,7 @@ def gather_logs(hosts, target_dir):
     try:
         for host in hosts:
             logs_path = host.generate_logs()
-            try:
-                bits, stat = client.containers.get(host.name).get_archive(logs_path)
-            except Exception as e:  # fix for prod case
-                print(e)
-                bits, stat = client.containers.get('extra_{}'.format(host.name)).get_archive(logs_path)
+            bits, stat = client.containers.get(host.name).get_archive(logs_path)
             with open(str(tmp_tar), 'w+b') as f:
                 for chunk in bits:
                     f.write(chunk)
