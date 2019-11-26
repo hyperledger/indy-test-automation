@@ -5,7 +5,8 @@ from system.docker_setup import client, pool_builder, pool_starter,\
     DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME, NETWORK_SUBNET
 
 
-EXTRA_NODE_NAME_BASE = 'extra_{}'.format(NODE_NAME_BASE)
+# EXTRA_NODE_NAME_BASE = 'extra_{}'.format(NODE_NAME_BASE)
+EXTRA_NODE_NAME_BASE = NODE_NAME_BASE
 EXTRA_NODES_NUM = 7
 PORT_1 = '9701'
 PORT_2 = '9702'
@@ -26,7 +27,8 @@ class TestProductionSuite:
         # create extra nodes
         extra_containers = pool_starter(
             pool_builder(
-                DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, EXTRA_NODE_NAME_BASE, NETWORK_NAME, EXTRA_NODES_NUM
+                DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, EXTRA_NODE_NAME_BASE, NETWORK_NAME, EXTRA_NODES_NUM,
+                start_from=4
             )
         )
 
