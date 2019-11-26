@@ -159,7 +159,8 @@ def gather_logs(hosts, target_dir):
             logs_path = host.generate_logs()
             try:
                 bits, stat = client.containers.get(host.name).get_archive(logs_path)
-            except docker.errors.NotFound:  # fix for prod case
+            except Exception as e:  # fix for prod case
+                print(e)
                 bits, stat = client.containers.get('extra_{}'.format(host.name)).get_archive(logs_path)
             with open(str(tmp_tar), 'w+b') as f:
                 for chunk in bits:
