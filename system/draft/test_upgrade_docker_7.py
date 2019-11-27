@@ -15,13 +15,12 @@ from system.docker_setup import client, pool_builder, pool_starter,\
 # TODO INDY-2132 and INDY-2125
 @pytest.mark.asyncio
 # RUN IT 3 TIMES:
-# 1.6.73 / 1.6.51 (1.1.24 / 0.9.3+12.58) | 1.6.83 / 1.6.58 (1.1.35 / 0.9.9) -> latest
-# 1.9.1 / 1.9.1 (1.1.52 / 1.0.1) -> latest
+# 1.6.73 / 1.6.51 (1.1.24 / 0.9.3+12.58) | 1.6.83 / 1.6.58 (1.1.35 / 0.9.9) -> latest >> set fees is buggy
+# 1.9.1 / 1.9.1 (1.1.52 / 1.0.1) -> latest >> auth rule is buggy
+# 1.9.0 / 1.9.0 (1.1.50 / 1.0.0) -> latest >> mint and xfer are buggy
 # previous -> latest
 async def test_pool_upgrade_positive(
-        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, check_no_failures_fixture,
-        # initial_fees_setting,
-        # initial_token_minting
+        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, check_no_failures_fixture
 ):
     # ------------------EXTRA NODE SETUP--------------------------------------------------------------------------------
     # create extra node
@@ -53,13 +52,13 @@ async def test_pool_upgrade_positive(
     ).exit_code == 0
 
     # upgrade it to the target version of pool upgrade command
-    plenum_ver = '1.12.0~dev962'
+    plenum_ver = '1.12.0~dev965'
     plenum_pkg = 'indy-plenum'
-    node_ver = '1.12.0~dev1138'
+    node_ver = '1.12.0~dev1141'
     node_pkg = 'indy-node'
-    sovrin_ver = '1.1.167'
+    sovrin_ver = '1.1.172'
     sovrin_pkg = 'sovrin'
-    plugin_ver = '1.0.5~dev118'
+    plugin_ver = '1.0.5~dev120'
     repo_update = new_node.exec_run(
         [
             'sed',
@@ -99,7 +98,7 @@ async def test_pool_upgrade_positive(
         'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
     ]
     init_time = 1
-    version = '1.1.167'
+    version = '1.1.172'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -123,17 +122,16 @@ async def test_pool_upgrade_positive(
     )
 
     time.sleep(60)
-    # perform upgrade to the same version to write upgrade txn and wait for a while [1.1.35 | 1.1.52]
+    # perform upgrade to the same version to write upgrade txn and wait for a while
+    # [from 1.1.35 installed to 1.1.35 | from 1.1.50 installed to 1.1.52]
     req = await ledger.build_pool_upgrade_request(
-        trustee_did, name, '1.1.52', action, _sha256, _timeout, docker_7_schedule, None, reinstall, force, 'sovrin'
+        trustee_did, name, '1.1.50', action, _sha256, _timeout, docker_7_schedule, None, True, force, 'sovrin'
     )
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
-    time.sleep(120)
+    time.sleep(180)
 
     timestamp0 = int(time.time())
-
-    # address = initial_token_minting
 
     steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     res = await send_nym(
@@ -175,55 +173,53 @@ async def test_pool_upgrade_positive(
 
     timestamp1 = int(time.time())
 
-    # set auth rule for pool restart action
-    req = await ledger.build_auth_rule_request(
-        trustee_did, '118', 'ADD', 'action', '*', '*', json.dumps(
-            {
-                'constraint_id': 'ROLE',
-                'role': '*',
-                'sig_count': 1,
-                'need_to_be_owner': False,
-                'metadata': {}
-            }
-        )
-    )
-    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    assert res['op'] == 'REPLY'
-
-    # set rule for cred def adding with off ledger parameters
-    req = await ledger.build_auth_rule_request(
-        trustee_did, '102', 'ADD', '*', None, '*', json.dumps(
-            {
-                'constraint_id': 'OR',
-                'auth_constraints':
-                    [
-                        {
-                            'constraint_id': 'ROLE',
-                            'role': '0',
-                            'sig_count': 1,
-                            'need_to_be_owner': False,
-                            'off_ledger_signature': False,
-                            'metadata': {}
-                        },
-                        {
-                            'constraint_id': 'ROLE',
-                            'role': '*',
-                            'sig_count': 0,
-                            'need_to_be_owner': False,
-                            'off_ledger_signature': True,
-                            'metadata': {}
-                        }
-                    ]
-            }
-        )
-    )
+    # # set auth rule for pool restart action
+    # req = await ledger.build_auth_rule_request(
+    #     trustee_did, '118', 'ADD', 'action', '*', '*', json.dumps(
+    #         {
+    #             'constraint_id': 'ROLE',
+    #             'role': '*',
+    #             'sig_count': 1,
+    #             'need_to_be_owner': False,
+    #             'metadata': {}
+    #         }
+    #     )
+    # )
+    # res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    # assert res['op'] == 'REPLY'
+    #
+    # # set rule for cred def adding with off ledger parameters
+    # req = await ledger.build_auth_rule_request(
+    #     trustee_did, '102', 'ADD', '*', None, '*', json.dumps(
+    #         {
+    #             'constraint_id': 'OR',
+    #             'auth_constraints':
+    #                 [
+    #                     {
+    #                         'constraint_id': 'ROLE',
+    #                         'role': '0',
+    #                         'sig_count': 1,
+    #                         'need_to_be_owner': False,
+    #                         'off_ledger_signature': False,
+    #                         'metadata': {}
+    #                     },
+    #                     {
+    #                         'constraint_id': 'ROLE',
+    #                         'role': '*',
+    #                         'sig_count': 0,
+    #                         'need_to_be_owner': False,
+    #                         'off_ledger_signature': True,
+    #                         'metadata': {}
+    #                     }
+    #                 ]
+    #         }
+    #     )
+    # )
 
     # await send_nodes(pool_handler, wallet_handler, trustee_did, 5, alias='ExtraNode')
 
     # await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', 5)
     # await send_upgrades(pool_handler, wallet_handler, trustee_did, 'sovrin', 5)
-
-    # await send_payments(pool_handler, wallet_handler, trustee_did, address, 5)
 
     # old style fees setting before the upgrade
     trustee_did2, trustee_vk2 = await did.create_and_store_my_did(
@@ -240,18 +236,44 @@ async def test_pool_upgrade_positive(
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did4, trustee_vk4, None, 'TRUSTEE')
 
-    fees = {'100': 1, '101': 1, '102': 1, '113': 1, '114': 1, '10001': 1}
+    # fees = {'100': 1, '101': 1, '102': 1, '113': 1, '114': 1}
+    #
+    # req = await payment.build_set_txn_fees_req(wallet_handler, trustee_did, 'sov', json.dumps(fees))
+    #
+    # req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+    # req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
+    # req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
+    # req = await ledger.multi_sign_request(wallet_handler, trustee_did4, req)
+    #
+    # res = json.loads(await ledger.submit_request(pool_handler, req))
+    # print(res)
+    # assert res['op'] == 'REPLY'
 
-    req = await payment.build_set_txn_fees_req(wallet_handler, trustee_did, 'sov', json.dumps(fees))
-
+    # mint and pay
+    address = await payment.create_payment_address(
+        wallet_handler, 'sov', json.dumps({"seed": str('0000000000000000000000000Wallet0')})
+    )
+    req, _ = await payment.build_mint_req(
+        wallet_handler, trustee_did, json.dumps([{'recipient': address, 'amount': 1000 * 100000}]), None
+    )
     req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
     req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
     req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did4, req)
-
     res = json.loads(await ledger.submit_request(pool_handler, req))
     print(res)
     assert res['op'] == 'REPLY'
+
+    await send_payments(pool_handler, wallet_handler, trustee_did, address, 5)
+    # ---
+
+    # POOL UPGRADE TO THE LATEST STABLE BEFORE APT INSTALL TO THE LATEST MASTER
+    time.sleep(60)
+    req = await ledger.build_pool_upgrade_request(
+        trustee_did, name, '1.1.60', action, _sha256, _timeout, docker_7_schedule, None, reinstall, force, 'sovrin'
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REPLY'
+    time.sleep(180)
 
     # # schedule pool upgrade - for STABLE to STABLE upgrade
     # req = await ledger.build_pool_upgrade_request(
@@ -420,7 +442,7 @@ async def test_pool_upgrade_positive(
     assert res['op'] == 'REPLY'
 
     # write fees after the upgrade
-    fees = {'100_a': 2, '101_b': 2, '102_c': 2, '113_d': 2, '114_e': 2, '10001_f': 2}
+    fees = {'100_a': 2, '101_b': 2, '102_c': 2, '113_d': 2, '114_e': 2}
 
     req = await payment.build_set_txn_fees_req(wallet_handler, trustee_did, 'sov', json.dumps(fees))
 
@@ -433,8 +455,14 @@ async def test_pool_upgrade_positive(
     print(res)
     assert res['op'] == 'REPLY'
 
+    await send_payments(pool_handler, wallet_handler, trustee_did, address, 5)
+
     # write and read NYM after the upgrade
-    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=10)
+    await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
+
+    # check that added node wrote all txns
+    await ensure_pool_is_in_sync(nodes_num=8)
+    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
     add_before_results = [
         nym_before_res, attrib_before_res, schema_before_res, cred_def_before_res, revoc_reg_def_before_res,
@@ -454,17 +482,6 @@ async def test_pool_upgrade_positive(
     assert all([res['result']['seqNo'] is not None for res in get_after_results])
     assert all([check is not -1 for check in version_checks])
     assert all([check is not -1 for check in status_checks])
-
-    # # add new node
-    # # primary, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
-    # res = await send_node(
-    #     pool_handler, wallet_handler, ['VALIDATOR'], steward_did, EXTRA_DESTS[3], new_alias,
-    #     EXTRA_BLSKEYS[3], EXTRA_BLSKEY_POPS[3], new_ip, int(PORT_2), new_ip, int(PORT_1)
-    # )
-    # assert res['op'] == 'REPLY'
-    # # await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
-    # await ensure_pool_is_in_sync(nodes_num=8)
-    # await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
     # stop Node7 -> drop all states -> start Node7
     node7 = NodeHost(7)

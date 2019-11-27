@@ -524,6 +524,20 @@ async def ensure_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trust
     )
 
 
+async def check_ledgers_are_in_sync(pool_handle, wallet_handle, trustee_did):
+    results = await get_validator_info(pool_handle, wallet_handle, trustee_did)
+    transaction_count = [
+        v['result']['data']['Node_info']['Metrics']['transaction-count'] for k, v in results.items()
+    ]
+    assert all([a == b for a, b in itertools.combinations(transaction_count, 2)])
+
+
+async def ensure_ledgers_are_in_sync(pool_handle, wallet_handle, trustee_did):
+    await eventually(
+        check_ledgers_are_in_sync, pool_handle, wallet_handle, trustee_did, retry_wait=10, timeout=200
+    )
+
+
 async def get_validator_info(pool_handle, wallet_handle, trustee_did):
     req = await ledger.build_get_validator_info_request(trustee_did)
     results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
