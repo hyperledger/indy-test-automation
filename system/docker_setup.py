@@ -82,7 +82,7 @@ def pool_builder(docker_build_ctx_path, node_image_name, node_name_base, network
                                   security_opt=['seccomp=unconfined'],
                                   tmpfs={'/run': '',
                                          '/run/lock': ''})
-            for i in range(start_from+1, start_from+nodes_num+1)]
+            for i in range(start_from + 1, start_from+nodes_num + 1)]
 
 
 def pool_starter(node_containers):

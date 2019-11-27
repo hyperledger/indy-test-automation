@@ -231,7 +231,7 @@ class TestProductionSuite:
         primary14 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary13)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(node_ids=list(range(5, 12)))
+        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
         # promote initial 4th node by owner
         await eventually(
@@ -240,7 +240,7 @@ class TestProductionSuite:
         primary15 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary14)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(node_ids=list(range(4, 12)))
+        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
         # promote initial 3rd node by owner
         await eventually(
@@ -249,7 +249,7 @@ class TestProductionSuite:
         primary16 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary15)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(node_ids=list(range(3, 12)))
+        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
         # promote initial 2nd node by owner
         await eventually(
@@ -258,7 +258,7 @@ class TestProductionSuite:
         primary17 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary16)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(node_ids=list(range(2, 12)))
+        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
         # promote initial 1st node by owner
         await eventually(
@@ -267,12 +267,12 @@ class TestProductionSuite:
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary17)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_pool_is_in_sync(nodes_num=11)
+        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
-    # TODO implement upgrade chain test case
-    @pytest.mark.asyncio
-    async def test_case_upgrade_chain(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
-    ):
-        pass
+    # # TODO implement upgrade chain test case
+    # @pytest.mark.asyncio
+    # async def test_case_upgrade_chain(
+    #         self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+    # ):
+    #     pass

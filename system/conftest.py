@@ -75,6 +75,13 @@ async def pool_handler(event_loop):
 
 @pytest.fixture()
 @async_generator
+async def aws_pool_handler(event_loop):
+    pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis_test')
+    await yield_(pool_handle)
+
+
+@pytest.fixture()
+@async_generator
 async def wallet_handler(event_loop):
     wallet_handle, _, _ = await wallet_helper()
     await yield_(wallet_handle)
