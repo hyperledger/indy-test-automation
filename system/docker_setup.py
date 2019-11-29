@@ -10,8 +10,7 @@ import asyncio
 from async_generator import yield_
 
 from .utils import (
-    pool_helper, wallet_helper, default_trustee, ensure_pool_is_functional, ensure_all_nodes_online,
-    NodeHost
+    pool_helper, wallet_helper, default_trustee, ensure_pool_is_functional, ensure_all_nodes_online, NodeHost
 )
 
 import logging

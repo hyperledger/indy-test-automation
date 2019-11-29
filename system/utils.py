@@ -20,7 +20,7 @@ from json import JSONDecodeError
 import hashlib
 from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError, payment
 from system.docker_setup import client, pool_builder, pool_starter,\
-    DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME
+    DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NETWORK_NAME
 
 
 import logging
@@ -129,6 +129,23 @@ UPGRADE_MAPPING = {
     'i-0d2d372e6a3c5e017': 'vol-0abc2059816e67ae7'  # 8
 }
 
+docker_7_destinations = [
+    'Gw6pDLhcBcoQesN72qfotTgFa7cbuqZpkX3Xo6pLhPhv', '8ECVSk179mjsjKRLWiQtssMLgp6EPhWXtaYyStWPSGAb',
+    'DKVxG2fXXTU8yT5N7hGEbXB3dfdAnYv1JczDUHpmDxya', '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA',
+    '4SWokCJWJc69Tn74VvLS6t2G2ucvXqM9FDMsWJjmsUxe', 'Cv1Ehj43DDM5ttNBmC6VPpEfwXWwfGktHwjDJsTV5Fz8',
+    'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
+]
+
+docker_7_schedule = json.dumps(
+    dict(
+        {
+            dest: datetime.strftime(
+                datetime.now(tz=timezone.utc) + timedelta(minutes=1 + 0 * 5), '%Y-%m-%dT%H:%M:%S%z'
+            ) for dest, i in zip(docker_7_destinations, range(len(docker_7_destinations)))
+        }
+    )
+)
+
 
 def run_async_method(method, *args, **kwargs):
     loop = asyncio.get_event_loop()
@@ -156,7 +173,6 @@ async def pool_helper(pool_name=None, path_to_genesis=POOL_GENESIS_PATH, node_li
         pool_config = json.dumps({"genesis_txn": path_to_genesis, "preordered_nodes": node_list})
     else:
         pool_config = json.dumps({"genesis_txn": path_to_genesis})
-    # print(pool_config)
     await pool.create_pool_ledger_config(pool_name, pool_config)
     pool_handle = await pool.open_pool_ledger(pool_name, pool_config)
 
