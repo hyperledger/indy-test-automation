@@ -19,8 +19,6 @@ import json
 from json import JSONDecodeError
 import hashlib
 from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError, payment
-from system.docker_setup import client, pool_builder, pool_starter,\
-    DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NETWORK_NAME
 
 
 import logging
@@ -1287,6 +1285,9 @@ def upgrade_nodes_manually(containers, sovrin_ver, node_ver, plenum_ver, plugin_
 
 
 def create_new_node(container_name, ip, alias, init_seed, sovrin_ver, node_ver, plenum_ver, plugin_ver):
+    from system.docker_setup import client, pool_builder, pool_starter, \
+        DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NETWORK_NAME
+
     # create extra node
     new_node = pool_starter(
         pool_builder(
