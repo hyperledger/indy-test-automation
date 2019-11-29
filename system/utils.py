@@ -18,8 +18,9 @@ import testinfra
 import json
 from json import JSONDecodeError
 import hashlib
-
 from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError, payment
+from system.docker_setup import client, pool_builder, pool_starter,\
+    DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME
 
 
 import logging
@@ -1267,3 +1268,52 @@ def upgrade_nodes_manually(containers, sovrin_ver, node_ver, plenum_ver, plugin_
             ['systemctl', 'start', 'indy-node'],
             user='root'
         ).exit_code == 0
+
+
+def create_new_node(container_name, ip, alias, init_seed, sovrin_ver, node_ver, plenum_ver, plugin_ver):
+    # create extra node
+    new_node = pool_starter(
+        pool_builder(
+            DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, container_name, NETWORK_NAME, 1
+        )
+    )[0]
+
+    GENESIS_PATH = '/var/lib/indy/sandbox/'
+
+    # put both genesis files
+    print(new_node.exec_run(['mkdir', GENESIS_PATH], user='indy'))
+
+    for _, prefix in enumerate(['pool', 'domain']):
+        bits, stat = client.containers.get('node1'). \
+            get_archive('{}{}_transactions_genesis'.format(GENESIS_PATH, prefix))
+        assert new_node.put_archive(GENESIS_PATH, bits)
+
+    new_ip = ip
+    PORT_1 = '9701'
+    PORT_2 = '9702'
+    new_alias = alias
+
+    # initialize
+    assert new_node.exec_run(
+        ['init_indy_node', new_alias, new_ip, PORT_1, new_ip, PORT_2, init_seed],
+        user='indy'
+    ).exit_code == 0
+
+    # upgrade it to the target version of pool upgrade command
+    res = new_node.exec_run(
+        ['apt', 'update'],
+        user='root'
+    )
+    assert res.exit_code == 0
+
+    res = new_node.exec_run(
+        ['apt', 'install',
+         '{}={}'.format('sovrin', sovrin_ver),
+         '{}={}'.format('indy-node', node_ver),
+         '{}={}'.format('indy-plenum', plenum_ver),
+         '{}={}'.format('sovtoken', plugin_ver),
+         '{}={}'.format('sovtokenfees', plugin_ver),
+         '-y', '--allow-change-held-packages'],
+        user='root'
+    )
+    assert res.exit_code == 0
