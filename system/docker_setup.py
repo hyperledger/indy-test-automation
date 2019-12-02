@@ -205,13 +205,13 @@ def create_new_node(container_name, ip, alias, init_seed, sovrin_ver, node_ver, 
     new_ip = ip
     PORT_1 = '9701'
     PORT_2 = '9702'
-    new_alias = alias
 
     # initialize
-    assert new_node.exec_run(
-        ['init_indy_node', new_alias, new_ip, PORT_1, new_ip, PORT_2, init_seed],
+    res = new_node.exec_run(
+        ['init_indy_node', alias, new_ip, PORT_1, new_ip, PORT_2, init_seed],
         user='indy'
-    ).exit_code == 0
+    )
+    assert res.exit_code == 0
 
     # upgrade it to the target version of pool upgrade command
     res = new_node.exec_run(
@@ -231,6 +231,8 @@ def create_new_node(container_name, ip, alias, init_seed, sovrin_ver, node_ver, 
         user='root'
     )
     assert res.exit_code == 0
+
+    return new_node
 
 
 if __name__ == '__main__':

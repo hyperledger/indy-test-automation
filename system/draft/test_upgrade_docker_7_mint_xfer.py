@@ -40,18 +40,18 @@ async def test_pool_upgrade_mint_xfer(
         wallet_handler, 'sov', json.dumps({"seed": str('0000000000000000000000000Wallet0')})
     )
 
-    new_node_name = 'node8'
+    new_node_name = 'new_node'
     new_node_ip = '10.0.0.9'
     new_node_alias = 'Node8'
-    new_node_seed = '000000000000000000000000000node8',
-    sovrin_ver = '1.1.62'
-    indy_node_ver = '1.12.0~rc1',
-    indy_plenum_ver = '1.12.0',
-    plugin_ver = '1.0.5~rc24'
+    new_node_seed = '000000000000000000000000000node8'
+    sovrin_ver = '1.1.63'
+    indy_node_ver = '1.12.0'
+    indy_plenum_ver = '1.12.0'
+    plugin_ver = '1.0.5'
     # ------------------------------------------------------------------------------------------------------------------
 
     # create new node and upgrade it to proper version
-    create_new_node(
+    new_node = create_new_node(
         new_node_name,
         new_node_ip,
         new_node_alias,
@@ -63,6 +63,7 @@ async def test_pool_upgrade_mint_xfer(
     )
 
     # upgrade pool to 1.1.50 with reinstall with force
+    await asyncio.sleep(60)
     req = await ledger.build_pool_upgrade_request(
         trustee_did,
         random_string(10),
@@ -78,7 +79,7 @@ async def test_pool_upgrade_mint_xfer(
     )
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
-    await asyncio.sleep(60)
+    await asyncio.sleep(180)
 
     # mint and pay
     req, _ = await payment.build_mint_req(
@@ -93,6 +94,7 @@ async def test_pool_upgrade_mint_xfer(
     await send_payments(pool_handler, wallet_handler, trustee_did, address, 5)
 
     # upgrade pool
+    await asyncio.sleep(60)
     req = await ledger.build_pool_upgrade_request(
         trustee_did,
         random_string(10),
@@ -108,17 +110,17 @@ async def test_pool_upgrade_mint_xfer(
     )
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
-    await asyncio.sleep(60)
+    await asyncio.sleep(180)
 
     # start new node
-    assert new_node_name.exec_run(
+    assert new_node.exec_run(
         ['systemctl', 'start', 'indy-node'],
         user='root'
     ).exit_code == 0
     await asyncio.sleep(60)
 
     # add new node
-    primary, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
+    # primary, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
     res = await send_node(
         pool_handler,
         wallet_handler,
@@ -135,7 +137,7 @@ async def test_pool_upgrade_mint_xfer(
     )
     assert res['op'] == 'REPLY'
     await pool.refresh_pool_ledger(pool_handler)
-    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
+    # await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
     # check new node's catchup
     await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)

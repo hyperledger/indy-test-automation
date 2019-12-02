@@ -36,18 +36,18 @@ async def test_pool_upgrade_set_fees(
     )
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
 
-    new_node_name = 'node8'
+    new_node_name = 'new_node'
     new_node_ip = '10.0.0.9'
     new_node_alias = 'Node8'
-    new_node_seed = '000000000000000000000000000node8',
-    sovrin_ver = '1.1.62'
-    indy_node_ver = '1.12.0~rc1',
-    indy_plenum_ver = '1.12.0',
-    plugin_ver = '1.0.5~rc24'
+    new_node_seed = '000000000000000000000000000node8'
+    sovrin_ver = '1.1.63'
+    indy_node_ver = '1.12.0'
+    indy_plenum_ver = '1.12.0'
+    plugin_ver = '1.0.5'
     # ------------------------------------------------------------------------------------------------------------------
 
     # create new node and upgrade it to proper version
-    create_new_node(
+    new_node = create_new_node(
         new_node_name,
         new_node_ip,
         new_node_alias,
@@ -59,6 +59,7 @@ async def test_pool_upgrade_set_fees(
     )
 
     # upgrade pool to 1.1.35 with reinstall with force
+    await asyncio.sleep(60)
     req = await ledger.build_pool_upgrade_request(
         trustee_did,
         random_string(10),
@@ -74,7 +75,7 @@ async def test_pool_upgrade_set_fees(
     )
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
-    await asyncio.sleep(60)
+    await asyncio.sleep(180)
 
     # set old style fees
     fees = {'100': 1, '101': 1, '102': 1, '113': 1, '114': 1}
@@ -86,6 +87,7 @@ async def test_pool_upgrade_set_fees(
     assert res['op'] == 'REPLY'
 
     # upgrade pool
+    await asyncio.sleep(60)
     req = await ledger.build_pool_upgrade_request(
         trustee_did,
         random_string(10),
@@ -101,10 +103,10 @@ async def test_pool_upgrade_set_fees(
     )
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
-    await asyncio.sleep(60)
+    await asyncio.sleep(180)
 
     # start new node
-    assert new_node_name.exec_run(
+    assert new_node.exec_run(
         ['systemctl', 'start', 'indy-node'],
         user='root'
     ).exit_code == 0

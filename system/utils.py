@@ -517,7 +517,7 @@ async def check_all_nodes_online(pool_handle, wallet_handle, trustee_did, unreac
 
 async def ensure_all_nodes_online(pool_handle, wallet_handle, trustee_did, unreached=0):
     await eventually(
-        check_all_nodes_online, pool_handle, wallet_handle, trustee_did, unreached, retry_wait=10, timeout=100
+        check_all_nodes_online, pool_handle, wallet_handle, trustee_did, unreached, retry_wait=10, timeout=200
     )
 
 
