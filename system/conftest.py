@@ -15,6 +15,7 @@ from .utils import (
 from .docker_setup import setup, teardown
 
 ATOMS = 100000
+PAYMENT_METHOD = 'sov'
 _failed_nodes = {}
 
 
@@ -113,10 +114,10 @@ def payment_init(request, payment_init_module):
 @pytest.fixture()
 @async_generator
 async def initial_token_minting(payment_init, pool_handler, wallet_handler, get_default_trustee):
-    libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee
-    address = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps(
-        {"seed": str('0000000000000000000000000Wallet0')}))
+    address = await payment.create_payment_address(
+        wallet_handler, PAYMENT_METHOD, json.dumps({"seed": str('0000000000000000000000000Wallet0')})
+    )
     trustee_did_second, trustee_vk_second = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
     trustee_did_third, trustee_vk_third = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_second, trustee_vk_second, None, 'TRUSTEE')
@@ -135,7 +136,6 @@ async def initial_token_minting(payment_init, pool_handler, wallet_handler, get_
 @pytest.fixture()
 @async_generator
 async def initial_fees_setting(payment_init, pool_handler, wallet_handler, get_default_trustee):
-    libsovtoken_payment_method = 'sov'
     trustee_did, _ = get_default_trustee
     trustee_did_second, trustee_vk_second = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
     trustee_did_third, trustee_vk_third = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
@@ -154,7 +154,7 @@ async def initial_fees_setting(payment_init, pool_handler, wallet_handler, get_d
         'add_rre_0_5': int(0.5 * ATOMS)
         }
     req = await payment.build_set_txn_fees_req(
-        wallet_handler, trustee_did, libsovtoken_payment_method, json.dumps(fees)
+        wallet_handler, trustee_did, PAYMENT_METHOD, json.dumps(fees)
     )
     req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
     req = await ledger.multi_sign_request(wallet_handler, trustee_did_second, req)
