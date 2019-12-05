@@ -889,7 +889,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
                 results.pop(list(results.keys())[list(results.values()).index('timeout')])
         except ValueError:
             pass
-        # check that VC is not in progress at all nodes first
+        # check that VC is not in progress (status `False`)
         assert not all([get_vc_status_from_info(info) for _, info in results.items()])
         # remove all not REPLY and empty (not selected) primaries entries
         primaries = [get_primary_from_info(info, name) for name, info in results.items()]
@@ -898,7 +898,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         res, votes = primaries.most_common()[0]
         assert res is not None
         assert votes >= (n - f)
-        # check that VC is not in progress (status `False`)
+
         return res
 
     primary = await eventually(_get_primary, retry_wait=20, timeout=300)

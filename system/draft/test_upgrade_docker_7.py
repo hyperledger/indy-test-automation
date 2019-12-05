@@ -14,10 +14,10 @@ from system.docker_setup import client, pool_builder, pool_starter,\
 # TODO dynamic install of old version to upgrade from
 # TODO INDY-2132 and INDY-2125
 @pytest.mark.asyncio
-# RUN IT 3 TIMES:
-# 1.6.73 / 1.6.51 (1.1.24 / 0.9.3+12.58) | 1.6.83 / 1.6.58 (1.1.35 / 0.9.9) -> latest >> set fees is buggy
-# 1.9.1 / 1.9.1 (1.1.52 / 1.0.1) -> latest >> auth rule is buggy
-# 1.9.0 / 1.9.0 (1.1.50 / 1.0.0) -> latest >> mint and xfer are buggy
+# RUN IT 4 TIMES:
+# 1.6.83 / 1.6.58 (1.1.35 / 0.9.9) -> latest >> set fees is buggy :: pass
+# 1.9.1 / 1.9.1 (1.1.52 / 1.0.1) -> latest >> auth rule is buggy :: pass
+# 1.9.0 / 1.9.0 (1.1.50 / 1.0.0) -> latest >> mint and xfer are buggy :: pass
 # previous -> latest
 async def test_pool_upgrade_positive(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, check_no_failures_fixture
@@ -52,24 +52,24 @@ async def test_pool_upgrade_positive(
     ).exit_code == 0
 
     # upgrade it to the target version of pool upgrade command
-    plenum_ver = '1.12.0~dev965'
+    plenum_ver = '1.12.0'
     plenum_pkg = 'indy-plenum'
-    node_ver = '1.12.0~dev1141'
+    node_ver = '1.12.0'
     node_pkg = 'indy-node'
-    sovrin_ver = '1.1.172'
+    sovrin_ver = '1.1.63'
     sovrin_pkg = 'sovrin'
-    plugin_ver = '1.0.5~dev120'
-    repo_update = new_node.exec_run(
-        [
-            'sed',
-            '-i',
-            '50c\\deb https://repo.sovrin.org/deb xenial master',
-            '/etc/apt/sources.list'
-        ]
-    )
-    print(repo_update.output)
-    assert repo_update.exit_code == 0
-    time.sleep(15)
+    plugin_ver = '1.0.5'
+    # repo_update = new_node.exec_run(
+    #     [
+    #         'sed',
+    #         '-i',
+    #         '50c\\deb https://repo.sovrin.org/deb xenial master',
+    #         '/etc/apt/sources.list'
+    #     ]
+    # )
+    # print(repo_update.output)
+    # assert repo_update.exit_code == 0
+    # time.sleep(15)
     res = new_node.exec_run(
         ['apt', 'update'],
         user='root'
@@ -98,7 +98,7 @@ async def test_pool_upgrade_positive(
         'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
     ]
     init_time = 1
-    version = '1.1.172'
+    version = '1.1.63'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -269,7 +269,7 @@ async def test_pool_upgrade_positive(
     # POOL UPGRADE TO THE LATEST STABLE BEFORE APT INSTALL TO THE LATEST MASTER
     time.sleep(60)
     req = await ledger.build_pool_upgrade_request(
-        trustee_did, name, '1.1.60', action, _sha256, _timeout, docker_7_schedule, None, reinstall, force, 'sovrin'
+        trustee_did, name, '1.1.63', action, _sha256, _timeout, docker_7_schedule, None, reinstall, force, 'sovrin'
     )
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
@@ -282,65 +282,65 @@ async def test_pool_upgrade_positive(
     # res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     # assert res['op'] == 'REPLY'
 
-    # perform upgrade manually - for STABLE to MASTER upgrade
-    containers = [client.containers.get('node{}'.format(i)) for i in range(1, 8)]
-
-    for container in containers:
-
-        assert container.exec_run(
-            ['systemctl', 'stop', 'indy-node'],
-            user='root'
-        ).exit_code == 0
-
-        assert container.exec_run(
-            ['systemctl', 'stop', 'indy-node-control'],
-            user='root'
-        ).exit_code == 0
-
-    for container in containers:
-
-        repo_update = container.exec_run(
-            [
-                'sed',
-                '-i',
-                '50c\\deb https://repo.sovrin.org/deb xenial master',
-                '/etc/apt/sources.list'
-            ]
-        )
-        print(repo_update.output)
-        assert repo_update.exit_code == 0
-        time.sleep(15)
-        res = container.exec_run(
-            ['apt', 'update'],
-            user='root'
-        )
-        print(res.output)
-        assert res.exit_code == 0
-
-        res = container.exec_run(
-            ['apt', 'install',
-             '{}={}'.format(sovrin_pkg, sovrin_ver),
-             '{}={}'.format(node_pkg, node_ver),
-             '{}={}'.format(plenum_pkg, plenum_ver),
-             '{}={}'.format('sovtoken', plugin_ver),
-             '{}={}'.format('sovtokenfees', plugin_ver),
-             '-y', '--allow-change-held-packages'],
-            user='root'
-        )
-        print(res.output)
-        assert res.exit_code == 0
-
-    for container in containers:
-
-        assert container.exec_run(
-            ['systemctl', 'start', 'indy-node'],
-            user='root'
-        ).exit_code == 0
-
-        assert container.exec_run(
-            ['systemctl', 'start', 'indy-node-control'],
-            user='root'
-        ).exit_code == 0
+    # # perform upgrade manually - for STABLE to MASTER upgrade
+    # containers = [client.containers.get('node{}'.format(i)) for i in range(1, 8)]
+    #
+    # for container in containers:
+    #
+    #     assert container.exec_run(
+    #         ['systemctl', 'stop', 'indy-node'],
+    #         user='root'
+    #     ).exit_code == 0
+    #
+    #     assert container.exec_run(
+    #         ['systemctl', 'stop', 'indy-node-control'],
+    #         user='root'
+    #     ).exit_code == 0
+    #
+    # for container in containers:
+    #
+    #     repo_update = container.exec_run(
+    #         [
+    #             'sed',
+    #             '-i',
+    #             '50c\\deb https://repo.sovrin.org/deb xenial master',
+    #             '/etc/apt/sources.list'
+    #         ]
+    #     )
+    #     print(repo_update.output)
+    #     assert repo_update.exit_code == 0
+    #     time.sleep(15)
+    #     res = container.exec_run(
+    #         ['apt', 'update'],
+    #         user='root'
+    #     )
+    #     print(res.output)
+    #     assert res.exit_code == 0
+    #
+    #     res = container.exec_run(
+    #         ['apt', 'install',
+    #          '{}={}'.format(sovrin_pkg, sovrin_ver),
+    #          '{}={}'.format(node_pkg, node_ver),
+    #          '{}={}'.format(plenum_pkg, plenum_ver),
+    #          '{}={}'.format('sovtoken', plugin_ver),
+    #          '{}={}'.format('sovtokenfees', plugin_ver),
+    #          '-y', '--allow-change-held-packages'],
+    #         user='root'
+    #     )
+    #     print(res.output)
+    #     assert res.exit_code == 0
+    #
+    # for container in containers:
+    #
+    #     assert container.exec_run(
+    #         ['systemctl', 'start', 'indy-node'],
+    #         user='root'
+    #     ).exit_code == 0
+    #
+    #     assert container.exec_run(
+    #         ['systemctl', 'start', 'indy-node-control'],
+    #         user='root'
+    #     ).exit_code == 0
 
     # # cancel pool upgrade - optional
     # req = await ledger.build_pool_upgrade_request(

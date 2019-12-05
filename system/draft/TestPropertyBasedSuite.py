@@ -191,8 +191,7 @@ class TestPropertyBasedSuite:
             pool_handler, wallet_handler, creator_did, random_string(10), '1.0', json.dumps(['attribute'])
         )
         assert res['op'] == 'REPLY'
-        await asyncio.sleep(1)
-        res = await get_schema(pool_handler, wallet_handler, creator_did, schema_id)
+        res = await ensure_get_something(get_schema, pool_handler, wallet_handler, creator_did, schema_id)
         schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
         req = {
                'protocolVersion': 2,

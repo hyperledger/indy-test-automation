@@ -69,7 +69,6 @@ class TestConsensusSuite:
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
-    # @pytest.mark.skip(reason='INDY-2059, INDY-2023')
     @pytest.mark.asyncio
     async def test_consensus_n_and_f_changing(
             self, pool_handler, wallet_handler, get_default_trustee

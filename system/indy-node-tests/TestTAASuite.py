@@ -50,6 +50,14 @@ class TestTAASuite:
         req = await ledger.build_txn_author_agreement_request(trustee_did, 'non-latest-text', 'non-latest-version')
         res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         assert res['op'] == 'REPLY'
+        # add non-latest TAA with the same version and text - should be rejected
+        req = await ledger.build_txn_author_agreement_request(trustee_did, 'non-latest-text', 'non-latest-version')
+        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        assert res['op'] == 'REJECT'
+        # add non-latest TAA with the same version but different text - should be rejected
+        req = await ledger.build_txn_author_agreement_request(trustee_did, 'some-other-text', 'non-latest-version')
+        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        assert res['op'] == 'REJECT'
         # add the latest TAA
         req = await ledger.build_txn_author_agreement_request(trustee_did, taa_text, taa_ver)
         res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
