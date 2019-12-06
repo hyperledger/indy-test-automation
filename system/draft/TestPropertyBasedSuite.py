@@ -84,7 +84,7 @@ class TestPropertyBasedSuite:
         print(res)
         assert res['op'] == 'REPLY'
 
-    @settings(deadline=None, max_examples=250)
+    @settings(deadline=None, max_examples=100)
     @given(reqid=strategies.integers(min_value=1, max_value=max_size),
            xhash=strategies.text().map(lambda x: hashlib.sha256(x.encode()).hexdigest()),
            key=strategies.text(min_size=1, alphabet=printable),
@@ -210,6 +210,7 @@ class TestPropertyBasedSuite:
         res = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, creator_did, json.dumps(req))
         )
+        print(req)
         print(res)
         assert res['op'] == 'REPLY'
 

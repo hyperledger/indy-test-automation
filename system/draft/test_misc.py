@@ -2016,6 +2016,7 @@ async def test_misc_node_and_vc_interleaved(
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
 
+@pytest.mark.nodes_num(4)
 @pytest.mark.asyncio
 async def test_misc_async(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
@@ -2023,19 +2024,19 @@ async def test_misc_async(
     trustee_did, _ = get_default_trustee
 
     t0 = time.perf_counter()
-    for i in range(10):
+    for i in range(100):
         await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
     t1 = time.perf_counter()
-    print(t1 - t0)
+    print('\n{}'.format(t1 - t0))
 
     t2 = time.perf_counter()
     tasks = []
-    for i in range(10):
+    for i in range(100):
         task = send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
         tasks.append(task)
     await asyncio.gather(*tasks)
     t3 = time.perf_counter()
-    print(t3 - t2)
+    print('\n{}'.format(t3 - t2))
 
 
 @pytest.mark.nodes_num(4)
@@ -2072,6 +2073,7 @@ async def test_misc_do_not_restore_primaries(
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
 
+@pytest.mark.nodes_num(4)
 @pytest.mark.asyncio
 # IS-1381
 async def test_misc_multiple_restrictions(
@@ -2149,6 +2151,7 @@ async def test_misc_multiple_restrictions(
     credentials = await anoncreds.prover_get_credentials_for_proof_req(wallet_handler, proof_request)
     print('\nCREDENTIALS:')
     pprint.pprint(json.loads(credentials))
+
     search_handle = await anoncreds.prover_search_credentials_for_proof_req(wallet_handler, proof_request, None)
 
     creds_for_attr1 = await anoncreds.prover_fetch_credentials_for_proof_req(
@@ -2197,8 +2200,46 @@ async def test_misc_multiple_restrictions(
     )
     print('\nREQUESTED PROOF:')
     pprint.pprint(json.loads(proof)['requested_proof'])
+
     assert 'Pyotr' ==\
            json.loads(proof)['requested_proof']['revealed_attr_groups']['attr1_referent']['values']['first_name']['raw']
     assert 'Pustota' ==\
            json.loads(proof)['requested_proof']['revealed_attr_groups']['attr1_referent']['values']['last_name']['raw']
     assert await anoncreds.verifier_verify_proof(proof_request, proof, schemas_json, cred_defs_json, '{}', '{}')
+
+
+@pytest.mark.asyncio
+# INDY-2216 / INDY-2303
+async def test_misc_upgrades(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture
+):
+    trustee_did, _ = get_default_trustee
+    version = '1.1.182'
+    status = 'Active: active (running)'
+
+    req = await ledger.build_pool_upgrade_request(
+        trustee_did,
+        random_string(10),
+        version,
+        'start',
+        hashlib.sha256().hexdigest(),
+        5,
+        docker_7_schedule,
+        None,
+        False,
+        True,
+        'sovrin'
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REPLY'
+    await asyncio.sleep(600)
+
+    docker_7_hosts = [
+        testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)
+    ]
+    version_outputs = [host.run('dpkg -l | grep sovrin') for host in docker_7_hosts]
+    status_outputs = [host.run('systemctl status indy-node') for host in docker_7_hosts]
+    version_checks = [output.stdout.find(version.split('.')[-1]) for output in version_outputs]
+    status_checks = [output.stdout.find(status) for output in status_outputs]
+    assert all([check is not -1 for check in version_checks])
+    assert all([check is not -1 for check in status_checks])
