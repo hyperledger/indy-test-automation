@@ -2214,7 +2214,7 @@ async def test_misc_upgrades(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture
 ):
     trustee_did, _ = get_default_trustee
-    version = '1.1.182'
+    version = '1.1.186'
     status = 'Active: active (running)'
 
     req = await ledger.build_pool_upgrade_request(

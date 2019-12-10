@@ -43,14 +43,17 @@ class TestViewChangeSuite:
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
+    @pytest.mark.parametrize('node_id', [2, 7])
     @pytest.mark.asyncio
-    async def test_vc_by_demotion_last(
-            self, pool_handler, wallet_handler, get_default_trustee, nodes_num
+    async def test_vc_by_demotion_exact(
+            self, pool_handler, wallet_handler, get_default_trustee, nodes_num, node_id
     ):
-        _alias = 'Node7'
-        _did = 'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
         trustee_did, _ = get_default_trustee
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
+        pool_info = get_pool_info('1')
+        _alias = get_node_alias(node_id)
+        _did = get_node_did(_alias, pool_info=pool_info)
 
         primary_first, _, _ = await get_primary(pool_handler, wallet_handler, trustee_did)
         await eventually(demote_node, pool_handler, wallet_handler, trustee_did, _alias, _did)
