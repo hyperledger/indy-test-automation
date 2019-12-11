@@ -2243,3 +2243,25 @@ async def test_misc_upgrades(
     status_checks = [output.stdout.find(status) for output in status_outputs]
     assert all([check is not -1 for check in version_checks])
     assert all([check is not -1 for check in status_checks])
+
+
+@pytest.mark.asyncio
+# INDY-2306
+async def test_misc_big_schema(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    trustee_did, _ = get_default_trustee
+    schema_id_local, res1 = await send_schema(
+        pool_handler, wallet_handler, trustee_did, 'schema1', '1.0', json.dumps(
+            [random_string(i) for i in range(11, 136)]
+        )
+    )
+    print(res1)
+    assert res1['op'] == 'REPLY'
+
+    res2 = await ensure_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
+    print(res2)
+
+    schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+    assert schema_id_local == schema_id_ledger
+    assert res2['result']['seqNo'] == json.loads(schema_json)['seqNo']
