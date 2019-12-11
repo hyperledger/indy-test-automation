@@ -5,14 +5,9 @@ from random import randrange as rr
 from datetime import datetime, timedelta, timezone
 
 
-import logging
-logger = logging.getLogger(__name__)
-
-
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestAuthMapMiscSuite:
 
-    @pytest.mark.skip('INDY-2024')
     @pytest.mark.parametrize('adder_role, adder_role_num', [
         ('TRUSTEE', '0'),
         ('STEWARD', '2'),
@@ -26,8 +21,11 @@ class TestAuthMapMiscSuite:
         ('TRUSTEE', '0')
     ])
     @pytest.mark.asyncio
-    async def test_case_node(self, pool_handler, wallet_handler, get_default_trustee,
-                             adder_role, adder_role_num, editor_role, editor_role_num):
+    async def test_case_node(
+            self, pool_handler, wallet_handler, get_default_trustee,
+            adder_role, adder_role_num, editor_role, editor_role_num
+    ):
+        await pool.refresh_pool_ledger(pool_handler)
         trustee_did, _ = get_default_trustee
         # add adder to add node
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -98,8 +96,9 @@ class TestAuthMapMiscSuite:
         ('NETWORK_MONITOR', '201')
     ])
     @pytest.mark.asyncio
-    async def test_case_pool_restart(self, pool_handler, wallet_handler, get_default_trustee,
-                                     adder_role, adder_role_num):  # we can add pool restart only
+    async def test_case_pool_restart(
+            self, pool_handler, wallet_handler, get_default_trustee, adder_role, adder_role_num
+    ):  # we can add pool restart only
         trustee_did, _ = get_default_trustee
         # add adder to restart pool
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -134,8 +133,9 @@ class TestAuthMapMiscSuite:
         ('NETWORK_MONITOR', '201')
     ])
     @pytest.mark.asyncio
-    async def test_case_validator_info(self, pool_handler, wallet_handler, get_default_trustee,
-                                       adder_role, adder_role_num):  # we can add validator info only
+    async def test_case_validator_info(
+            self, pool_handler, wallet_handler, get_default_trustee, adder_role, adder_role_num
+    ):  # we can add validator info only
         trustee_did, _ = get_default_trustee
         # add adder to get validator info
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -167,8 +167,9 @@ class TestAuthMapMiscSuite:
         ('TRUSTEE', '0')
     ])
     @pytest.mark.asyncio
-    async def test_case_pool_config(self, pool_handler, wallet_handler, get_default_trustee,
-                                    editor_role, editor_role_num):  # we can edit pool config only
+    async def test_case_pool_config(
+            self, pool_handler, wallet_handler, get_default_trustee, editor_role, editor_role_num
+    ):  # we can edit pool config only
         trustee_did, _ = get_default_trustee
         # add editor to edit pool config
         editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
@@ -198,8 +199,9 @@ class TestAuthMapMiscSuite:
         ('TRUSTEE', '0')
     ])
     @pytest.mark.asyncio
-    async def test_case_auth_rule(self, pool_handler, wallet_handler, get_default_trustee,
-                                  editor_role, editor_role_num):  # we can edit auth rule only
+    async def test_case_auth_rule(
+            self, pool_handler, wallet_handler, get_default_trustee, editor_role, editor_role_num
+    ):  # we can edit auth rule only
         trustee_did, _ = get_default_trustee
         # add editor to edit auth rule
         editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
