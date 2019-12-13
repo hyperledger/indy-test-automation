@@ -2243,3 +2243,39 @@ async def test_misc_upgrades(
     status_checks = [output.stdout.find(status) for output in status_outputs]
     assert all([check is not -1 for check in version_checks])
     assert all([check is not -1 for check in status_checks])
+
+
+@pytest.mark.asyncio
+# INDY-2306
+async def test_misc_big_schema(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num
+):
+    trustee_did, _ = get_default_trustee
+    schema_id_local, res1 = await send_schema(
+        pool_handler, wallet_handler, trustee_did, 'schema1', '1.0', json.dumps(
+            [random_string(256) for i in range(125)]
+        )
+    )
+    print(res1)
+    assert res1['op'] == 'REPLY'
+
+    res2 = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id_local)
+    print(res2)
+
+    schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+    assert schema_id_local == schema_id_ledger
+    assert res2['result']['seqNo'] == json.loads(schema_json)['seqNo']
+
+    cred_def_id_local, _, res3 = await send_cred_def(
+        pool_handler, wallet_handler, trustee_did, schema_json, random_string(256), None, json.dumps(
+            {'support_revocation': True}
+        )
+    )
+    print(res3)
+    assert res3['op'] == 'REPLY'
+
+    res4 = await get_cred_def(pool_handler, wallet_handler, trustee_did, cred_def_id_local)
+    print(res4)
+
+    cred_def_id_ledger, cred_def_json = await ledger.parse_get_cred_def_response(json.dumps(res4))
+    assert cred_def_id_local == cred_def_id_ledger

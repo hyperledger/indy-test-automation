@@ -91,7 +91,7 @@ class TestConsensusSuite:
         for node in temp_test_nodes[-2:]:
             node.start_service()
         await eventually(
-            promote_node, pool_handler, wallet_handler, trustee_did, alias, target_did, timeout=90
+            promote_node, pool_handler, wallet_handler, trustee_did, alias, target_did, timeout=180
         )
 
         for node in test_nodes[-2:]:
