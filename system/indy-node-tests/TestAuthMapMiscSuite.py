@@ -25,7 +25,6 @@ class TestAuthMapMiscSuite:
             self, pool_handler, wallet_handler, get_default_trustee,
             adder_role, adder_role_num, editor_role, editor_role_num
     ):
-        await pool.refresh_pool_ledger(pool_handler)
         trustee_did, _ = get_default_trustee
         # add adder to add node
         adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
