@@ -244,11 +244,53 @@ class TestLedgerSuite:
                 {'support_revocation': revocation}
             )
         )
+        assert res3['op'] == 'REPLY'
 
         res4 = await ensure_get_something(get_cred_def, pool_handler, wallet_handler, trustee_did, cred_def_id_local)
 
         cred_def_id_ledger, cred_def_json = await ledger.parse_get_cred_def_response(json.dumps(res4))
         assert cred_def_id_local == cred_def_id_ledger
+
+    @pytest.mark.parametrize(
+        'target_role, tag, result',
+        [
+            ('ENDORSER', random_string(257), 'REQNACK'),
+            ('NETWORK_MONITOR', random_string(256), 'REJECT'),
+            (None, random_string(256), 'REJECT')
+        ]
+    )
+    @pytest.mark.asyncio
+    # CRED_DEF				    GET_CRED_DEF + PARSE_GET_CRED_DEF
+    async def test_cred_def_negative(
+            self, pool_handler, wallet_handler, get_default_trustee, target_role, tag, result
+    ):
+        # SETUP---------------------------------------------------------------------------------------------------------
+        trustee_did, _ = get_default_trustee
+        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        await send_nym(
+            pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
+        )
+        schema_id_local, res1 = await send_schema(  # make schema using TRUSTEE
+            pool_handler, wallet_handler, trustee_did, random_string(256), '1.0', json.dumps(
+                [random_string(1), random_string(256)]
+            )
+        )
+        assert res1['op'] == 'REPLY'
+        res2 = await ensure_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
+        schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+        # --------------------------------------------------------------------------------------------------------------
+        cred_def_id_local, _, res3 = await send_cred_def(
+            pool_handler, wallet_handler, target_did, schema_json, tag, None, json.dumps(
+                {'support_revocation': False}
+            )
+        )
+        assert res3['op'] == result
+
+        if result == 'REQNACK':
+            res4 = await get_cred_def(pool_handler, wallet_handler, trustee_did, cred_def_id_local)
+            assert res4['op'] == result
+        else:
+            await ensure_cant_get_something(get_cred_def, pool_handler, wallet_handler, trustee_did, cred_def_id_local)
 
     @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'ENDORSER'])
     @pytest.mark.parametrize('tag', [random_string(1), random_string(256)])
@@ -284,6 +326,7 @@ class TestLedgerSuite:
                 {'max_cred_num': max_cred_num, 'issuance_type': issuance_type}
             )
         )
+        assert res4['op'] == 'REPLY'
 
         res5 = await ensure_get_something(
             get_revoc_reg_def, pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local
@@ -291,6 +334,54 @@ class TestLedgerSuite:
 
         rev_reg_def_id_ledger, rev_reg_def_json = await ledger.parse_get_revoc_reg_def_response(json.dumps(res5))
         assert rev_reg_def_id_local == rev_reg_def_id_ledger
+
+    @pytest.mark.parametrize(
+        'target_role, tag, result',
+        [
+            # ('ENDORSER', random_string(257), 'REQNACK'),  # INDY-2314
+            ('NETWORK_MONITOR', random_string(256), 'REJECT'),
+            (None, random_string(256), 'REJECT')
+        ]
+    )
+    @pytest.mark.asyncio
+    # REV_REG_DEF				GET_REV_REG_DEF + PARSE_GET_REV_REG_DEF
+    async def test_rev_reg_def_negative(
+            self, pool_handler, wallet_handler, get_default_trustee, target_role, tag, result
+    ):
+        # SETUP---------------------------------------------------------------------------------------------------------
+        trustee_did, _ = get_default_trustee
+        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        await send_nym(
+            pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
+        )
+        schema_id_local, res1 = await send_schema(  # make schema using TRUSTEE
+            pool_handler, wallet_handler, trustee_did, random_string(256), '1.0', json.dumps(
+                [random_string(1), random_string(256)]
+            )
+        )
+        assert res1['op'] == 'REPLY'
+        res2 = await ensure_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
+        schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+        cred_def_id, _, res3 = await send_cred_def(  # make cred def using TRUSTEE
+            pool_handler, wallet_handler, target_did, schema_json, random_string(256), None, json.dumps(
+                {'support_revocation': True}
+            )
+        )
+        # --------------------------------------------------------------------------------------------------------------
+        rev_reg_def_id_local, rev_reg_def_json, rev_reg_entry_json, res4 = await send_revoc_reg_def(
+            pool_handler, wallet_handler, target_did, None, tag, cred_def_id, json.dumps(
+                {'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}
+            )
+        )
+        assert res4['op'] == result
+
+        if result == 'REQNACK':
+            res4 = await get_revoc_reg_def(pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local)
+            assert res4['op'] == result
+        else:
+            await ensure_cant_get_something(
+                get_revoc_reg_def, pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local
+            )
 
     @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'ENDORSER'])
     @pytest.mark.parametrize('tag', [random_string(1), random_string(256)])
@@ -327,6 +418,7 @@ class TestLedgerSuite:
                 {'max_cred_num': max_cred_num, 'issuance_type': issuance_type}
             )
         )
+        assert res4['op'] == 'REPLY'
 
         timestamp1 = int(time.time())
 
@@ -350,6 +442,67 @@ class TestLedgerSuite:
 
         assert rev_reg_json == rev_reg_delta_json  # is it ok?
         assert timestamp2 == timestamp3  # is it ok?
+
+    @pytest.mark.parametrize(
+        'target_role, tag, result',
+        [
+            # ('ENDORSER', random_string(257), 'REQNACK'),  # INDY-2314
+            ('NETWORK_MONITOR', random_string(256), 'REJECT'),
+            (None, random_string(256), 'REJECT')
+        ]
+    )
+    @pytest.mark.asyncio
+    # REV_REG_ENTRY			    GET_REV_REG + PARSE_GET_REV_REG | GET_REV_REG_DELTA + PARSE_GET_REV_REG_DELTA
+    async def test_rev_reg_entry_negative(
+            self, pool_handler, wallet_handler, get_default_trustee, target_role, tag, result
+    ):
+        # SETUP---------------------------------------------------------------------------------------------------------
+        timestamp0 = int(time.time())
+        trustee_did, _ = get_default_trustee
+        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        await send_nym(
+            pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
+        )
+        schema_id_local, res1 = await send_schema(  # make schema using TRUSTEE
+            pool_handler, wallet_handler, trustee_did, random_string(256), '1.0', json.dumps(
+                [random_string(1), random_string(256)]
+            )
+        )
+        assert res1['op'] == 'REPLY'
+        res2 = await ensure_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
+        schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+        cred_def_id, _, res3 = await send_cred_def(  # make cred def using TRUSTEE
+            pool_handler, wallet_handler, trustee_did, schema_json, random_string(256), None, json.dumps(
+                {'support_revocation': True}
+            )
+        )
+        # --------------------------------------------------------------------------------------------------------------
+        rev_reg_def_id_local, rev_reg_def_json, rev_reg_entry_json, res4 = await send_revoc_reg_entry(
+            pool_handler, wallet_handler, target_did, 'CL_ACCUM', tag, cred_def_id, json.dumps(
+                {'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}
+            )
+        )
+        assert res4['op'] == result
+
+        timestamp1 = int(time.time())
+
+        if result == 'REQNACK':
+            res5 = await get_revoc_reg(pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local, timestamp1)
+            assert res5['op'] == result
+
+            res6 = await get_revoc_reg_delta(
+                pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local, timestamp0, timestamp1
+            )
+            assert res6['op'] == result
+        else:
+            await ensure_cant_get_something(
+                get_revoc_reg, pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local, timestamp1
+            )
+
+            await ensure_cant_get_something(
+                get_revoc_reg_delta, pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local, timestamp0,
+                timestamp1
+            )
 
     @pytest.mark.parametrize(
         'txn_type, action, field, old_value, new_value, role, sig_count, need_to_be_owner',
