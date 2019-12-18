@@ -2288,12 +2288,30 @@ async def test_misc_new_taa(
 ):
     trustee_did, _ = get_default_trustee
 
+    # send nym with TAA before AML and TAA
+    req0 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+    req0 = await ledger.append_txn_author_agreement_acceptance_to_request(
+        req0, 'taa text', '0.1', None, 'non_existent_aml_key', int(time.time())
+    )
+    res0 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req0))
+    print(res0)
+    assert res0['op'] == 'REPLY'
+
     aml_key = 'aml_key'
     req = await ledger.build_acceptance_mechanisms_request(
         trustee_did, json.dumps({aml_key: random_string(128)}), random_string(256), random_string(1024)
     )
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
+
+    # send nym with TAA after AML but before TAA
+    req00 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+    req00 = await ledger.append_txn_author_agreement_acceptance_to_request(
+        req00, 'another taa text', '0.2', None, aml_key, int(time.time())
+    )
+    res00 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req00))
+    print(res00)
+    assert res00['op'] == 'REPLY'
 
     timestamp1 = int(time.time())
 
