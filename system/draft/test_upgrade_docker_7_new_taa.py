@@ -89,13 +89,13 @@ async def test_pool_upgrade_auth_rule(
 
     timestamp1 = int(time.time())
 
-    req3 = await ledger.build_txn_author_agreement_request(trustee_did, '', '2.0', retired=timestamp1)
+    req3 = await ledger.build_txn_author_agreement_request(trustee_did, '', '2.0', retirement_ts=timestamp1)
     res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req3))
     print(res3)
     assert res3['op'] == 'REPLY'
 
     # cannot create a transaction author agreement with a 'retired' field
-    req4 = await ledger.build_txn_author_agreement_request(trustee_did, 'some text', '3.0', retired=timestamp1)
+    req4 = await ledger.build_txn_author_agreement_request(trustee_did, 'some text', '3.0', retirement_ts=timestamp1)
     res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req4))
     print(res4)
     assert res4['op'] == 'REJECT'
@@ -106,7 +106,7 @@ async def test_pool_upgrade_auth_rule(
     assert res5['op'] == 'REPLY'
 
     # the latest transaction author agreement cannot be retired
-    req6 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 3 text', '3.0', retired=timestamp1)
+    req6 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 3 text', '3.0', retirement_ts=timestamp1)
     res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req6))
     print(res6)
     assert res6['op'] == 'REJECT'
@@ -198,7 +198,7 @@ async def test_pool_upgrade_auth_rule(
     res9 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req9))
     assert res9['op'] == 'REPLY'
 
-    req10 = await ledger.build_txn_author_agreement_request(trustee_did, '', '2.0', retired=None)
+    req10 = await ledger.build_txn_author_agreement_request(trustee_did, '', '2.0', retirement_ts=None)
     res10 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req10))
     print(res10)
     assert res10['op'] == 'REPLY'
