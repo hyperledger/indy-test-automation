@@ -31,6 +31,7 @@ class TestTAASuite:
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
         assert res3['op'] == 'REPLY'
 
+    @pytest.mark.skip('INDY-2316')
     @pytest.mark.parametrize(
         'taa_text, taa_ver',
         [

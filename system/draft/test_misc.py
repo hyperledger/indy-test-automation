@@ -2361,6 +2361,10 @@ async def test_misc_new_taa(
     assert res4['op'] == 'REPLY'
 
     req11 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 2 text', '2.0', retirement_ts=timestamp1)
+    req11 = json.loads(req11)
+    req11['operation']['retired'] = req11['operation']['retirement_ts']
+    del req11['operation']['retirement_ts']
+    req11 = json.dumps(req11)
     res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req11))
     print(res11)
     assert res11['op'] == 'REPLY'

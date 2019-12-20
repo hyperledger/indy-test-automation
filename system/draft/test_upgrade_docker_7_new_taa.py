@@ -18,10 +18,12 @@ import json
 # check ledgers and states
 async def test_pool_upgrade_auth_rule(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
-        check_no_failures_fixture
+        # check_no_failures_fixture
 ):
     # SETUP ------------------------------------------------------------------------------------------------------------
     trustee_did, _ = get_default_trustee
+
+    timestamp1 = int(time.time())
 
     steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     res = await send_nym(
@@ -40,10 +42,10 @@ async def test_pool_upgrade_auth_rule(
     new_node_ip = '10.0.0.9'
     new_node_alias = 'Node8'
     new_node_seed = '000000000000000000000000000node8'
-    sovrin_ver = '1.1.63'  # FIXME
-    indy_node_ver = '1.12.0'  # FIXME
-    indy_plenum_ver = '1.12.0'  # FIXME
-    plugin_ver = '1.0.5'  # FIXME
+    sovrin_ver = '1.1.192'
+    indy_node_ver = '1.12.1~dev1165'
+    indy_plenum_ver = '1.12.1~dev979'
+    plugin_ver = '1.0.6~dev135'
     # ------------------------------------------------------------------------------------------------------------------
 
     # create new node and upgrade it to proper version
@@ -85,17 +87,14 @@ async def test_pool_upgrade_auth_rule(
     )
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
-    await asyncio.sleep(180)
-
-    timestamp1 = int(time.time())
-
-    req3 = await ledger.build_txn_author_agreement_request(trustee_did, '', '2.0', retirement_ts=timestamp1)
-    res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req3))
-    print(res3)
-    assert res3['op'] == 'REPLY'
+    await asyncio.sleep(660)
 
     # cannot create a transaction author agreement with a 'retired' field
     req4 = await ledger.build_txn_author_agreement_request(trustee_did, 'some text', '3.0', retirement_ts=timestamp1)
+    req4 = json.loads(req4)
+    req4['operation']['retired'] = req4['operation']['retirement_ts']
+    del req4['operation']['retirement_ts']
+    req4 = json.dumps(req4)
     res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req4))
     print(res4)
     assert res4['op'] == 'REJECT'
@@ -105,8 +104,23 @@ async def test_pool_upgrade_auth_rule(
     print(res5)
     assert res5['op'] == 'REPLY'
 
+    # retire old format taa that was written before the upgrade
+    req3 = await ledger.build_txn_author_agreement_request(trustee_did, '', '2.0', retirement_ts=timestamp1)
+    print(req3)
+    req3 = json.loads(req3)
+    req3['operation']['retired'] = req3['operation']['retirement_ts']
+    del req3['operation']['retirement_ts']
+    req3 = json.dumps(req3)
+    res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req3))
+    print(res3)
+    assert res3['op'] == 'REPLY'
+
     # the latest transaction author agreement cannot be retired
     req6 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 3 text', '3.0', retirement_ts=timestamp1)
+    req6 = json.loads(req6)
+    req6['operation']['retired'] = req6['operation']['retirement_ts']
+    del req6['operation']['retirement_ts']
+    req6 = json.dumps(req6)
     res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req6))
     print(res6)
     assert res6['op'] == 'REJECT'
@@ -161,18 +175,27 @@ async def test_pool_upgrade_auth_rule(
     res = json.loads(await ledger.submit_request(pool_handler, req))
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None
+    assert 'digest' not in res['result']['data']
+    assert 'ratified' not in res['result']['data']
+    assert 'retired' not in res['result']['data']
 
     # send GET_TAA for TAA2
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '2.0'}))
     res = json.loads(await ledger.submit_request(pool_handler, req))
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None
+    assert res['result']['data']['digest'] is not None
+    assert res['result']['data']['ratified'] is not None
+    assert res['result']['data']['retired'] is not None
 
     # send GET_TAA for TAA3
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '3.0'}))
     res = json.loads(await ledger.submit_request(pool_handler, req))
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None
+    assert res['result']['data']['digest'] is not None
+    assert res['result']['data']['ratified'] is not None
+    assert 'retired' not in res['result']['data']
 
     # add TAA1 to nym - pass
     req7 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
@@ -209,6 +232,7 @@ async def test_pool_upgrade_auth_rule(
         req11, '', '2.0', None, aml_key, int(time.time())
     )
     res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req11))
+    print(res11)
     assert res11['op'] == 'REPLY'
 
     # add TAA2 to nym with old timestamp - fail (old timestamp)
@@ -217,4 +241,9 @@ async def test_pool_upgrade_auth_rule(
         req12, '', '2.0', None, aml_key, timestamp1
     )
     res12 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req12))
+    print(res12)
     assert res12['op'] == 'REJECT'
+
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+    await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
+    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
