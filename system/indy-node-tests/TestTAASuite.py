@@ -7,11 +7,14 @@ SEC_PER_DAY = 24 * 60 * 60
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 class TestTAASuite:
 
-    @pytest.mark.parametrize('aml, version_set, context, timestamp, version_get', [
-        ({random_string(10): random_string(10)}, '0', random_string(25), None, '0'),
-        ({random_string(100): random_string(100)}, random_string(5), None,
-         int(time.time()) // SEC_PER_DAY * SEC_PER_DAY, None)
-    ])
+    @pytest.mark.parametrize(
+        'aml, version_set, context, timestamp, version_get',
+        [
+            ({random_string(10): random_string(10)}, '0', random_string(25), None, '0'),
+            ({random_string(100): random_string(100)}, random_string(5), None,
+             int(time.time()) // SEC_PER_DAY * SEC_PER_DAY, None)
+        ]
+    )
     @pytest.mark.asyncio
     async def test_case_send_and_get_aml(
             self, pool_handler, wallet_handler, get_default_trustee, aml, version_set, context, timestamp, version_get
@@ -28,10 +31,14 @@ class TestTAASuite:
         res3 = json.loads(await ledger.submit_request(pool_handler, req))
         assert res3['op'] == 'REPLY'
 
-    @pytest.mark.parametrize('taa_text, taa_ver', [
-        (random_string(1), random_string(100)),
-        (random_string(100), random_string(1))
-    ])
+    @pytest.mark.skip('INDY-2316')
+    @pytest.mark.parametrize(
+        'taa_text, taa_ver',
+        [
+            (random_string(1), random_string(100)),
+            (random_string(100), random_string(1))
+        ]
+    )
     @pytest.mark.asyncio
     async def test_case_send_and_get_taa(self, pool_handler, wallet_handler, get_default_trustee, taa_text, taa_ver):
         trustee_did, _ = get_default_trustee
@@ -134,15 +141,17 @@ class TestTAASuite:
         aml_key = aml_ver = taa_ver = random_string(5)
         aml_val = taa_text = random_string(25)
         trustee_did, _ = get_default_trustee
-        req = {
-            'protocolVersion': 2,
-            'reqId': 1,
-            'identifier': trustee_did,
-            'operation': {
-                'type': '5',
-                'aml': aml,
-                'version': '1'
-                }
+        req =\
+            {
+                'protocolVersion': 2,
+                'reqId': 1,
+                'identifier': trustee_did,
+                'operation':
+                    {
+                        'type': '5',
+                        'aml': aml,
+                        'version': '1'
+                    }
             }
         res1 = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))

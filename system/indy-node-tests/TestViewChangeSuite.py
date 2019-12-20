@@ -137,3 +137,53 @@ class TestViewChangeSuite:
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
+    @pytest.mark.parametrize(
+        'node_txns_count, loops_count, concurrency', [
+            (15, 3, False),
+            (10, 5, False),
+            (5, 7, False),
+            (150, 3, True),
+            (100, 5, True),
+            (50, 7, True)
+        ]
+    )
+    @pytest.mark.nodes_num(5)
+    @pytest.mark.asyncio
+    async def test_misc_node_and_vc_interleaved(
+        self, pool_handler, wallet_handler, get_default_trustee, nodes_num, node_txns_count, loops_count, concurrency
+    ):
+        trustee_did, _ = get_default_trustee
+        pool_info = get_pool_info('1')
+
+        for i in range(loops_count):
+            # find primary
+            primary, primary_alias, primary_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+            # demote it to force VC
+            await eventually(
+                demote_node, pool_handler, wallet_handler, trustee_did, 'Node{}'.format(primary),
+                pool_info['Node{}'.format(primary)], timeout=60
+            )
+            await pool.refresh_pool_ledger(pool_handler)
+            # check VC status
+            await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
+            # send extra node txns
+            if concurrency:  # sent all txns at once concurrently
+                tasks = []
+                for _ in range(node_txns_count):
+                    task = send_nodes(
+                        pool_handler, wallet_handler, trustee_did, count=1, alias='INACTIVE_NODE'
+                    )
+                    tasks.append(task)
+                await asyncio.gather(*tasks, return_exceptions=True)
+            else:  # sent all txns one by one
+                await eventually(
+                    send_nodes, pool_handler, wallet_handler, trustee_did, count=node_txns_count, alias='INACTIVE_NODE'
+                )
+            # promote ex-primary back
+            await eventually(promote_node, pool_handler, wallet_handler, trustee_did, primary_alias, primary_did)
+
+        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=10)
+        await ensure_pool_is_in_sync(nodes_num=nodes_num)
+        await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
