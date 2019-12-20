@@ -18,12 +18,12 @@ import json
 # check ledgers and states
 async def test_pool_upgrade_auth_rule(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
-        # check_no_failures_fixture
+        check_no_failures_fixture
 ):
     # SETUP ------------------------------------------------------------------------------------------------------------
     trustee_did, _ = get_default_trustee
 
-    timestamp1 = int(time.time())
+    timestamp1 = int(time.time()) - 2*24*60*60
 
     steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     res = await send_nym(
@@ -243,6 +243,11 @@ async def test_pool_upgrade_auth_rule(
     res12 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req12))
     print(res12)
     assert res12['op'] == 'REJECT'
+
+    # send TRANSACTION_AUTHOR_AGREEMENT_DISABLE
+    req = await ledger.build_disable_all_txn_author_agreements_request(trustee_did)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REPLY'
 
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
     await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
