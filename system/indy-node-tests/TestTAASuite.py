@@ -197,6 +197,7 @@ class TestTAASuite:
         res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
         assert res8['op'] == 'REJECT'
 
+    @pytest.mark.skip('INDY-2316')
     @pytest.mark.asyncio
     async def test_case_taa_with_xfer(
             self, payment_init, pool_handler, wallet_handler, get_default_trustee, initial_token_minting

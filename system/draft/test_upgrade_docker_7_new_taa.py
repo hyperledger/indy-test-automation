@@ -5,6 +5,7 @@ import hashlib
 import time
 import asyncio
 import json
+from system.docker_setup import client
 
 
 @pytest.mark.asyncio
@@ -16,14 +17,16 @@ import json
 # add new node with the same version installed
 # read TAA txns written and send ledger txns signed with TAA
 # check ledgers and states
-async def test_pool_upgrade_auth_rule(
+async def test_pool_upgrade_new_taa(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
-        check_no_failures_fixture
+        check_no_failures_fixture, initial_token_minting, nodes_num
 ):
     # SETUP ------------------------------------------------------------------------------------------------------------
     trustee_did, _ = get_default_trustee
-
-    timestamp1 = int(time.time()) - 2*24*60*60
+    timestamp1 = int(time.time()) - 24*60*60
+    libsovtoken_payment_method = 'sov'
+    address1 = initial_token_minting
+    address2 = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps({}))
 
     steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     res = await send_nym(
@@ -42,10 +45,10 @@ async def test_pool_upgrade_auth_rule(
     new_node_ip = '10.0.0.9'
     new_node_alias = 'Node8'
     new_node_seed = '000000000000000000000000000node8'
-    sovrin_ver = '1.1.192'
-    indy_node_ver = '1.12.1~dev1165'
-    indy_plenum_ver = '1.12.1~dev979'
-    plugin_ver = '1.0.6~dev135'
+    sovrin_ver = '1.1.195'
+    indy_node_ver = '1.12.1~dev1167'
+    indy_plenum_ver = '1.12.1~dev982'
+    plugin_ver = '1.0.6~dev136'
     # ------------------------------------------------------------------------------------------------------------------
 
     # create new node and upgrade it to proper version
@@ -60,41 +63,91 @@ async def test_pool_upgrade_auth_rule(
         plugin_ver
     )
 
+    # check config ledger writing before
+    req = await ledger.build_auth_rule_request(
+        trustee_did, '118', 'ADD', 'action', '*', '*', json.dumps(
+            {
+                'constraint_id': 'ROLE',
+                'role': '*',
+                'sig_count': 2,
+                'need_to_be_owner': True,
+                'metadata': {}
+            }
+        )
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REPLY'
+
     req1 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 1 text', '1.0')
     res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
     print(res1)
     assert res1['op'] == 'REPLY'
+
+    # add taa to payment
+    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
+    res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    source1 = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res)
+    )[0]['source']
+    extra = await payment.prepare_payment_extra_with_acceptance_data(
+        None, 'taa 1 text', '1.0', None, aml_key, int(time.time())
+    )
+    req, _ = await payment.build_payment_req(
+        wallet_handler, trustee_did, json.dumps([source1]),
+        json.dumps([{"recipient": address2, "amount": 100 * 100000}, {"recipient": address1, "amount": 900 * 100000}]),
+        extra)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res)
+    assert res['op'] == 'REPLY'
+
+    # add taa to schema
+    schema_id, schema_json = await anoncreds.issuer_create_schema(
+        trustee_did, random_string(5), '1.0', json.dumps([random_string(10)])
+    )
+    req = await ledger.build_schema_request(trustee_did, schema_json)
+    req = await ledger.append_txn_author_agreement_acceptance_to_request(
+        req, 'taa 1 text', '1.0', None, aml_key, int(time.time())
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REPLY'
 
     req2 = await ledger.build_txn_author_agreement_request(trustee_did, '', '2.0')
     res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
     print(res2)
     assert res2['op'] == 'REPLY'
 
-    # upgrade pool
-    await asyncio.sleep(60)
-    req = await ledger.build_pool_upgrade_request(
-        trustee_did,
-        random_string(10),
-        sovrin_ver,
-        'start',
-        hashlib.sha256().hexdigest(),
-        5,
-        docker_7_schedule,
-        None,
-        False,
-        True,
-        'sovrin'
-    )
-    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    assert res['op'] == 'REPLY'
-    await asyncio.sleep(660)
+    # # upgrade pool normally (sovrin is bound)
+    # await asyncio.sleep(60)
+    # req = await ledger.build_pool_upgrade_request(
+    #     trustee_did,
+    #     random_string(10),
+    #     sovrin_ver,
+    #     'start',
+    #     hashlib.sha256().hexdigest(),
+    #     5,
+    #     docker_7_schedule,
+    #     None,
+    #     False,
+    #     True,
+    #     'sovrin'
+    # )
+    # res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    # assert res['op'] == 'REPLY'
+    # await asyncio.sleep(660)
+
+    # upgrade pool manually (sovrin is not bound)
+    versions = {
+        'sovrin_ver': sovrin_ver,
+        'node_ver': indy_node_ver,
+        'plenum_ver': indy_plenum_ver,
+        'plugin_ver': plugin_ver
+    }
+    containers = [client.containers.get('node{}'.format(i)) for i in range(1, nodes_num+1)]
+    upgrade_nodes_manually(containers, **versions)
+    await asyncio.sleep(30)
 
     # cannot create a transaction author agreement with a 'retired' field
     req4 = await ledger.build_txn_author_agreement_request(trustee_did, 'some text', '3.0', retirement_ts=timestamp1)
-    req4 = json.loads(req4)
-    req4['operation']['retired'] = req4['operation']['retirement_ts']
-    del req4['operation']['retirement_ts']
-    req4 = json.dumps(req4)
     res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req4))
     print(res4)
     assert res4['op'] == 'REJECT'
@@ -106,21 +159,12 @@ async def test_pool_upgrade_auth_rule(
 
     # retire old format taa that was written before the upgrade
     req3 = await ledger.build_txn_author_agreement_request(trustee_did, '', '2.0', retirement_ts=timestamp1)
-    print(req3)
-    req3 = json.loads(req3)
-    req3['operation']['retired'] = req3['operation']['retirement_ts']
-    del req3['operation']['retirement_ts']
-    req3 = json.dumps(req3)
     res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req3))
     print(res3)
     assert res3['op'] == 'REPLY'
 
     # the latest transaction author agreement cannot be retired
     req6 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 3 text', '3.0', retirement_ts=timestamp1)
-    req6 = json.loads(req6)
-    req6['operation']['retired'] = req6['operation']['retirement_ts']
-    del req6['operation']['retirement_ts']
-    req6 = json.dumps(req6)
     res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req6))
     print(res6)
     assert res6['op'] == 'REJECT'
@@ -152,7 +196,7 @@ async def test_pool_upgrade_auth_rule(
     await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
-    # check config ledger writing
+    # check config ledger writing after
     req = await ledger.build_auth_rule_request(
         trustee_did, '118', 'ADD', 'action', '*', '*', json.dumps(
             {
@@ -176,8 +220,8 @@ async def test_pool_upgrade_auth_rule(
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None
     assert 'digest' not in res['result']['data']
-    assert 'ratified' not in res['result']['data']
-    assert 'retired' not in res['result']['data']
+    assert 'ratification_ts' not in res['result']['data']
+    assert 'retirement_ts' not in res['result']['data']
 
     # send GET_TAA for TAA2
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '2.0'}))
@@ -185,8 +229,8 @@ async def test_pool_upgrade_auth_rule(
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None
     assert res['result']['data']['digest'] is not None
-    assert res['result']['data']['ratified'] is not None
-    assert res['result']['data']['retired'] is not None
+    assert res['result']['data']['ratification_ts'] is not None
+    assert res['result']['data']['retirement_ts'] is not None
 
     # send GET_TAA for TAA3
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '3.0'}))
@@ -194,8 +238,8 @@ async def test_pool_upgrade_auth_rule(
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None
     assert res['result']['data']['digest'] is not None
-    assert res['result']['data']['ratified'] is not None
-    assert 'retired' not in res['result']['data']
+    assert res['result']['data']['ratification_ts'] is not None
+    assert 'retirement_ts' not in res['result']['data']
 
     # add TAA1 to nym - pass
     req7 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
@@ -204,6 +248,8 @@ async def test_pool_upgrade_auth_rule(
     )
     res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req7))
     assert res7['op'] == 'REPLY'
+
+    # TODO write payment with appended TAA
 
     # add TAA2 to nym - fail (retired)
     req8 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
@@ -220,6 +266,23 @@ async def test_pool_upgrade_auth_rule(
     )
     res9 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req9))
     assert res9['op'] == 'REPLY'
+
+    # add TAA3 to payment - pass
+    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
+    res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    source1 = json.loads(
+        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res)
+    )[0]['source']
+    extra = await payment.prepare_payment_extra_with_acceptance_data(
+        None, 'taa 3 text', '3.0', None, aml_key, int(time.time())
+    )
+    req, _ = await payment.build_payment_req(
+        wallet_handler, trustee_did, json.dumps([source1]),
+        json.dumps([{"recipient": address2, "amount": 100 * 100000}, {"recipient": address1, "amount": 800 * 100000}]),
+        extra)
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res)
+    assert res['op'] == 'REPLY'
 
     req10 = await ledger.build_txn_author_agreement_request(trustee_did, '', '2.0', retirement_ts=None)
     res10 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req10))

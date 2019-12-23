@@ -2287,8 +2287,7 @@ async def test_misc_new_taa(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     trustee_did, _ = get_default_trustee
-
-    timestamp1 = int(time.time()) - 2*24*60*60
+    timestamp1 = int(time.time()) - 24*60*60
 
     # send nym with TAA before AML and TAA
     req01 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
@@ -2344,16 +2343,16 @@ async def test_misc_new_taa(
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None
     assert res['result']['data']['digest'] is not None
-    assert res['result']['data']['ratified'] is not None
-    assert 'retired' not in res['result']['data']
+    assert res['result']['data']['ratification_ts'] is not None
+    assert 'retirement_ts' not in res['result']['data']
 
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '2.0'}))
     res = json.loads(await ledger.submit_request(pool_handler, req))
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None
     assert res['result']['data']['digest'] is not None
-    assert res['result']['data']['ratified'] is not None
-    assert 'retired' not in res['result']['data']
+    assert res['result']['data']['ratification_ts'] is not None
+    assert 'retirement_ts' not in res['result']['data']
 
     req3 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
     req3 = await ledger.append_txn_author_agreement_acceptance_to_request(
@@ -2372,10 +2371,6 @@ async def test_misc_new_taa(
     assert res4['op'] == 'REPLY'
 
     req11 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 2 text', '2.0', retirement_ts=timestamp1)
-    req11 = json.loads(req11)
-    req11['operation']['retired'] = req11['operation']['retirement_ts']
-    del req11['operation']['retirement_ts']
-    req11 = json.dumps(req11)
     res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req11))
     print(res11)
     assert res11['op'] == 'REPLY'
@@ -2385,8 +2380,8 @@ async def test_misc_new_taa(
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None
     assert res['result']['data']['digest'] is not None
-    assert res['result']['data']['ratified'] is not None
-    assert res['result']['data']['retired'] is not None
+    assert res['result']['data']['ratification_ts'] is not None
+    assert res['result']['data']['retirement_ts'] is not None
 
     req5 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
     req5 = await ledger.append_txn_author_agreement_acceptance_to_request(
@@ -2414,16 +2409,16 @@ async def test_misc_new_taa(
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None
     assert res['result']['data']['digest'] is not None
-    assert res['result']['data']['ratified'] is not None
-    assert res['result']['data']['retired'] is not None
+    assert res['result']['data']['ratification_ts'] is not None
+    assert res['result']['data']['retirement_ts'] is not None
 
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '2.0'}))
     res = json.loads(await ledger.submit_request(pool_handler, req))
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None
     assert res['result']['data']['digest'] is not None
-    assert res['result']['data']['ratified'] is not None
-    assert res['result']['data']['retired'] is not None
+    assert res['result']['data']['ratification_ts'] is not None
+    assert res['result']['data']['retirement_ts'] is not None
 
     req7 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
     req7 = await ledger.append_txn_author_agreement_acceptance_to_request(
