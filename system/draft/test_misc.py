@@ -2298,6 +2298,8 @@ async def test_misc_new_taa(
     res01 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req01))
     print(res01)
     assert res01['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res01)))
+    assert res01['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     aml_key = 'aml_key'
     req = await ledger.build_acceptance_mechanisms_request(
@@ -2305,6 +2307,8 @@ async def test_misc_new_taa(
     )
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     # send nym with TAA after AML but before TAA - existing AML_KEY
     req02 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
@@ -2314,6 +2318,8 @@ async def test_misc_new_taa(
     res02 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req02))
     print(res02)
     assert res02['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res02)))
+    assert res02['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     # send nym with TAA after AML but before TAA - non-existent AML_KEY
     req03 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
@@ -2323,21 +2329,35 @@ async def test_misc_new_taa(
     res03 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req03))
     print(res03)
     assert res03['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res03)))
+    assert res03['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     req1 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 1 text', '1.0')
     res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
     print(res1)
     assert res1['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res1)))
+    assert res1['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     req2 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 2 text', '2.0')
     res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
     print(res2)
     assert res2['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res2)))
+    assert res2['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     req99 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 3 text', '3.0')
     res99 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req99))
     print(res99)
     assert res99['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res99)))
+    assert res99['result']['txnMetadata']['seqNo'] == parsed['seqNo']
+
+    if state_proof_check:
+        test_nodes = [NodeHost(i) for i in range(1, nodes_num + 1)]
+        for node in test_nodes[:-1]:
+            node.stop_service()
+        await asyncio.sleep(5)
 
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '1.0'}))
     res = json.loads(await ledger.submit_request(pool_handler, req))
@@ -2346,6 +2366,8 @@ async def test_misc_new_taa(
     assert res['result']['data']['digest'] is not None
     assert res['result']['data']['ratification_ts'] is not None
     assert 'retirement_ts' not in res['result']['data']
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['seqNo'] == parsed['seqNo']
 
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '2.0'}))
     res = json.loads(await ledger.submit_request(pool_handler, req))
@@ -2354,6 +2376,13 @@ async def test_misc_new_taa(
     assert res['result']['data']['digest'] is not None
     assert res['result']['data']['ratification_ts'] is not None
     assert 'retirement_ts' not in res['result']['data']
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['seqNo'] == parsed['seqNo']
+
+    if state_proof_check:
+        for node in test_nodes[:-1]:
+            node.start_service()
+        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
 
     req3 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
     req3 = await ledger.append_txn_author_agreement_acceptance_to_request(
@@ -2383,6 +2412,8 @@ async def test_misc_new_taa(
     assert res['result']['data']['digest'] is not None
     assert res['result']['data']['ratification_ts'] is not None
     assert res['result']['data']['retirement_ts'] is not None
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['seqNo'] == parsed['seqNo']
 
     req5 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
     req5 = await ledger.append_txn_author_agreement_acceptance_to_request(
@@ -2404,6 +2435,8 @@ async def test_misc_new_taa(
     req = await ledger.build_disable_all_txn_author_agreements_request(trustee_did)
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     if state_proof_check:
         test_nodes = [NodeHost(i) for i in range(1, nodes_num + 1)]
@@ -2418,6 +2451,8 @@ async def test_misc_new_taa(
     assert res['result']['data']['digest'] is not None
     assert res['result']['data']['ratification_ts'] is not None
     assert res['result']['data']['retirement_ts'] is not None
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['seqNo'] == parsed['seqNo']
 
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '2.0'}))
     res = json.loads(await ledger.submit_request(pool_handler, req))
@@ -2426,6 +2461,8 @@ async def test_misc_new_taa(
     assert res['result']['data']['digest'] is not None
     assert res['result']['data']['ratification_ts'] is not None
     assert res['result']['data']['retirement_ts'] is not None
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['seqNo'] == parsed['seqNo']
 
     if state_proof_check:
         for node in test_nodes[:-1]:
@@ -2439,6 +2476,8 @@ async def test_misc_new_taa(
     res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req7))
     print(res7)
     assert res7['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res7)))
+    assert res7['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     req8 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
     req8 = await ledger.append_txn_author_agreement_acceptance_to_request(
@@ -2447,6 +2486,8 @@ async def test_misc_new_taa(
     res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req8))
     print(res8)
     assert res8['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res8)))
+    assert res8['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
     await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
