@@ -2281,10 +2281,11 @@ async def test_misc_big_schema(
     assert cred_def_id_local == cred_def_id_ledger
 
 
+@pytest.mark.parametrize('state_proof_check', [False, True])
 @pytest.mark.asyncio
 # INDY-2302 / INDY-2316
 async def test_misc_new_taa(
-        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num, state_proof_check
 ):
     trustee_did, _ = get_default_trustee
     timestamp1 = int(time.time()) - 24*60*60
@@ -2404,6 +2405,12 @@ async def test_misc_new_taa(
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
 
+    if state_proof_check:
+        test_nodes = [NodeHost(i) for i in range(1, nodes_num + 1)]
+        for node in test_nodes[:-1]:
+            node.stop_service()
+        await asyncio.sleep(5)
+
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '1.0'}))
     res = json.loads(await ledger.submit_request(pool_handler, req))
     assert res['op'] == 'REPLY'
@@ -2419,6 +2426,11 @@ async def test_misc_new_taa(
     assert res['result']['data']['digest'] is not None
     assert res['result']['data']['ratification_ts'] is not None
     assert res['result']['data']['retirement_ts'] is not None
+
+    if state_proof_check:
+        for node in test_nodes[:-1]:
+            node.start_service()
+        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
 
     req7 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
     req7 = await ledger.append_txn_author_agreement_acceptance_to_request(
@@ -2439,3 +2451,36 @@ async def test_misc_new_taa(
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
     await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.asyncio
+# INDY-2302 / INDY-2316
+# keep containers from previous test -> downgrade libindy and python3-indy (1.12.0~1356) -> run this test
+async def test_misc_new_taa_reading_by_old_client(pool_handler, nodes_num):
+
+    test_nodes = [NodeHost(i) for i in range(1, nodes_num + 1)]
+    for node in test_nodes[:-1]:
+        node.stop_service()
+
+    await asyncio.sleep(5)
+
+    req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '1.0'}))
+    res = json.loads(await ledger.submit_request(pool_handler, req))
+    print(res)
+    assert res['op'] == 'REPLY'
+    assert res['result']['seqNo'] is not None
+    assert res['result']['data']['digest'] is not None
+    assert res['result']['data']['ratification_ts'] is not None
+    assert res['result']['data']['retirement_ts'] is not None
+
+    req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '2.0'}))
+    res = json.loads(await ledger.submit_request(pool_handler, req))
+    print(res)
+    assert res['op'] == 'REPLY'
+    assert res['result']['seqNo'] is not None
+    assert res['result']['data']['digest'] is not None
+    assert res['result']['data']['ratification_ts'] is not None
+    assert res['result']['data']['retirement_ts'] is not None
+
+    for node in test_nodes[:-1]:
+        node.start_service()
