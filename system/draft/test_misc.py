@@ -2408,7 +2408,7 @@ async def test_misc_new_taa(
     print(res4)
     assert res4['op'] == 'REPLY'
 
-    # SDK must allow `None` instead of taa text here !!!
+    # retire TAA2 without text
     req11 = await ledger.build_txn_author_agreement_request(trustee_did, None, '2.0', retirement_ts=timestamp1)
     res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req11))
     print(res11)
@@ -2440,6 +2440,22 @@ async def test_misc_new_taa(
     print(res6)
     assert res6['op'] == 'REJECT'
 
+    # retire TAA1 with text
+    req22 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 1 text', '1.0', retirement_ts=timestamp1)
+    res22 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req22))
+    print(res22)
+    assert res22['op'] == 'REPLY'
+
+    req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '1.0'}))
+    res = json.loads(await ledger.submit_request(pool_handler, req))
+    assert res['op'] == 'REPLY'
+    assert res['result']['seqNo'] is not None
+    assert res['result']['data']['digest'] is not None
+    assert res['result']['data']['ratification_ts'] is not None
+    assert res['result']['data']['retirement_ts'] is not None
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['seqNo'] == parsed['seqNo']
+
     req55 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
     req55 = await ledger.append_txn_author_agreement_acceptance_to_request(
         req55, 'taa 3 text', '3.0', None, aml_key, int(time.time())
@@ -2461,35 +2477,16 @@ async def test_misc_new_taa(
             node.stop_service()
         await asyncio.sleep(5)
 
-    req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '1.0'}))
-    res = json.loads(await ledger.submit_request(pool_handler, req))
-    assert res['op'] == 'REPLY'
-    assert res['result']['seqNo'] is not None
-    assert res['result']['data']['digest'] is not None
-    assert res['result']['data']['ratification_ts'] is not None
-    assert res['result']['data']['retirement_ts'] is not None
-    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
-    assert res['result']['seqNo'] == parsed['seqNo']
-
-    req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '2.0'}))
-    res = json.loads(await ledger.submit_request(pool_handler, req))
-    assert res['op'] == 'REPLY'
-    assert res['result']['seqNo'] is not None
-    assert res['result']['data']['digest'] is not None
-    assert res['result']['data']['ratification_ts'] is not None
-    assert res['result']['data']['retirement_ts'] is not None
-    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
-    assert res['result']['seqNo'] == parsed['seqNo']
-
-    req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '3.0'}))
-    res = json.loads(await ledger.submit_request(pool_handler, req))
-    assert res['op'] == 'REPLY'
-    assert res['result']['seqNo'] is not None
-    assert res['result']['data']['digest'] is not None
-    assert res['result']['data']['ratification_ts'] is not None
-    assert res['result']['data']['retirement_ts'] is not None
-    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
-    assert res['result']['seqNo'] == parsed['seqNo']
+    for i in [{'version': '1.0'}, {'version': '2.0'}, {'version': '3.0'}]:
+        req = await ledger.build_get_txn_author_agreement_request(None, json.dumps(i))
+        res = json.loads(await ledger.submit_request(pool_handler, req))
+        assert res['op'] == 'REPLY'
+        assert res['result']['seqNo'] is not None
+        assert res['result']['data']['digest'] is not None
+        assert res['result']['data']['ratification_ts'] is not None
+        assert res['result']['data']['retirement_ts'] is not None
+        parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+        assert res['result']['seqNo'] == parsed['seqNo']
 
     if state_proof_check:
         for node in test_nodes[:-1]:
