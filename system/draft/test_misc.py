@@ -2285,7 +2285,8 @@ async def test_misc_big_schema(
 @pytest.mark.asyncio
 # INDY-2302 / INDY-2316
 async def test_misc_new_taa(
-        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num, state_proof_check
+    docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture,
+    state_proof_check
 ):
     trustee_did, _ = get_default_trustee
     timestamp1 = int(time.time()) - 24*60*60
@@ -2400,7 +2401,8 @@ async def test_misc_new_taa(
     print(res4)
     assert res4['op'] == 'REPLY'
 
-    req11 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 2 text', '2.0', retirement_ts=timestamp1)
+    # SDK must allow `None` instead of taa text here !!!
+    req11 = await ledger.build_txn_author_agreement_request(trustee_did, None, '2.0', retirement_ts=timestamp1)
     res11 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req11))
     print(res11)
     assert res11['op'] == 'REPLY'
@@ -2431,6 +2433,14 @@ async def test_misc_new_taa(
     print(res6)
     assert res6['op'] == 'REJECT'
 
+    req55 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+    req55 = await ledger.append_txn_author_agreement_acceptance_to_request(
+        req55, 'taa 3 text', '3.0', None, aml_key, int(time.time())
+    )
+    res55 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req55))
+    print(res55)
+    assert res55['op'] == 'REPLY'
+
     # send TRANSACTION_AUTHOR_AGREEMENT_DISABLE
     req = await ledger.build_disable_all_txn_author_agreements_request(trustee_did)
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
@@ -2455,6 +2465,16 @@ async def test_misc_new_taa(
     assert res['result']['seqNo'] == parsed['seqNo']
 
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '2.0'}))
+    res = json.loads(await ledger.submit_request(pool_handler, req))
+    assert res['op'] == 'REPLY'
+    assert res['result']['seqNo'] is not None
+    assert res['result']['data']['digest'] is not None
+    assert res['result']['data']['ratification_ts'] is not None
+    assert res['result']['data']['retirement_ts'] is not None
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['seqNo'] == parsed['seqNo']
+
+    req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '3.0'}))
     res = json.loads(await ledger.submit_request(pool_handler, req))
     assert res['op'] == 'REPLY'
     assert res['result']['seqNo'] is not None

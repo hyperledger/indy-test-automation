@@ -168,7 +168,7 @@ async def test_pool_upgrade_new_taa(
     assert res5['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     # retire old format taa that was written before the upgrade
-    req3 = await ledger.build_txn_author_agreement_request(trustee_did, '', '2.0', retirement_ts=timestamp1)
+    req3 = await ledger.build_txn_author_agreement_request(trustee_did, None, '2.0', retirement_ts=timestamp1)
     res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req3))
     print(res3)
     assert res3['op'] == 'REPLY'
@@ -308,7 +308,7 @@ async def test_pool_upgrade_new_taa(
     parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
     assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
-    req10 = await ledger.build_txn_author_agreement_request(trustee_did, '', '2.0', retirement_ts=None)
+    req10 = await ledger.build_txn_author_agreement_request(trustee_did, None, '2.0', retirement_ts=None)
     res10 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req10))
     print(res10)
     assert res10['op'] == 'REPLY'
