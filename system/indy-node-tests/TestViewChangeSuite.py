@@ -168,7 +168,7 @@ class TestViewChangeSuite:
             # check VC status
             await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
             # send extra node txns
-            if concurrency:  # sent all txns at once concurrently
+            if concurrency:  # send all txns at once concurrently
                 tasks = []
                 for _ in range(node_txns_count):
                     task = send_nodes(
@@ -176,7 +176,7 @@ class TestViewChangeSuite:
                     )
                     tasks.append(task)
                 await asyncio.gather(*tasks, return_exceptions=True)
-            else:  # sent all txns one by one
+            else:  # send all txns one by one
                 await eventually(
                     send_nodes, pool_handler, wallet_handler, trustee_did, count=node_txns_count, alias='INACTIVE_NODE'
                 )
