@@ -46,9 +46,9 @@ async def test_pool_upgrade_new_taa(
     new_node_alias = 'Node8'
     new_node_seed = '000000000000000000000000000node8'
     sovrin_ver = '1.1.195'
-    indy_node_ver = '1.12.1~dev1167'
-    indy_plenum_ver = '1.12.1~dev982'
-    plugin_ver = '1.0.6~dev136'
+    indy_node_ver = '1.12.1~dev1172'
+    indy_plenum_ver = '1.12.1~dev989'
+    plugin_ver = '1.0.6~dev139'
     # ------------------------------------------------------------------------------------------------------------------
 
     # create new node and upgrade it to proper version
@@ -155,12 +155,16 @@ async def test_pool_upgrade_new_taa(
     await asyncio.sleep(30)
 
     # cannot create a transaction author agreement with a 'retired' field
-    req4 = await ledger.build_txn_author_agreement_request(trustee_did, 'some text', '3.0', retirement_ts=timestamp1)
+    req4 = await ledger.build_txn_author_agreement_request(
+        trustee_did, 'some text', '3.0', ratification_ts=int(time.time()), retirement_ts=timestamp1
+    )
     res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req4))
     print(res4)
     assert res4['op'] == 'REJECT'
 
-    req5 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 3 text', '3.0')
+    req5 = await ledger.build_txn_author_agreement_request(
+        trustee_did, 'taa 3 text', '3.0', ratification_ts=int(time.time())
+    )
     res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req5))
     print(res5)
     assert res5['op'] == 'REPLY'
@@ -180,6 +184,15 @@ async def test_pool_upgrade_new_taa(
     res6 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req6))
     print(res6)
     assert res6['op'] == 'REJECT'
+
+    req55 = await ledger.build_txn_author_agreement_request(
+        trustee_did, 'taa 4 text', '4.0', ratification_ts=int(time.time())
+    )
+    res55 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req55))
+    print(res55)
+    assert res55['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res55)))
+    assert res55['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     # start new node
     assert new_node.exec_run(
@@ -276,8 +289,6 @@ async def test_pool_upgrade_new_taa(
     )
     res8 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req8))
     assert res8['op'] == 'REJECT'
-    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res8)))
-    assert res8['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     # add TAA3 to nym - pass
     req9 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
@@ -351,6 +362,16 @@ async def test_pool_upgrade_new_taa(
     parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
     assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
-    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=5)
+
+    req = await ledger.build_txn_author_agreement_request(
+        trustee_did, random_string(100), random_string(100), ratification_ts=int(time.time())
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res)
+    assert res['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
+
     await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)

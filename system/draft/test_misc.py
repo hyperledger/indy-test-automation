@@ -2336,7 +2336,9 @@ async def test_misc_new_taa(
     parsed = json.loads(await ledger.get_response_metadata(json.dumps(res03)))
     assert res03['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
-    req1 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 1 text', '1.0')
+    req1 = await ledger.build_txn_author_agreement_request(
+        trustee_did, 'taa 1 text', '1.0', ratification_ts=int(time.time())
+    )
     res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
     print(res1)
     assert res1['op'] == 'REPLY'
@@ -2347,14 +2349,18 @@ async def test_misc_new_taa(
     res_negative = await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
     assert res_negative['op'] == 'REJECT'
 
-    req2 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 2 text', '2.0')
+    req2 = await ledger.build_txn_author_agreement_request(
+        trustee_did, 'taa 2 text', '2.0', ratification_ts=int(time.time())
+    )
     res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
     print(res2)
     assert res2['op'] == 'REPLY'
     parsed = json.loads(await ledger.get_response_metadata(json.dumps(res2)))
     assert res2['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
-    req99 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 3 text', '3.0')
+    req99 = await ledger.build_txn_author_agreement_request(
+        trustee_did, 'taa 3 text', '3.0', ratification_ts=int(time.time())
+    )
     res99 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req99))
     print(res99)
     assert res99['op'] == 'REPLY'
@@ -2445,6 +2451,14 @@ async def test_misc_new_taa(
     res22 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req22))
     print(res22)
     assert res22['op'] == 'REPLY'
+
+    req66 = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+    req66 = await ledger.append_txn_author_agreement_acceptance_to_request(
+        req66, 'taa 1 text', '1.0', None, aml_key, int(time.time())
+    )
+    res66 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req66))
+    print(res66)
+    assert res66['op'] == 'REJECT'
 
     req = await ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': '1.0'}))
     res = json.loads(await ledger.submit_request(pool_handler, req))
