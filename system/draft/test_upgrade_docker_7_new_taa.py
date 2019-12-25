@@ -355,6 +355,33 @@ async def test_pool_upgrade_new_taa(
     print(res12)
     assert res12['op'] == 'REJECT'
 
+    # check that sending forced write transactions still work
+    custom_schedule = json.dumps(
+        dict(
+            {
+                dest: datetime.strftime(
+                    datetime.now(tz=timezone.utc) + timedelta(days=1), '%Y-%m-%dT%H:%M:%S%z'
+                ) for dest, i in zip(docker_7_destinations, range(len(docker_7_destinations)))
+            }
+        )
+    )
+
+    req = await ledger.build_pool_upgrade_request(
+        trustee_did,
+        random_string(10),
+        '9.9.999',
+        'start',
+        hashlib.sha256().hexdigest(),
+        5,
+        custom_schedule,
+        None,
+        False,
+        True,
+        'sovrin'
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REPLY'
+
     # send TRANSACTION_AUTHOR_AGREEMENT_DISABLE
     req = await ledger.build_disable_all_txn_author_agreements_request(trustee_did)
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
