@@ -138,7 +138,9 @@ async def test_misc_state_proof(
     )
     res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res3['op'] == 'REPLY'
-    req = await ledger.build_txn_author_agreement_request(trustee_did, 'TAA text', 'TAA version')
+    req = await ledger.build_txn_author_agreement_request(
+        trustee_did, 'TAA text', 'TAA version', ratification_ts=int(time.time())
+    )
     res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res4['op'] == 'REPLY'
 

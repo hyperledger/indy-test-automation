@@ -890,7 +890,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
         except ValueError:
             pass
         # check that VC is not in progress (status `False`)
-        assert not all([get_vc_status_from_info(info) for _, info in results.items()])
+        assert all([not get_vc_status_from_info(info) for _, info in results.items()])
         # remove all not REPLY and empty (not selected) primaries entries
         primaries = [get_primary_from_info(info, name) for name, info in results.items()]
         # count the same entries

@@ -135,6 +135,7 @@ class TestTAASuite:
         assert res11['op'] == 'REPLY'
         assert res11['result']['seqNo'] is None
 
+    @pytest.mark.skip('INDY-2316')
     @pytest.mark.asyncio
     async def test_aml_taa_negative_cases(self, pool_handler, wallet_handler, get_default_trustee):
         aml = {}
