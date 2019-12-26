@@ -2718,12 +2718,12 @@ async def test_misc_new_taa_full_flow(
     res = await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
     assert res['op'] == 'REPLY'
 
-    # # update TAA 2 to remove retirement - fail FIXME uncomment after fix
-    # req = await ledger.build_txn_author_agreement_request(
-    #     trustee_did, None, '2.0', retirement_ts=None
-    # )
-    # res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    # assert res['op'] == 'REJECT'
+    # update TAA 2 to remove retirement - fail
+    req = await ledger.build_txn_author_agreement_request(
+        trustee_did, None, '2.0', retirement_ts=None
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REJECT'
 
     # create TAA 3 with ratification_ts - pass
     req = await ledger.build_txn_author_agreement_request(

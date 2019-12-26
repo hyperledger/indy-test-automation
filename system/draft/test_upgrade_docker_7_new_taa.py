@@ -46,9 +46,9 @@ async def test_pool_upgrade_new_taa(
     new_node_alias = 'Node8'
     new_node_seed = '000000000000000000000000000node8'
     sovrin_ver = '1.1.195'
-    indy_node_ver = '1.12.1~dev1172'
-    indy_plenum_ver = '1.12.1~dev989'
-    plugin_ver = '1.0.6~dev139'
+    indy_node_ver = '1.12.1~dev1174'
+    indy_plenum_ver = '1.12.1~dev990'
+    plugin_ver = '1.0.6~dev141'
     # ------------------------------------------------------------------------------------------------------------------
 
     # create new node and upgrade it to proper version
