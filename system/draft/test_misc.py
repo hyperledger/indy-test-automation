@@ -2485,6 +2485,8 @@ async def test_misc_new_taa(
     parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
     assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
+    await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
     if state_proof_check:
         test_nodes = [NodeHost(i) for i in range(1, nodes_num + 1)]
         for node in test_nodes[:-1]:

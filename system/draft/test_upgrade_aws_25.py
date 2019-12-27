@@ -36,11 +36,11 @@ async def test_pool_upgrade_positive():
     _timeout = 5
     aws_25_schedule = json.dumps(dict(
         {dest:
-            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
+            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+0*5), '%Y-%m-%dT%H:%M:%S%z')
          for dest, i in zip(persistent_dests, range(len(persistent_dests)))}
     ))
     reinstall = False
-    force = False
+    force = True
     package = 'sovrin'
     pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
     wallet_handle, _, _ = await wallet_helper()
@@ -110,7 +110,7 @@ async def test_pool_upgrade_positive():
     # print(res)
     # assert res['op'] == 'REPLY'
 
-    await asyncio.sleep(25*5*60)
+    await asyncio.sleep(10*60)
 
     aws_25_hosts = [
         testinfra.get_host('ssh://persistent_node'+str(i), ssh_config='/home/indy/.ssh/config') for i in range(1, 26)
@@ -139,11 +139,6 @@ async def test_pool_upgrade_positive():
         pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp0, timestamp1
     )
 
-    # write and read NYM after the upgrade
-    nym_res = await send_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
-    await asyncio.sleep(1)
-    get_nym_res = await get_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
-
     add_before_results = [
         nym_before_res, attrib_before_res, schema_before_res, cred_def_before_res, revoc_reg_def_before_res,
         revoc_reg_entry_before_res
@@ -164,3 +159,7 @@ async def test_pool_upgrade_positive():
     assert get_nym_res['result']['seqNo'] is not None
     assert all([check is not -1 for check in version_checks])
     assert all([check is not -1 for check in status_checks])
+
+    await ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did, nyms_count=5)
+    await ensure_ledgers_are_in_sync(pool_handle, wallet_handle, trustee_did)
+    await ensure_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trustee_did)
