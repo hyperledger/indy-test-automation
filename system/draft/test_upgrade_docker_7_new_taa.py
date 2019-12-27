@@ -45,10 +45,10 @@ async def test_pool_upgrade_new_taa(
     new_node_ip = '10.0.0.9'
     new_node_alias = 'Node8'
     new_node_seed = '000000000000000000000000000node8'
-    sovrin_ver = '1.1.195'
-    indy_node_ver = '1.12.1~dev1174'
-    indy_plenum_ver = '1.12.1~dev990'
-    plugin_ver = '1.0.6~dev141'
+    sovrin_ver = '1.1.65'
+    indy_node_ver = '1.12.1~rc1'
+    indy_plenum_ver = '1.12.1'
+    plugin_ver = '1.0.6~rc29'
     # ------------------------------------------------------------------------------------------------------------------
 
     # create new node and upgrade it to proper version
@@ -124,35 +124,36 @@ async def test_pool_upgrade_new_taa(
     parsed = json.loads(await ledger.get_response_metadata(json.dumps(res2)))
     assert res2['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
-    # # upgrade pool normally (sovrin is bound)
-    # await asyncio.sleep(60)
-    # req = await ledger.build_pool_upgrade_request(
-    #     trustee_did,
-    #     random_string(10),
-    #     sovrin_ver,
-    #     'start',
-    #     hashlib.sha256().hexdigest(),
-    #     5,
-    #     docker_7_schedule,
-    #     None,
-    #     False,
-    #     True,
-    #     'sovrin'
-    # )
-    # res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    # assert res['op'] == 'REPLY'
-    # await asyncio.sleep(660)
+    # upgrade pool normally (sovrin is bound)
+    await asyncio.sleep(60)
+    req = await ledger.build_pool_upgrade_request(
+        trustee_did,
+        random_string(10),
+        sovrin_ver,
+        'start',
+        hashlib.sha256().hexdigest(),
+        5,
+        docker_7_schedule,
+        None,
+        False,
+        False,
+        'sovrin'
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res)
+    assert res['op'] == 'REPLY'
+    await asyncio.sleep(2100)
 
-    # upgrade pool manually (sovrin is not bound)
-    versions = {
-        'sovrin_ver': sovrin_ver,
-        'node_ver': indy_node_ver,
-        'plenum_ver': indy_plenum_ver,
-        'plugin_ver': plugin_ver
-    }
-    containers = [client.containers.get('node{}'.format(i)) for i in range(1, nodes_num+1)]
-    upgrade_nodes_manually(containers, **versions)
-    await asyncio.sleep(30)
+    # # upgrade pool manually (sovrin is not bound)
+    # versions = {
+    #     'sovrin_ver': sovrin_ver,
+    #     'node_ver': indy_node_ver,
+    #     'plenum_ver': indy_plenum_ver,
+    #     'plugin_ver': plugin_ver
+    # }
+    # containers = [client.containers.get('node{}'.format(i)) for i in range(1, nodes_num+1)]
+    # upgrade_nodes_manually(containers, **versions)
+    # await asyncio.sleep(30)
 
     # cannot create a transaction author agreement with a 'retired' field
     req4 = await ledger.build_txn_author_agreement_request(
