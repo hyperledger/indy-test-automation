@@ -28,7 +28,7 @@ async def test_pool_upgrade_positive():
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
     init_time = 1
-    version = '1.1.62'
+    version = '1.1.65'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -110,7 +110,7 @@ async def test_pool_upgrade_positive():
     # print(res)
     # assert res['op'] == 'REPLY'
 
-    await asyncio.sleep(5*60)
+    await asyncio.sleep(10*60)
 
     aws_25_hosts = [
         testinfra.get_host('ssh://persistent_node'+str(i), ssh_config='/home/indy/.ssh/config') for i in range(1, 26)
@@ -139,11 +139,6 @@ async def test_pool_upgrade_positive():
         pool_handle, wallet_handle, trustee_did, revoc_reg_def_id2, timestamp0, timestamp1
     )
 
-    # write and read NYM after the upgrade
-    nym_res = await send_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
-    await asyncio.sleep(1)
-    get_nym_res = await get_nym(pool_handle, wallet_handle, trustee_did, another_random_did)
-
     add_before_results = [
         nym_before_res, attrib_before_res, schema_before_res, cred_def_before_res, revoc_reg_def_before_res,
         revoc_reg_entry_before_res
@@ -160,7 +155,9 @@ async def test_pool_upgrade_positive():
 
     assert all([res['op'] == 'REPLY' for res in add_before_results])
     assert all([res['result']['seqNo'] is not None for res in get_after_results])
-    assert nym_res['op'] == 'REPLY'
-    assert get_nym_res['result']['seqNo'] is not None
     assert all([check is not -1 for check in version_checks])
     assert all([check is not -1 for check in status_checks])
+
+    await ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did, nyms_count=5)
+    await ensure_ledgers_are_in_sync(pool_handle, wallet_handle, trustee_did)
+    await ensure_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trustee_did)

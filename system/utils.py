@@ -138,7 +138,7 @@ docker_7_schedule = json.dumps(
     dict(
         {
             dest: datetime.strftime(
-                datetime.now(tz=timezone.utc) + timedelta(minutes=1 + 0 * 5), '%Y-%m-%dT%H:%M:%S%z'
+                datetime.now(tz=timezone.utc) + timedelta(minutes=5 + i * 5), '%Y-%m-%dT%H:%M:%S%z'
             ) for dest, i in zip(docker_7_destinations, range(len(docker_7_destinations)))
         }
     )

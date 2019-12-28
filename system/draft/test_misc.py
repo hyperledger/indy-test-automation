@@ -2129,6 +2129,8 @@ async def test_misc_multiple_restrictions(
     proof_request = json.dumps(
         {
             "nonce": "123432421212",
+            # "nonce": hex(123456),
+            # "nonce": random_string(10),
             "name": "proof_req_1",
             "version": "0.1",
             "requested_attributes":
@@ -2485,6 +2487,8 @@ async def test_misc_new_taa(
     parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
     assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
+    await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
     if state_proof_check:
         test_nodes = [NodeHost(i) for i in range(1, nodes_num + 1)]
         for node in test_nodes[:-1]:
@@ -2718,12 +2722,12 @@ async def test_misc_new_taa_full_flow(
     res = await send_nym(pool_handler, wallet_handler, trustee_did, random_did_and_json()[0])
     assert res['op'] == 'REPLY'
 
-    # # update TAA 2 to remove retirement - fail FIXME uncomment after fix
-    # req = await ledger.build_txn_author_agreement_request(
-    #     trustee_did, None, '2.0', retirement_ts=None
-    # )
-    # res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    # assert res['op'] == 'REJECT'
+    # update TAA 2 to remove retirement - fail
+    req = await ledger.build_txn_author_agreement_request(
+        trustee_did, None, '2.0', retirement_ts=None
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REJECT'
 
     # create TAA 3 with ratification_ts - pass
     req = await ledger.build_txn_author_agreement_request(
@@ -2806,3 +2810,59 @@ async def test_misc_new_taa_full_flow(
 
     await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.asyncio
+async def test_misc_taa_versions(
+    docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num, check_no_failures_fixture
+):
+    trustee_did, _ = get_default_trustee
+    timestamp = int(time.time()) - 24*60*60
+
+    # create AML
+    aml_key = 'aml_key'
+    req = await ledger.build_acceptance_mechanisms_request(
+        trustee_did, json.dumps({aml_key: random_string(128)}), random_string(256), random_string(1024)
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
+
+    # create TAA 1 with version 1
+    req = await ledger.build_txn_author_agreement_request(
+        trustee_did, 'taa 1 text', '1', ratification_ts=int(time.time())
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
+
+    # create TAA 2 with version 1.0
+    req = await ledger.build_txn_author_agreement_request(
+        trustee_did, 'taa 2 text', '1.0', ratification_ts=int(time.time())
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
+
+    # retire TAA 1
+    req = await ledger.build_txn_author_agreement_request(
+        trustee_did, None, '1', retirement_ts=timestamp
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    assert res['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
+
+    # send NYM with TAA 2 appended
+    req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+    req = await ledger.append_txn_author_agreement_acceptance_to_request(
+        req, 'taa 2 text', '1.0', None, aml_key, int(time.time())
+    )
+    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res)
+    assert res['op'] == 'REPLY'
+    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
+    assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
