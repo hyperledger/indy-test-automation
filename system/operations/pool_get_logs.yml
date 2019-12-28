@@ -31,7 +31,7 @@
 
   - name: Fetch node logs
     synchronize:
-      src: /var/log/indy/live/
+      src: /var/log/indy/sandbox/
       dest: /tmp/logs
       mode: pull
     ignore_errors: yes

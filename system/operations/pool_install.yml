@@ -4,13 +4,13 @@
   vars:
     pool_prefix: persistent_node
     pool_size: "{{ groups['pool']|count }}"
-    sovrin_ver: 1.1.65
-    node_ver: 1.12.1~rc1
+    sovrin_ver: 1.1.67
+    node_ver: 1.12.1
     plenum_ver: 1.12.1
     libindy_crypto_ver: 0.4.5
     python_indy_crypto_ver: 0.4.5
     python_pyzmq_ver: 18.1.0
-    plugin_ver: 1.0.6~rc29
+    plugin_ver: 1.0.6
 
   tasks:
     - name: Identify node number
