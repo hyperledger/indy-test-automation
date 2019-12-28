@@ -155,8 +155,6 @@ async def test_pool_upgrade_positive():
 
     assert all([res['op'] == 'REPLY' for res in add_before_results])
     assert all([res['result']['seqNo'] is not None for res in get_after_results])
-    assert nym_res['op'] == 'REPLY'
-    assert get_nym_res['result']['seqNo'] is not None
     assert all([check is not -1 for check in version_checks])
     assert all([check is not -1 for check in status_checks])
 

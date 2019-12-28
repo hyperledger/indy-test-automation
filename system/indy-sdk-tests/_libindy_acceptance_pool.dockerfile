@@ -29,8 +29,8 @@ ARG indy_node_ver
 ARG python3_indy_crypto_ver
 ARG indy_crypto_ver
 ARG python3_pyzmq_ver
-ENV indy_plenum_ver=${indy_plenum_ver:-1.12.0}
-ENV indy_node_ver=${indy_node_ver:-1.12.0}
+ENV indy_plenum_ver=${indy_plenum_ver:-1.12.1}
+ENV indy_node_ver=${indy_node_ver:-1.12.1}
 ENV python3_indy_crypto_ver=${python3_indy_crypto_ver:-0.4.5}
 ENV indy_crypto_ver=${indy_crypto_ver:-0.4.5}
 ENV python3_pyzmq_ver=${python3_pyzmq_ver:-18.1.0}
