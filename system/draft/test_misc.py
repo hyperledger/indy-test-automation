@@ -2866,3 +2866,47 @@ async def test_misc_taa_versions(
     assert res['op'] == 'REPLY'
     parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
     assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
+
+
+@pytest.mark.asyncio
+async def test_misc_aws_demotion_promotion(
+    aws_pool_handler, wallet_handler, get_default_trustee
+):
+    trustee_did, _ = get_default_trustee
+    # read genesis to get aliases and dests
+    with open('../aws_genesis_test', 'r') as f:
+        data = f.read()
+        jsons = [json.loads(x) for x in data.split('\n')]
+        aliases = [_json['txn']['data']['data']['alias'] for _json in jsons]
+        dests = [_json['txn']['data']['dest'] for _json in jsons]
+    # put all into list of dicts
+    pool_data = [
+        {'node_alias': node_alias,
+         'node_dest': node_dest}
+        for node_alias, node_dest in zip(aliases, dests)
+    ]
+
+    async def _demote_promote_periodic():
+        while True:
+            # pick random node from pool to demote/promote it
+            req_data = random.choice(pool_data)
+
+            await demote_node(
+                aws_pool_handler, wallet_handler, trustee_did, req_data['node_alias'], req_data['node_dest']
+            )
+
+            # wait for an interval
+            await asyncio.sleep(120)
+
+            await promote_node(
+                aws_pool_handler, wallet_handler, trustee_did, req_data['node_alias'], req_data['node_dest']
+            )
+
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(_demote_promote_periodic())
+    loop.call_later(600, task.cancel)
+
+    try:
+        loop.run_until_complete(task)
+    except asyncio.CancelledError:
+        pass
