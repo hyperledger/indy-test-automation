@@ -2869,7 +2869,7 @@ async def test_misc_taa_versions(
 
 
 def test_misc_aws_demotion_promotion():
-    interval = 120
+    interval = 300
     loop = asyncio.get_event_loop()
     loop.run_until_complete(pool.set_protocol_version(2))
     pool_cfg = json.dumps({"genesis_txn": "../aws_genesis_test"})
@@ -2902,9 +2902,13 @@ def test_misc_aws_demotion_promotion():
             # pick random node from pool to demote/promote it
             req_data = random.choice(pool_data)
 
-            await demote_node(
-                pool_handle, wallet_handle, trustee_did, req_data['node_alias'], req_data['node_dest']
-            )
+            try:
+                await demote_node(
+                    pool_handle, wallet_handle, trustee_did, req_data['node_alias'], req_data['node_dest']
+                )
+            except PoolLedgerTimeout:
+                await asyncio.sleep(interval)
+                continue
 
             # wait for an interval
             await asyncio.sleep(interval)
@@ -2917,7 +2921,7 @@ def test_misc_aws_demotion_promotion():
             await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req)
             # restart promoted node
             host = testinfra.get_host('ssh://persistent_node' + req_data['node_alias'][4:])
-            host.run('systemctl restart indy-node')
+            host.run('sudo systemctl restart indy-node')
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(_demote_promote_periodic())
