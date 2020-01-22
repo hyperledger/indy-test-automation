@@ -101,8 +101,6 @@ async def test_misc_state_proof(
     # set fees
     print(initial_fees_setting)
 
-    timestamp1 = int(time.time())
-
     # set auth rule for schema
     req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
                                                json.dumps({
@@ -151,6 +149,7 @@ async def test_misc_state_proof(
     print([host.stop_service() for host in hosts[:-1]])
 
     # read all txns written from the single node
+    timestamp1 = int(time.time())
 
     req1 = await ledger.build_get_nym_request(None, random_did)
     res1 = json.loads(await ledger.submit_request(pool_handler, req1))

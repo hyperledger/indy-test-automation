@@ -2866,3 +2866,68 @@ async def test_misc_taa_versions(
     assert res['op'] == 'REPLY'
     parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
     assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
+
+
+def test_misc_aws_demotion_promotion():
+    interval = 300
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(pool.set_protocol_version(2))
+    pool_cfg = json.dumps({"genesis_txn": "../aws_genesis_test"})
+    pool_name = "pool_{}".format(random_string(24))
+    loop.run_until_complete(pool.create_pool_ledger_config(pool_name, pool_cfg))
+    pool_handle = loop.run_until_complete(pool.open_pool_ledger(pool_name, None))
+    wallet_cfg = json.dumps({"id": "wallet_{}".format(random_string(24))})
+    wallet_creds = json.dumps({"key": ""})
+    loop.run_until_complete(wallet.create_wallet(wallet_cfg, wallet_creds))
+    wallet_handle = loop.run_until_complete(wallet.open_wallet(wallet_cfg, wallet_creds))
+    trustee_did, _ = loop.run_until_complete(
+        did.create_and_store_my_did(wallet_handle, json.dumps({'seed': '000000000000000000000000Trustee1'}))
+    )
+
+    # read genesis to get aliases and dests
+    with open('../aws_genesis_test', 'r') as f:
+        data = f.read()
+        jsons = [json.loads(x) for x in data.split('\n')]
+        aliases = [_json['txn']['data']['data']['alias'] for _json in jsons]
+        dests = [_json['txn']['data']['dest'] for _json in jsons]
+    # put all into list of dicts
+    pool_data = [
+        {'node_alias': node_alias,
+         'node_dest': node_dest}
+        for node_alias, node_dest in zip(aliases, dests)
+    ]
+
+    async def _demote_promote_periodic():
+        while True:
+            # pick random node from pool to demote/promote it
+            req_data = random.choice(pool_data)
+
+            try:
+                await demote_node(
+                    pool_handle, wallet_handle, trustee_did, req_data['node_alias'], req_data['node_dest']
+                )
+            except PoolLedgerTimeout:
+                await asyncio.sleep(interval)
+                continue
+
+            # wait for an interval
+            await asyncio.sleep(interval)
+
+            _data = {
+                'alias': req_data['node_alias'],
+                'services': ['VALIDATOR']
+            }
+            req = await ledger.build_node_request(trustee_did, req_data['node_dest'], json.dumps(_data))
+            await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req)
+            # restart promoted node
+            host = testinfra.get_host('ssh://persistent_node' + req_data['node_alias'][4:])
+            host.run('sudo systemctl restart indy-node')
+
+    loop = asyncio.get_event_loop()
+    task = loop.create_task(_demote_promote_periodic())
+    loop.call_later(interval * 10, task.cancel)
+
+    try:
+        loop.run_until_complete(task)
+    except asyncio.CancelledError:
+        pass
