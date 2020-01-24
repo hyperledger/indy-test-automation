@@ -7,7 +7,7 @@ import testinfra
 import subprocess
 import numpy as np
 from random import randrange as rr
-from random import sample
+from random import sample, choice
 from datetime import datetime, timedelta, timezone
 import hashlib
 from hypothesis import errors, settings, Verbosity, given, strategies
@@ -2931,3 +2931,48 @@ def test_misc_aws_demotion_promotion():
         loop.run_until_complete(task)
     except asyncio.CancelledError:
         pass
+
+
+@pytest.mark.parametrize('demote_count', [1, 10])
+@pytest.mark.parametrize('promote_count', [1, 10])
+@pytest.mark.asyncio
+async def test_misc_demote_promote(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture,
+        nodes_num, demote_count, promote_count
+):
+    trustee_did, _ = get_default_trustee
+    pool_info = get_pool_info('1')
+    node_list = ['Node{}'.format(x) for x in range(nodes_num)]
+
+    # find primary
+    primary, primary_alias, primary_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+    # select random node
+    node_to_demote = choice(node_list)
+    # demote it
+    for i in range(demote_count):
+        await demote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
+    await pool.refresh_pool_ledger(pool_handler)
+    # make sure VC is done
+    new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
+    # demote new primary
+    for i in range(demote_count):
+        await demote_node(
+            pool_handler, wallet_handler, trustee_did, 'Node{}'.format(new_primary), pool_info['Node{}'.format(new_primary)]
+        )
+    await pool.refresh_pool_ledger(pool_handler)
+    # make sure VC is done
+    super_new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, new_primary)
+    # promote both nodes back simultaneously
+    for i in range(promote_count):
+        await promote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
+        await promote_node(
+            pool_handler, wallet_handler, trustee_did, 'Node{}'.format(new_primary), pool_info['Node{}'.format(new_primary)]
+        )
+    await pool.refresh_pool_ledger(pool_handler)
+    # make sure VC is done
+    await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, super_new_primary)
+
+    await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=10)
+    await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
+    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
