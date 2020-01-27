@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from indy import *
 from indy.error import *
 from system.utils import *
@@ -2988,8 +2987,8 @@ async def test_misc_redundant_demotions_promotions(
     await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
 
-@pytest.mark.parametrize('iterations', [5, 10])
-@pytest.mark.parametrize('nyms_count', [10, 100])
+@pytest.mark.parametrize('iterations', [3, 6])
+@pytest.mark.parametrize('nyms_count', [10, 20])
 @pytest.mark.asyncio
 async def test_misc_cyclic_demotions_promotions(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture,

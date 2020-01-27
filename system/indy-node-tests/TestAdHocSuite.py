@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from system.utils import *
 import docker
 
@@ -52,7 +51,8 @@ class TestAdHocSuite:
             assert res3['result']['seqNo'] is not None
 
             # check that pool is ok
-            await ensure_pool_is_in_sync(nodes_num=nodes_num)
+            await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+            await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
             await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
     @pytest.mark.asyncio
@@ -144,7 +144,8 @@ class TestAdHocSuite:
         node7.start_service()
 
         # check that pool is ok
-        await ensure_pool_is_in_sync()
+        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
         # write some txns
@@ -161,5 +162,6 @@ class TestAdHocSuite:
         assert res4['op'] == 'REPLY'
 
         # check again that pool is ok
-        await ensure_pool_is_in_sync()
+        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
