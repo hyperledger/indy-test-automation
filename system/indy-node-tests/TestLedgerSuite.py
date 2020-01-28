@@ -338,7 +338,7 @@ class TestLedgerSuite:
     @pytest.mark.parametrize(
         'target_role, tag, result',
         [
-            # ('ENDORSER', random_string(257), 'REQNACK'),  # INDY-2314
+            ('ENDORSER', random_string(257), 'REQNACK'),  # INDY-2314
             ('NETWORK_MONITOR', random_string(256), 'REJECT'),
             (None, random_string(256), 'REJECT')
         ]
@@ -375,13 +375,9 @@ class TestLedgerSuite:
         )
         assert res4['op'] == result
 
-        if result == 'REQNACK':
-            res4 = await get_revoc_reg_def(pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local)
-            assert res4['op'] == result
-        else:
-            await ensure_cant_get_something(
-                get_revoc_reg_def, pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local
-            )
+        await ensure_cant_get_something(
+            get_revoc_reg_def, pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local
+        )
 
     @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'ENDORSER'])
     @pytest.mark.parametrize('tag', [random_string(1), random_string(256)])
@@ -446,7 +442,6 @@ class TestLedgerSuite:
     @pytest.mark.parametrize(
         'target_role, tag, result',
         [
-            # ('ENDORSER', random_string(257), 'REQNACK'),  # INDY-2314
             ('NETWORK_MONITOR', random_string(256), 'REJECT'),
             (None, random_string(256), 'REJECT')
         ]

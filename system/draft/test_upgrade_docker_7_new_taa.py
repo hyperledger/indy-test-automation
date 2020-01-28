@@ -30,7 +30,7 @@ async def test_pool_upgrade_new_taa(
 
     steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     res = await send_nym(
-        pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, 'Steward5', 'STEWARD'
+        pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, 'Steward8', 'STEWARD'
     )
     assert res['op'] == 'REPLY'
 
@@ -45,10 +45,10 @@ async def test_pool_upgrade_new_taa(
     new_node_ip = '10.0.0.9'
     new_node_alias = 'Node8'
     new_node_seed = '000000000000000000000000000node8'
-    sovrin_ver = '1.1.65'
-    indy_node_ver = '1.12.1~rc1'
-    indy_plenum_ver = '1.12.1'
-    plugin_ver = '1.0.6~rc29'
+    sovrin_ver = '1.1.69'
+    indy_node_ver = '1.12.2~rc1'
+    indy_plenum_ver = '1.12.2'
+    plugin_ver = '1.0.7~rc32'
     # ------------------------------------------------------------------------------------------------------------------
 
     # create new node and upgrade it to proper version
@@ -142,7 +142,7 @@ async def test_pool_upgrade_new_taa(
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     print(res)
     assert res['op'] == 'REPLY'
-    await asyncio.sleep(2100)
+    await asyncio.sleep(5*7*60)
 
     # # upgrade pool manually (sovrin is not bound)
     # versions = {
@@ -200,7 +200,8 @@ async def test_pool_upgrade_new_taa(
         ['systemctl', 'start', 'indy-node'],
         user='root'
     ).exit_code == 0
-    await asyncio.sleep(60)
+
+    await asyncio.sleep(120)
 
     # add new node
     res = await send_node(
