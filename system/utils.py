@@ -100,31 +100,31 @@ ORIGINAL_MAPPING = {
 }
 
 UPGRADE_MAPPING = {
-    'i-06d864ffc17f20f94': 'vol-077cc8d587b041f23',  # 4
-    'i-0d38585877dc14755': 'vol-02cd98f4eaca2fbcc',  # 17
-    'i-07813055c26ecf5d2': 'vol-0e92240c830cce462',  # 18
-    'i-0ba6de7b7e4ac763a': 'vol-0021bff615c8bc407',  # 5
-    'i-0f6dedb3ee93e1138': 'vol-0fca45427e32982f0',  # 13
-    'i-043ba82aa40f0fdae': 'vol-0e820c91b25058abd',  # 14
-    'i-0db8a21e6c0252ba7': 'vol-0cc505e3c33ace23e',  # 1
-    'i-06784287da28fa930': 'vol-0ed51820ee07e97e8',  # 24
-    'i-0995b5b9f320a2824': 'vol-0d2f368eaed3eea18',  # 10
-    'i-0d1b2f330f139ea85': 'vol-0bef4404f956a79bd',  # 23
-    'i-0ca3f7bf60d60d133': 'vol-0f8d5ec316649c715',  # 6
-    'i-06836b3ffe6aaca39': 'vol-016421526cb9b6d65',  # 19
-    'i-06f30f8aed3af1d4c': 'vol-098edb6155f9973b5',  # 16
-    'i-058781262b6761fdc': 'vol-052b1cae3f6060f7b',  # 3
-    'i-042ee39c972737df7': 'vol-05886ac75ef411fb7',  # 22
-    'i-0852c0983a638d6d9': 'vol-03edb41f21fab4149',  # 12
-    'i-0aaed544f37ee52c1': 'vol-02eb46c5f71cc0d95',  # 20
-    'i-0fcb2d529e3f9a04f': 'vol-05bfd03912d885317',  # 7
-    'i-0eb04f156b1c51b14': 'vol-00655dfaa725e3adb',  # 21
-    'i-07cdbd66e43be4296': 'vol-0fc1d6a80c354eebb',  # 11
-    'i-03078455ca5dda6b8': 'vol-0b0c41eb84e1d007a',  # 15
-    'i-00cd5b1dca8a078e1': 'vol-077f0dd1b9d3b2606',  # 2
-    'i-0eb6a38d4fe2d47a5': 'vol-05e0d74deb7135dc1',  # 9
-    'i-08a30f8a12db050f9': 'vol-01a734649902ef115',  # 25
-    'i-0d2d372e6a3c5e017': 'vol-0abc2059816e67ae7'  # 8
+    'i-06d864ffc17f20f94': 'vol-0b7e077fadb734c87',  # 4
+    'i-0d38585877dc14755': 'vol-04a3448e6c085ee66',  # 17
+    'i-07813055c26ecf5d2': 'vol-0d4483214a8704ca9',  # 18
+    'i-0ba6de7b7e4ac763a': 'vol-053b193d3d48bb8cd',  # 5
+    'i-0f6dedb3ee93e1138': 'vol-0158c5a3ab37bb971',  # 13
+    'i-043ba82aa40f0fdae': 'vol-0d1c39ed7455978c4',  # 14
+    'i-0db8a21e6c0252ba7': 'vol-0ade27a5cb797295a',  # 1
+    'i-06784287da28fa930': 'vol-0ff8a237befeb4ee4',  # 24
+    'i-0995b5b9f320a2824': 'vol-074ff705972c71a4c',  # 10
+    'i-0d1b2f330f139ea85': 'vol-018cf3d9b780d3832',  # 23
+    'i-0ca3f7bf60d60d133': 'vol-0f254e8c98d02f39a',  # 6
+    'i-06836b3ffe6aaca39': 'vol-08a50535d8574a39b',  # 19
+    'i-06f30f8aed3af1d4c': 'vol-0b22d27e96c235e46',  # 16
+    'i-058781262b6761fdc': 'vol-084cca5bcbe68879b',  # 3
+    'i-042ee39c972737df7': 'vol-0ff01f694f80c9da4',  # 22
+    'i-0852c0983a638d6d9': 'vol-06bf54fbaf725dc35',  # 12
+    'i-0aaed544f37ee52c1': 'vol-0c540717bb7a38ccc',  # 20
+    'i-0fcb2d529e3f9a04f': 'vol-0df295c3d22c66086',  # 7
+    'i-0eb04f156b1c51b14': 'vol-080722e515a1a8cc6',  # 21
+    'i-07cdbd66e43be4296': 'vol-03fe70c18c11b2c0d',  # 11
+    'i-03078455ca5dda6b8': 'vol-0ecf4062af6687d77',  # 15
+    'i-00cd5b1dca8a078e1': 'vol-0154433c7dd85b4e9',  # 2
+    'i-0eb6a38d4fe2d47a5': 'vol-0c304466dc5e2228e',  # 9
+    'i-08a30f8a12db050f9': 'vol-023a5172007ecf06f',  # 25
+    'i-0d2d372e6a3c5e017': 'vol-023d59d0b6a6b6d6a'  # 8
 }
 
 docker_7_destinations = [

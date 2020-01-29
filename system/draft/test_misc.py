@@ -2868,7 +2868,7 @@ async def test_misc_taa_versions(
 
 
 def test_misc_aws_demotion_promotion():
-    interval = 300
+    interval = 180
     loop = asyncio.get_event_loop()
     loop.run_until_complete(pool.set_protocol_version(2))
     pool_cfg = json.dumps({"genesis_txn": "../aws_genesis_test"})
@@ -2899,7 +2899,7 @@ def test_misc_aws_demotion_promotion():
     async def _demote_promote_periodic():
         while True:
             # pick random node from pool to demote/promote it
-            req_data = random.choice(pool_data)
+            req_data = random.choice(pool_data[:-1])  # keep 25th node always in pool
 
             try:
                 await demote_node(
@@ -2924,7 +2924,7 @@ def test_misc_aws_demotion_promotion():
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(_demote_promote_periodic())
-    loop.call_later(interval * 10, task.cancel)
+    loop.call_later(interval * 100, task.cancel)
 
     try:
         loop.run_until_complete(task)
