@@ -2869,6 +2869,7 @@ async def test_misc_taa_versions(
 
 def test_misc_aws_demotion_promotion():
     interval = 180
+    nodes_num = 3
     loop = asyncio.get_event_loop()
     loop.run_until_complete(pool.set_protocol_version(2))
     pool_cfg = json.dumps({"genesis_txn": "../aws_genesis_test"})
@@ -2899,28 +2900,44 @@ def test_misc_aws_demotion_promotion():
     async def _demote_promote_periodic():
         while True:
             # pick random node from pool to demote/promote it
-            req_data = random.choice(pool_data[:-1])  # keep 25th node always in pool
+            req_data_list = []
+            for i in range(nodes_num):
+                req_data_list.append(random.choice(pool_data[:-1]))  # keep 25th node always in pool
 
-            try:
-                await demote_node(
-                    pool_handle, wallet_handle, trustee_did, req_data['node_alias'], req_data['node_dest']
-                )
-            except PoolLedgerTimeout:
-                await asyncio.sleep(interval)
-                continue
+            for req_data in req_data_list:
+                try:
+                    await demote_node(
+                        pool_handle, wallet_handle, trustee_did, req_data['node_alias'], req_data['node_dest']
+                    )
+                    # stop demoted node
+                    host = testinfra.get_host('ssh://persistent_node' + req_data['node_alias'][4:])
+                    host.run('sudo systemctl stop indy-node')
+                except PoolLedgerTimeout:
+                    await asyncio.sleep(interval)
+                    continue
 
             # wait for an interval
             await asyncio.sleep(interval)
 
-            _data = {
-                'alias': req_data['node_alias'],
-                'services': ['VALIDATOR']
-            }
-            req = await ledger.build_node_request(trustee_did, req_data['node_dest'], json.dumps(_data))
-            await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req)
-            # restart promoted node
-            host = testinfra.get_host('ssh://persistent_node' + req_data['node_alias'][4:])
-            host.run('sudo systemctl restart indy-node')
+            for req_data in req_data_list:
+                _data = {
+                    'alias': req_data['node_alias'],
+                    'services': ['VALIDATOR']
+                }
+                try:
+                    req = await ledger.build_node_request(trustee_did, req_data['node_dest'], json.dumps(_data))
+                    await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req)
+                    # start promoted node
+                    host = testinfra.get_host('ssh://persistent_node' + req_data['node_alias'][4:])
+                    host.run('sudo systemctl start indy-node')
+                except PoolLedgerTimeout:
+                    await asyncio.sleep(interval)
+
+                    req = await ledger.build_node_request(trustee_did, req_data['node_dest'], json.dumps(_data))
+                    await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req)
+                    # start promoted node
+                    host = testinfra.get_host('ssh://persistent_node' + req_data['node_alias'][4:])
+                    host.run('sudo systemctl start indy-node')
 
     loop = asyncio.get_event_loop()
     task = loop.create_task(_demote_promote_periodic())
