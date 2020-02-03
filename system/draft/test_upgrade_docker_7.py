@@ -50,11 +50,11 @@ async def test_pool_upgrade_positive(
     # upgrade it to the target version of pool upgrade command
     plenum_ver = '1.12.2'
     plenum_pkg = 'indy-plenum'
-    node_ver = '1.12.2~rc1'
+    node_ver = '1.12.2'
     node_pkg = 'indy-node'
-    sovrin_ver = '1.1.69'
+    sovrin_ver = '1.1.71'
     sovrin_pkg = 'sovrin'
-    plugin_ver = '1.0.7~rc32'
+    plugin_ver = '1.0.7'
     # repo_update = new_node.exec_run(
     #     [
     #         'sed',
@@ -93,8 +93,8 @@ async def test_pool_upgrade_positive(
         '4SWokCJWJc69Tn74VvLS6t2G2ucvXqM9FDMsWJjmsUxe', 'Cv1Ehj43DDM5ttNBmC6VPpEfwXWwfGktHwjDJsTV5Fz8',
         'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
     ]
-    init_time = 3
-    version = '1.1.69'
+    init_time = 5
+    version = '1.1.71'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -279,7 +279,7 @@ async def test_pool_upgrade_positive(
     print(res)
     assert res['op'] == 'REPLY'
 
-    await asyncio.sleep(5*7*60)
+    await asyncio.sleep(8*5*60)
 
     # # perform upgrade manually - for STABLE to MASTER upgrade
     # containers = [client.containers.get('node{}'.format(i)) for i in range(1, 8)]
