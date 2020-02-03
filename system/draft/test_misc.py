@@ -2899,10 +2899,8 @@ def test_misc_aws_demotion_promotion():
 
     async def _demote_promote_periodic():
         while True:
-            # pick random node from pool to demote/promote it
-            req_data_list = []
-            for i in range(nodes_num):
-                req_data_list.append(random.choice(pool_data[:-1]))  # keep 25th node always in pool
+            # pick random node(s) from pool to demote/promote it
+            req_data_list = random.sample(pool_data[:-1], nodes_num)  # keep 25th node always in pool
 
             for req_data in req_data_list:
                 try:
@@ -2973,11 +2971,12 @@ async def test_misc_redundant_demotions_promotions(
     await pool.refresh_pool_ledger(pool_handler)
     # make sure VC is done
     new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
+    new_primary_name = 'Node{}'.format(new_primary)
     # demote new primary
     demote_tasks = []
     for i in range(demote_count):
         task = demote_node(
-            pool_handler, wallet_handler, trustee_did, 'Node{}'.format(new_primary), pool_info['Node{}'.format(new_primary)]
+            pool_handler, wallet_handler, trustee_did, new_primary_name, pool_info[new_primary_name]
         )
         demote_tasks.append(task)
     await asyncio.gather(*demote_tasks, return_exceptions=True)
@@ -2990,7 +2989,7 @@ async def test_misc_redundant_demotions_promotions(
         task1 = promote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
         promote_tasks.append(task1)
         task2 = promote_node(
-            pool_handler, wallet_handler, trustee_did, 'Node{}'.format(new_primary), pool_info['Node{}'.format(new_primary)]
+            pool_handler, wallet_handler, trustee_did, new_primary_name, pool_info[new_primary_name]
         )
         promote_tasks.append(task2)
     await asyncio.gather(*promote_tasks, return_exceptions=True)
@@ -2998,10 +2997,8 @@ async def test_misc_redundant_demotions_promotions(
     # make sure VC is done
     await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, super_new_primary)
 
-    await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
     await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=10)
-    await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
-    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_okay(pool_handler, wallet_handler, trustee_did)
 
 
 @pytest.mark.parametrize('iterations', [3, 6])
@@ -3015,7 +3012,7 @@ async def test_misc_cyclic_demotions_promotions(
     pool_info = get_pool_info('1')
     node_list = ['Node{}'.format(x) for x in range(1, nodes_num + 1)]
 
-    for i in range(iterations):
+    for _ in range(iterations):
         # find primary
         primary, primary_alias, primary_did = await get_primary(pool_handler, wallet_handler, trustee_did)
         # select random node
@@ -3035,6 +3032,5 @@ async def test_misc_cyclic_demotions_promotions(
         # make sure pool works
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count)
 
-    await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
-    await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
-    await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+    await ensure_pool_is_okay(pool_handler, wallet_handler, trustee_did)
+

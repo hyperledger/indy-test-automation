@@ -553,6 +553,12 @@ async def ensure_ledgers_are_in_sync(pool_handle, wallet_handle, trustee_did):
     )
 
 
+async def ensure_pool_is_okay(pool_handle, wallet_handle, trustee_did):
+    await ensure_all_nodes_online(pool_handle, wallet_handle, trustee_did)
+    await ensure_ledgers_are_in_sync(pool_handle, wallet_handle, trustee_did)
+    await ensure_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trustee_did)
+
+
 async def get_validator_info(pool_handle, wallet_handle, trustee_did):
     req = await ledger.build_get_validator_info_request(trustee_did)
     results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
@@ -1282,3 +1288,11 @@ def upgrade_nodes_manually(containers, sovrin_ver, node_ver, plenum_ver, plugin_
             ['systemctl', 'start', 'indy-node'],
             user='root'
         ).exit_code == 0
+
+
+async def fees_setter():
+    pass    # TODO TO BE IMPLEMENTED
+
+
+async def fees_adder():
+    pass    # TODO TO BE IMPLEMENTED
