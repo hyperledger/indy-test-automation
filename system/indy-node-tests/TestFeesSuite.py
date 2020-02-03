@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from system.utils import *
 from indy import payment
 
@@ -399,13 +398,15 @@ class TestFeesSuite:
 
         # try to add trust anchor with one steward (default rule) - should be rejected
         new_ta_did, new_ta_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-        res1 = await send_nym\
-            (pool_handler, wallet_handler, steward_did, new_ta_did, new_ta_vk, 'new TA', 'TRUST_ANCHOR')
+        res1 = await send_nym(
+            pool_handler, wallet_handler, steward_did, new_ta_did, new_ta_vk, 'new TA', 'TRUST_ANCHOR'
+        )
         print(res1)
         assert res1['op'] == 'REJECT'
         # add new trust anchor according to new rule
-        res2 = await send_nym\
-            (pool_handler, wallet_handler, trustee_did, new_ta_did, new_ta_vk, 'new TA', 'TRUST_ANCHOR')
+        res2 = await send_nym(
+            pool_handler, wallet_handler, trustee_did, new_ta_did, new_ta_vk, 'new TA', 'TRUST_ANCHOR'
+        )
         print(res2)
         assert res2['op'] == 'REPLY'
 
@@ -547,13 +548,15 @@ class TestFeesSuite:
 
         # try to add network monitor with one trust anchor (default rule) - should be rejected
         new_nm_did, new_nm_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-        res1 = await send_nym\
-            (pool_handler, wallet_handler, ta_did, new_nm_did, new_nm_vk, 'new NM', 'NETWORK_MONITOR')
+        res1 = await send_nym(
+            pool_handler, wallet_handler, ta_did, new_nm_did, new_nm_vk, 'new NM', 'NETWORK_MONITOR'
+        )
         print(res1)
         assert res1['op'] == 'REJECT'
         # add new network monitor according to new rule
-        res2 = await send_nym\
-            (pool_handler, wallet_handler, trustee_did, new_nm_did, new_nm_vk, 'new NM', 'NETWORK_MONITOR')
+        res2 = await send_nym(
+            pool_handler, wallet_handler, trustee_did, new_nm_did, new_nm_vk, 'new NM', 'NETWORK_MONITOR'
+        )
         print(res2)
         assert res2['op'] == 'REPLY'
 
@@ -606,8 +609,9 @@ class TestFeesSuite:
         assert res10['op'] == 'REPLY'
 
     @pytest.mark.asyncio
-    async def test_case_identity_owner(self, pool_handler, wallet_handler, get_default_trustee, initial_fees_setting,
-                                       initial_token_minting):
+    async def test_case_identity_owner(
+            self, pool_handler, wallet_handler, get_default_trustee, initial_fees_setting, initial_token_minting
+    ):
         libsovtoken_payment_method = 'sov'
         trustee_did, _ = get_default_trustee
         trustee_did2, trustee_vk2 = await did.create_and_store_my_did(wallet_handler, json.dumps(
@@ -717,19 +721,23 @@ class TestFeesSuite:
 
         # try to add identity owner with one trust anchor without fees (default rule) - should be rejected
         new_io_did, new_io_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-        res1 = await send_nym\
-            (pool_handler, wallet_handler, ta_did, new_io_did, new_io_vk, 'new IO', None)
+        res1 = await send_nym(
+            pool_handler, wallet_handler, ta_did, new_io_did, new_io_vk, 'new IO', None
+        )
         print(res1)
         assert res1['op'] == 'REJECT'
         # add new identity owner according to new rule
         req, _ = await payment.build_get_payment_sources_request(wallet_handler, ta_did, address)
         res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, ta_did, req)
-        source1 = \
-            json.loads(await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res))[0]['source']
+        source1 = json.loads(
+            await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res)
+        )[0]['source']
         req = await ledger.build_nym_request(ta_did, new_io_did, new_io_vk, 'new IO', None)
-        req_with_fees_json, _ = await payment.add_request_fees(wallet_handler, ta_did, req, json.dumps([source1]),
-                                                               json.dumps([{'recipient': address,
-                                                                            'amount': 950 * 100000}]), None)
+        req_with_fees_json, _ = await payment.add_request_fees(
+            wallet_handler, ta_did, req, json.dumps([source1]), json.dumps(
+                [{'recipient': address, 'amount': 950 * 100000}]
+            ), None
+        )
         res2 = json.loads(
             await ledger.sign_and_submit_request(pool_handler, wallet_handler, ta_did, req_with_fees_json))
         print(res2)

@@ -142,6 +142,9 @@ async def test_misc_state_proof(
     res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res4['op'] == 'REPLY'
 
+    # txns must be written at ALL nodes before they will be stopped
+    await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
     await asyncio.sleep(wait_time)
 
     # stop all nodes except one

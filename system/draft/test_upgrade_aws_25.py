@@ -27,8 +27,8 @@ async def test_pool_upgrade_positive():
                         '6CRQcKzeRMCstErDT2Pso4he3rWWu1m16CRyp1fjYCFx', '53skV1LWLCbcxxdvoxY3pKDx2MAvszA27hA6cBZxLbnf',
                         'CbW92yCBgTMKquvsSRzDn5aA5uHzWZfP85bcW6RUK4hk', 'H5cW9eWhcBSEHfaAVkqP5QNa11m6kZ9zDyRXQZDBoSpq',
                         'DE8JMTgA7DaieF9iGKAyy5yvsZovroHr3SMEoDnbgFcp']
-    init_time = 1
-    version = '1.1.65'
+    init_time = 3
+    version = '1.1.69'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -36,16 +36,15 @@ async def test_pool_upgrade_positive():
     _timeout = 5
     aws_25_schedule = json.dumps(dict(
         {dest:
-            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+0*5), '%Y-%m-%dT%H:%M:%S%z')
+            datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=init_time+i*5), '%Y-%m-%dT%H:%M:%S%z')
          for dest, i in zip(persistent_dests, range(len(persistent_dests)))}
     ))
     reinstall = False
-    force = True
+    force = False
     package = 'sovrin'
     pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
     wallet_handle, _, _ = await wallet_helper()
     random_did = random_did_and_json()[0]
-    another_random_did = random_did_and_json()[0]
     trustee_did, trustee_vk = await did.create_and_store_my_did(
         wallet_handle, json.dumps({'seed': '000000000000000000000000Trustee1'})
     )
@@ -110,7 +109,7 @@ async def test_pool_upgrade_positive():
     # print(res)
     # assert res['op'] == 'REPLY'
 
-    await asyncio.sleep(10*60)
+    await asyncio.sleep(25*5*60)
 
     aws_25_hosts = [
         testinfra.get_host('ssh://persistent_node'+str(i), ssh_config='/home/indy/.ssh/config') for i in range(1, 26)
@@ -153,11 +152,12 @@ async def test_pool_upgrade_positive():
     res = json.loads(await ledger.submit_request(pool_handle, req))
     assert res['op'] == 'REPLY'
 
+    await ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did, nyms_count=5)
+
     assert all([res['op'] == 'REPLY' for res in add_before_results])
     assert all([res['result']['seqNo'] is not None for res in get_after_results])
     assert all([check is not -1 for check in version_checks])
     assert all([check is not -1 for check in status_checks])
 
-    await ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did, nyms_count=5)
     await ensure_ledgers_are_in_sync(pool_handle, wallet_handle, trustee_did)
     await ensure_state_root_hashes_are_in_sync(pool_handle, wallet_handle, trustee_did)

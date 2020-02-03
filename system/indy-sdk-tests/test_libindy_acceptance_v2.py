@@ -1,14 +1,12 @@
 import docker
 import testinfra
-import time
-from system.docker_setup import NETWORK_NAME
 
 
 def test_libindy():
     client = docker.from_env()
     client_name = 'libindy_acceptance_client'
     pool_name = 'libindy_acceptance_pool'
-    sdk_ver = '1.14.0-rc-117'
+    sdk_ver = '1.14.2-rc-123'
 
     try:
         client.containers.get(client_name).remove(force=True)
