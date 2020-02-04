@@ -224,6 +224,26 @@ class TestProductionSuite:
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
         await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
+        # demote 5th node by trustee
+        await eventually(
+            demote_node, pool_handler, wallet_handler, trustee_did, 'Node5', pool_info['Node5']
+        )
+        await pool.refresh_pool_ledger(pool_handler)
+        primary13 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary12)
+        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
+        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+        # demote 6th node by trustee
+        await eventually(
+            demote_node, pool_handler, wallet_handler, trustee_did, 'Node6', pool_info['Node6']
+        )
+        await pool.refresh_pool_ledger(pool_handler)
+        primary14 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary13)
+        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
+        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
         # demote 11th node by owner
         with pytest.raises(AssertionError):  # negative case - steward demotes node that he doesn't own
             await demote_node(pool_handler, wallet_handler, stewards['steward5'], 'Node11', pool_info['Node11'])
@@ -232,7 +252,7 @@ class TestProductionSuite:
             demote_node, pool_handler, wallet_handler, stewards['steward11'], 'Node11', pool_info['Node11']
         )
         await pool.refresh_pool_ledger(pool_handler)
-        primary13 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary12)
+        primary15 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary14)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
         await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
@@ -245,7 +265,27 @@ class TestProductionSuite:
             promote_node, pool_handler, wallet_handler, trustee_did, 'Node11', pool_info['Node11']
         )
         await pool.refresh_pool_ledger(pool_handler)
-        primary14 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary13)
+        primary16 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary15)
+        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
+        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+        # promote 6th node by owner
+        await eventually(
+            promote_node, pool_handler, wallet_handler, stewards['steward6'], 'Node6', pool_info['Node6']
+        )
+        await pool.refresh_pool_ledger(pool_handler)
+        primary17 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary16)
+        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+        await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
+        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+        # promote 5th node by owner
+        await eventually(
+            promote_node, pool_handler, wallet_handler, stewards['steward5'], 'Node5', pool_info['Node5']
+        )
+        await pool.refresh_pool_ledger(pool_handler)
+        primary18 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary17)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
         await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
@@ -255,7 +295,7 @@ class TestProductionSuite:
             promote_node, pool_handler, wallet_handler, stewards['steward4'], 'Node4', pool_info['Node4']
         )
         await pool.refresh_pool_ledger(pool_handler)
-        primary15 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary14)
+        primary19 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary18)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
         await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
@@ -265,7 +305,7 @@ class TestProductionSuite:
             promote_node, pool_handler, wallet_handler, stewards['steward3'], 'Node3', pool_info['Node3']
         )
         await pool.refresh_pool_ledger(pool_handler)
-        primary16 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary15)
+        primary20 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary19)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
         await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
@@ -275,7 +315,7 @@ class TestProductionSuite:
             promote_node, pool_handler, wallet_handler, stewards['steward2'], 'Node2', pool_info['Node2']
         )
         await pool.refresh_pool_ledger(pool_handler)
-        primary17 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary16)
+        primary21 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary20)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
         await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
@@ -285,11 +325,10 @@ class TestProductionSuite:
             promote_node, pool_handler, wallet_handler, stewards['steward1'], 'Node1', pool_info['Node1']
         )
         await pool.refresh_pool_ledger(pool_handler)
-        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary17)
-        await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
+        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary21)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
-        await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
-        await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+        await ensure_pool_is_okay(pool_handler, wallet_handler, trustee_did)
 
     # # TODO implement upgrade chain test case
     # @pytest.mark.asyncio
