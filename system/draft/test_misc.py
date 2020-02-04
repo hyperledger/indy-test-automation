@@ -2952,7 +2952,7 @@ def test_misc_aws_demotion_promotion():
 @pytest.mark.asyncio
 async def test_misc_redundant_demotions_promotions(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture,
-        nodes_num, demote_count, promote_count
+        payment_init, initial_token_minting, nodes_num, demote_count, promote_count
 ):
     trustee_did, _ = get_default_trustee
     pool_info = get_pool_info('1')
@@ -3006,7 +3006,7 @@ async def test_misc_redundant_demotions_promotions(
 @pytest.mark.asyncio
 async def test_misc_cyclic_demotions_promotions(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture,
-        nodes_num, iterations, nyms_count
+        payment_init, initial_token_minting, nodes_num, iterations, nyms_count
 ):
     trustee_did, _ = get_default_trustee
     pool_info = get_pool_info('1')
@@ -3034,3 +3034,19 @@ async def test_misc_cyclic_demotions_promotions(
 
     await ensure_pool_is_okay(pool_handler, wallet_handler, trustee_did)
 
+
+@pytest.mark.asyncio
+async def test_misc_check_new_helpers(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
+        payment_init, initial_token_minting
+):
+    trustee_did, _ = get_default_trustee
+    address = initial_token_minting
+    fees = await fees_setter(pool_handler, wallet_handler, trustee_did, 'sov')
+    for _ in range(10):
+        t = time.perf_counter()
+        req = await ledger.build_nym_request(trustee_did, random_did_and_json()[0], None, None, None)
+        await add_fees_and_send_request(pool_handler, wallet_handler, trustee_did, address, req, fees['nym'])
+        print('\n{}'.format(time.perf_counter() - t))
+
+    await ensure_pool_is_okay(pool_handler, wallet_handler, trustee_did)
