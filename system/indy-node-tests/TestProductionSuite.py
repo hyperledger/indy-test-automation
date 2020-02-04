@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from system.utils import *
 from system.docker_setup import client, pool_builder, pool_starter,\
     DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME, NETWORK_SUBNET
@@ -13,7 +12,7 @@ PORT_2 = '9702'
 ALIAS_PREFIX = 'Node'
 SEED_PREFIX = '000000000000000000000000000node'
 GENESIS_PATH = '/var/lib/indy/sandbox/'
-NYMS_COUNT = 10
+NYMS_COUNT = 5
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
@@ -61,7 +60,7 @@ class TestProductionSuite:
         start_res = [node.exec_run(['systemctl', 'start', 'indy-node'], user='root') for node in extra_containers]
         assert all([res.exit_code == 0 for res in init_res])
         assert all([res.exit_code == 0 for res in start_res])
-        time.sleep(15)  # FIXME intermittent failure with locked db files
+        await asyncio.sleep(15)  # FIXME intermittent failure with locked db files
 
         trustee_did, _ = get_default_trustee
         stewards = {}
