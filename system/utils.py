@@ -1308,7 +1308,7 @@ async def fees_setter(
     # set fees
     if not fees:
         fees = {
-            'nym': 1,
+            'nym': 0,  # don't break nym sending in tests
             'attrib': 2,
             'schema': 3,
             'cred_def': 4,
