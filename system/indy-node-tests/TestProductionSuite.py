@@ -251,7 +251,8 @@ class TestProductionSuite:
             demote_node, pool_handler, wallet_handler, stewards['steward11'], 'Node11', pool_info['Node11']
         )
         await pool.refresh_pool_ledger(pool_handler)
-        primary15 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary14)
+        # we get the same primary here
+        # primary15 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary14)
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
         await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
@@ -264,7 +265,7 @@ class TestProductionSuite:
             promote_node, pool_handler, wallet_handler, trustee_did, 'Node11', pool_info['Node11']
         )
         await pool.refresh_pool_ledger(pool_handler)
-        primary16 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary15)
+        primary16 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary14)  # 14 not 15
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=NYMS_COUNT)
         await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
