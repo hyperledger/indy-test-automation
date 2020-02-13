@@ -1,6 +1,7 @@
 import pytest
 from system.utils import *
 import docker
+from random import choice
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
@@ -165,3 +166,111 @@ class TestAdHocSuite:
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
         await ensure_state_root_hashes_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+    @pytest.mark.parametrize(
+        'demote_count, promote_count',
+        [
+            (1, 5),
+            (100, 5),
+            (100, 1)
+        ]
+    )
+    @pytest.mark.asyncio
+    async def test_misc_redundant_demotions_promotions(
+            self, pool_handler, wallet_handler, get_default_trustee, payment_init, initial_token_minting, nodes_num,
+            demote_count, promote_count
+    ):
+        trustee_did, _ = get_default_trustee
+        pool_info = get_pool_info('1')
+        node_list = ['Node{}'.format(x) for x in range(1, nodes_num + 1)]
+        address = initial_token_minting
+        fees = await fees_setter(pool_handler, wallet_handler, trustee_did, 'sov')
+
+        # find primary
+        primary, primary_alias, primary_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+        # select random node
+        node_to_demote = choice(node_list)
+        # demote it
+        demote_tasks = []
+        for i in range(demote_count):
+            task = demote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
+            demote_tasks.append(task)
+        await asyncio.gather(*demote_tasks, return_exceptions=True)
+        await pool.refresh_pool_ledger(pool_handler)
+        # make sure VC is done
+        new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
+        new_primary_name = 'Node{}'.format(new_primary)
+        # demote new primary
+        demote_tasks = []
+        for i in range(demote_count):
+            task = demote_node(
+                pool_handler, wallet_handler, trustee_did, new_primary_name, pool_info[new_primary_name]
+            )
+            demote_tasks.append(task)
+        await asyncio.gather(*demote_tasks, return_exceptions=True)
+        await pool.refresh_pool_ledger(pool_handler)
+        # make sure VC is done
+        super_new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, new_primary)
+        # write txn with fees
+        req = await ledger.build_attrib_request(trustee_did, trustee_did, None, None, random_string(256))
+        await add_fees_and_send_request(pool_handler, wallet_handler, trustee_did, address, req, fees['attrib'])
+        # promote both nodes back simultaneously
+        promote_tasks = []
+        for i in range(promote_count):
+            task1 = promote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
+            promote_tasks.append(task1)
+            task2 = promote_node(
+                pool_handler, wallet_handler, trustee_did, new_primary_name, pool_info[new_primary_name]
+            )
+            promote_tasks.append(task2)
+        await asyncio.gather(*promote_tasks, return_exceptions=True)
+        await pool.refresh_pool_ledger(pool_handler)
+        # make sure VC is done
+        await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, super_new_primary)
+
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=10)
+        await ensure_pool_is_okay(pool_handler, wallet_handler, trustee_did)
+
+    @pytest.mark.parametrize(
+        'iterations, nyms_count',
+        [
+            (1, 10),
+            (5, 10),
+            (5, 1)
+        ]
+    )
+    @pytest.mark.asyncio
+    async def test_misc_cyclic_demotions_promotions(
+            self, pool_handler, wallet_handler, get_default_trustee, payment_init, initial_token_minting, nodes_num,
+            iterations, nyms_count
+    ):
+        trustee_did, _ = get_default_trustee
+        pool_info = get_pool_info('1')
+        node_list = ['Node{}'.format(x) for x in range(1, nodes_num + 1)]
+        address = initial_token_minting
+        fees = await fees_setter(pool_handler, wallet_handler, trustee_did, 'sov')
+
+        for _ in range(iterations):
+            # find primary
+            primary, primary_alias, primary_did = await get_primary(pool_handler, wallet_handler, trustee_did)
+            # select random node
+            node_to_demote = choice(node_list)
+            # demote it
+            await demote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
+            await pool.refresh_pool_ledger(pool_handler)
+            # make sure VC is done
+            new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
+            # make sure pool works
+            await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count)
+            # write txn with fees
+            req = await ledger.build_attrib_request(trustee_did, trustee_did, None, None, random_string(256))
+            await add_fees_and_send_request(pool_handler, wallet_handler, trustee_did, address, req, fees['attrib'])
+            # promote node back
+            await promote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
+            await pool.refresh_pool_ledger(pool_handler)
+            # make sure VC is done
+            await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, new_primary)
+            # make sure pool works
+            await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count)
+
+        await ensure_pool_is_okay(pool_handler, wallet_handler, trustee_did)
