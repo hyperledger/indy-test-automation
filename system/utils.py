@@ -165,12 +165,15 @@ def random_seed_and_json():
 
 
 async def pool_helper(pool_name=None, path_to_genesis=POOL_GENESIS_PATH, node_list=None):
+    REQ_TIMEOUT = 5
     if not pool_name:
         pool_name = random_string(25)
     if node_list:
-        pool_config = json.dumps({"genesis_txn": path_to_genesis, "preordered_nodes": node_list})
+        pool_config = json.dumps(
+            {"genesis_txn": path_to_genesis, "preordered_nodes": node_list, "timeout": REQ_TIMEOUT}
+        )
     else:
-        pool_config = json.dumps({"genesis_txn": path_to_genesis})
+        pool_config = json.dumps({"genesis_txn": path_to_genesis, "timeout": REQ_TIMEOUT})
     await pool.create_pool_ledger_config(pool_name, pool_config)
     pool_handle = await pool.open_pool_ledger(pool_name, pool_config)
 
