@@ -4,7 +4,7 @@ from random import randrange as rr
 from system.utils import *
 
 
-@pytest.mark.parametrize('wait_time', [0, 600])  # 0 - common proof reading, 600 - freshness proof reading
+@pytest.mark.parametrize('wait_time', [0, 660])  # 0 - common proof reading, 660 - freshness proof reading
 @pytest.mark.asyncio
 async def test_misc_state_proof(
         docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
