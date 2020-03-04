@@ -6,7 +6,7 @@ def test_libindy():
     client = docker.from_env()
     client_name = 'libindy_acceptance_client'
     pool_name = 'libindy_acceptance_pool'
-    sdk_ver = '1.14.2-rc-123'
+    sdk_ver = '1.14.3-rc-127'
 
     try:
         client.containers.get(client_name).remove(force=True)

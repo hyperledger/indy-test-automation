@@ -16,7 +16,7 @@ def test_ubuntu18():
         print(line)
     container = client.containers.run(image, name=name, detach=True, tty=True)
     container.start()
-    res = container.exec_run('dpkg -l')
+    res = str(container.exec_run('dpkg -l'))
     checks = ['libindy', 'indy-cli', 'libnullpay', 'libvcx']
-    assert all([str(res).find(check) is not -1 for check in checks])
+    assert all([check in res for check in checks])
     print(res)

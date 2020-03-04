@@ -3081,3 +3081,15 @@ async def test_misc_demotions(
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
         # make sure pool works
         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
+
+@pytest.mark.nodes_num(4)
+@pytest.mark.asyncio
+async def test_misc_demotions(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
+):
+    trustee_did, _ = get_default_trustee
+    req = await ledger.build_get_txn_request(None, '3', 1)
+    res = json.loads(await ledger.submit_request(pool_handler, req))
+    print(res)
+    assert res['result']['seqNo'] is not None
