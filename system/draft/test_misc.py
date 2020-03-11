@@ -2105,17 +2105,21 @@ async def test_misc_multiple_restrictions(
                 "first_name":
                     {
                         "raw": "Pyotr",
-                        "encoded": "111"
+                        # "encoded": "111"
+                        "encoded": "0"
                     },
                 "last_name":
                     {
                         "raw": "Pustota",
-                        "encoded": "222"
+                        # "encoded": "222"
+                        "encoded": "000000000000000000000000000000000000000000000000000000000000000000000000000000000"
                     },
                 "age":
                     {
                         "raw": "99",
-                        "encoded": "333"
+                        # "encoded": "333"
+                        # "encoded": "00000012300000"
+                        "encoded": "100000000000000000000000000000000000000000000000000000009"
                     }
             }
         ), None, None
