@@ -2106,7 +2106,7 @@ async def test_misc_multiple_restrictions(
                     {
                         "raw": "Pyotr",
                         # "encoded": "111"
-                        "encoded": "0"
+                        "encoded": "1139480000000000000001716456278103335"
                     },
                 "last_name":
                     {
@@ -2118,8 +2118,8 @@ async def test_misc_multiple_restrictions(
                     {
                         "raw": "99",
                         # "encoded": "333"
-                        # "encoded": "00000012300000"
-                        "encoded": "100000000000000000000000000000000000000000000000000000009"
+                        "encoded": "0000000000000000000000000000000000000001230000"
+                        # "encoded": "100000000000000000000000000000000000000000000000000000009"
                     }
             }
         ), None, None
@@ -2140,14 +2140,18 @@ async def test_misc_multiple_restrictions(
                 {
                     "attr1_referent":
                         {
-                            "names": ["first_name", "last_name"]
+                            "names": ["first_name", "last_name"],
+                            "restrictions": []
                         }
                 },
             "requested_predicates":
                 {
                     "predicate1_referent":
                         {
-                            "name": "age", "p_type": ">=", "p_value": 18
+                            "name": "age",
+                            "p_type": ">=",
+                            "p_value": 18,
+                            "restrictions": []
                         }
                 }
         }
