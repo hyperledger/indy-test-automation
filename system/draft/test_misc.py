@@ -3101,3 +3101,39 @@ async def test_misc_demotions(
     res = json.loads(await ledger.submit_request(pool_handler, req))
     print(res)
     assert res['result']['seqNo'] is not None
+
+
+@pytest.mark.nodes_num(4)
+@pytest.mark.parametrize(
+    'xhash, raw, enc',
+    [
+        (hashlib.sha256().hexdigest(), None, None),
+        (None, json.dumps({'key': random_string(256)}), None),
+        (None, None, random_string(256))
+    ]
+)
+@pytest.mark.asyncio
+# IS-1515
+async def test_misc_attrib_reading(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, nodes_num, xhash, raw, enc
+):
+    trustee_did, _ = get_default_trustee
+    random_did = random_did_and_json()[0]
+
+    res_nym = await send_nym(pool_handler, wallet_handler, trustee_did, random_did)
+    assert res_nym['op'] == 'REPLY'
+
+    res_attr = await send_attrib(
+        pool_handler, wallet_handler, trustee_did, random_did, xhash, raw, enc
+    )
+    print(res_attr)
+    assert res_attr['op'] == 'REPLY'
+
+    # stop all nodes except one
+    hosts = [NodeHost(i) for i in range(1, nodes_num+1)]
+    print([host.stop_service() for host in hosts[:-1]])
+
+    req = await ledger.build_get_txn_request(None, 'DOMAIN', res_attr['result']['txnMetadata']['seqNo'])
+    res = json.loads(await ledger.submit_request(pool_handler, req))
+    print(res)
+    assert res['result']['seqNo'] is not None
