@@ -48,13 +48,13 @@ async def test_pool_upgrade_positive(
     ).exit_code == 0
 
     # upgrade it to the target version of pool upgrade command
-    plenum_ver = '1.12.2'
+    plenum_ver = '1.12.3'
     plenum_pkg = 'indy-plenum'
-    node_ver = '1.12.2'
+    node_ver = '1.12.3~rc1'
     node_pkg = 'indy-node'
-    sovrin_ver = '1.1.71'
+    sovrin_ver = '1.1.78'
     sovrin_pkg = 'sovrin'
-    plugin_ver = '1.0.7'
+    plugin_ver = '1.0.8~rc34'
     # repo_update = new_node.exec_run(
     #     [
     #         'sed',
@@ -94,7 +94,7 @@ async def test_pool_upgrade_positive(
         'BM8dTooz5uykCbYSAAFwKNkYfT4koomBHsSWHTDtkjhW'
     ]
     init_time = 5
-    version = '1.1.71'
+    version = '1.1.78'
     status = 'Active: active (running)'
     name = 'upgrade'+'_'+version+'_'+datetime.now(tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%S%z')
     action = 'start'
@@ -355,7 +355,7 @@ async def test_pool_upgrade_positive(
         user='root'
     ).exit_code == 0
 
-    await asyncio.sleep(120)
+    await asyncio.sleep(180)
 
     docker_7_hosts = [
         testinfra.get_host('docker://node' + str(i)) for i in range(1, 8)
@@ -423,6 +423,7 @@ async def test_pool_upgrade_positive(
         )
     )
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    print(res)
     assert res['op'] == 'REPLY'
 
     # set rule for revoc reg def adding without off ledger parameters
