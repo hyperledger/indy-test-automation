@@ -27,8 +27,8 @@ RUN apt-get update && apt-get install -y \
 RUN python3 -m pip install -U \
         pip \
         setuptools \
-        virtualenv \
-        pipenv \
+        virtualenv==16.0.0 \
+        pipenv==2018.11.26 \
     && pip3 list
 
 # libindy
