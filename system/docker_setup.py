@@ -6,7 +6,7 @@ from subprocess import CalledProcessError
 import docker
 
 from .utils import (
-    pool_helper, wallet_helper, default_trustee, ensure_pool_is_functional, ensure_all_nodes_online, NodeHost
+    ensure_pool_helper, wallet_helper, default_trustee, ensure_pool_is_functional, ensure_all_nodes_online, NodeHost
 )
 
 import logging
@@ -138,7 +138,7 @@ def main(nodes_num=None):
 async def wait_until_pool_is_ready():
     wallet_handle, _, _ = await wallet_helper()
     trustee_did, _ = await default_trustee(wallet_handle)
-    pool_handle, _ = await pool_helper()
+    pool_handle, _ = await ensure_pool_helper()
     await ensure_all_nodes_online(pool_handle, wallet_handle, trustee_did)
     await ensure_pool_is_functional(pool_handle, wallet_handle, trustee_did)
 

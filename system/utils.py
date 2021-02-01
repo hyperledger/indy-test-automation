@@ -164,6 +164,12 @@ def random_seed_and_json():
     return random_string(32), json.dumps({'seed': random_string(32)})
 
 
+async def ensure_pool_helper():
+    return await eventually(
+        pool_helper, retry_wait=2, timeout=200
+    )
+
+
 async def pool_helper(pool_name=None, path_to_genesis=POOL_GENESIS_PATH, node_list=None):
     REQ_TIMEOUT = 5
     if not pool_name:
