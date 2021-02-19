@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
 # https://github.com/pypa/pip/issues/5240
 # https://github.com/pypa/pip/issues/5221
 RUN python3 -m pip install -U \
-        pip \
+        pip==10.0.0 \
         setuptools \
         virtualenv==16.0.0 \
         pipenv==2018.11.26 \
