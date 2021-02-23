@@ -7,7 +7,7 @@ services:
       context: ./client
       args:
           - PYTHON3_VERSION
-          - LIBINDY_REPO_COMPONENT
+          - CLIENT_REPO_COMPONENT
           - LIBINDY_VERSION
           - LIBSOVTOKEN_INSTALL
           - LIBSOVTOKEN_VERSION
@@ -18,7 +18,7 @@ services:
     build:
       context: ./node
       args:
-          - INDY_NODE_REPO_COMPONENT
+          - NODE_REPO_COMPONENT
           - LIBINDY_CRYPTO_VERSION
           - PYTHON3_LIBINDY_CRYPTO_VERSION
           - INDY_PLENUM_VERSION
