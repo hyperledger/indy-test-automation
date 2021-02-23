@@ -1,8 +1,5 @@
 FROM teracy/ubuntu:16.04-dind-latest
 
-ARG CLIENT_REPO_COMPONENT
-RUN echo ${CLIENT_REPO_COMPONENT, "CLIENT_REPO_COMPONENT must be provided"}
-
 # generally useful packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \

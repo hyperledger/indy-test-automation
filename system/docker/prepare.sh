@@ -63,7 +63,7 @@ set -x
 
 # 1. build docker-compose image
 # TODO pass optional docker composer version
-docker build -t "$docker_compose_image_name" "$docker_routine_path/docker-compose"
+docker build -t "$docker_compose_image_name" "$docker_routine_path/docker-compose" -e CLIENT_REPO_COMPONENT
 
 # 2. build client image
 docker run -t --rm \
