@@ -34,12 +34,12 @@ RUN python3 -m pip install -U \
 # libindy
 ARG LIBINDY_REPO_COMPONENT
 RUN echo "Check that LIBINDY_REPO_COMPONENT is provided" \
-    test -n "$LIBINDY_REPO_COMPONENT"
+    && test -n "$LIBINDY_REPO_COMPONENT"
 ENV LIBINDY_REPO_COMPONENT=${LIBINDY_REPO_COMPONENT}
 
 ARG LIBINDY_VERSION
 RUN echo "Check that LIBINDY_VERSION is provided" \
-    test -n "$LIBINDY_VERSION"
+    && test -n "$LIBINDY_VERSION"
 ENV LIBINDY_VERSION=${LIBINDY_VERSION}
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
