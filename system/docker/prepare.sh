@@ -37,14 +37,13 @@ image_repository="hyperledger/indy-test-automation"
 docker_compose_image_name="${image_repository}:docker-compose"
 
 node_env_variables=" \
-    PYTHON3_VERSION \
-    LIBINDY_REPO_COMPONENT \
+    NODE_REPO_COMPONENT \
     LIBINDY_VERSION \
     LIBSOVTOKEN_INSTALL \
     LIBSOVTOKEN_VERSION \
 "
 client_env_variables=" \
-    INDY_NODE_REPO_COMPONENT \
+    CLIENT_REPO_COMPONENT \
     LIBINDY_CRYPTO_VERSION \
     PYTHON3_LIBINDY_CRYPTO_VERSION \
     INDY_PLENUM_VERSION \
@@ -75,8 +74,7 @@ docker run -t --rm \
     -u "$user_id" \
     -e "IMAGE_REPOSITORY=$image_repository" \
     -e u_id="$user_id" \
-    -e PYTHON3_VERSION \
-    -e LIBINDY_REPO_COMPONENT \
+    -e NODE_REPO_COMPONENT \
     -e LIBINDY_VERSION \
     -e LIBSOVTOKEN_INSTALL \
     -e LIBSOVTOKEN_VERSION \
@@ -91,7 +89,7 @@ docker run -t --rm \
     -u "$user_id" \
     -e "IMAGE_REPOSITORY=$image_repository" \
     -e u_id="$user_id" \
-    -e INDY_NODE_REPO_COMPONENT \
+    -e CLIENT_REPO_COMPONENT \
     -e LIBINDY_CRYPTO_VERSION \
     -e PYTHON3_LIBINDY_CRYPTO_VERSION \
     -e INDY_PLENUM_VERSION \

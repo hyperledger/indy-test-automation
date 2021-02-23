@@ -1,5 +1,8 @@
 FROM teracy/ubuntu:16.04-dind-latest
 
+ARG CLIENT_REPO_COMPONENT
+RUN echo ${CLIENT_REPO_COMPONENT, "CLIENT_REPO_COMPONENT must be provided"}
+
 # generally useful packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
@@ -12,10 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # python
-ARG PYTHON3_VERSION
-ENV PYTHON3_VERSION=${PYTHON3_VERSION:-3.5}
 RUN apt-get update && apt-get install -y \
-        python${PYTHON3_VERSION} \
+        python3.5 \
         python3-pip \
         python-setuptools \
     && rm -rf /var/lib/apt/lists/*
@@ -31,29 +32,27 @@ RUN python3 -m pip install -U \
         pipenv==2018.11.26 \
     && pip3 list
 
-# libindy
-ARG LIBINDY_REPO_COMPONENT
-RUN echo "Check that LIBINDY_REPO_COMPONENT is provided" \
-    && test -n "$LIBINDY_REPO_COMPONENT"
-ENV LIBINDY_REPO_COMPONENT=${LIBINDY_REPO_COMPONENT}
+# sovrin repo init
+ARG CLIENT_REPO_COMPONENT
+RUN echo "Check that CLIENT_REPO_COMPONENT is provided" \
+    && test -n "$CLIENT_REPO_COMPONENT"
+ENV CLIENT_REPO_COMPONENT=${CLIENT_REPO_COMPONENT}
 
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
+    && add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial ${CLIENT_REPO_COMPONENT}" \
+    && apt-get update
+
+# indy dependencies
 ARG LIBINDY_VERSION
 RUN echo "Check that LIBINDY_VERSION is provided" \
     && test -n "$LIBINDY_VERSION"
 ENV LIBINDY_VERSION=${LIBINDY_VERSION}
 
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
-    && add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial ${LIBINDY_REPO_COMPONENT}" \
-    && apt-get update && apt-get install -y \
-        libindy=${LIBINDY_VERSION} \
-#    && add-apt-repository --remove "deb https://repo.sovrin.org/sdk/deb xenial ${LIBINDY_REPO_COMPONENT}" \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get install -y \
+        libindy=${LIBINDY_VERSION}
 
-# libsovtoken
-# TODO: Remove it in indy-test-automation
-# FIXME
-#   - for now it's tricky to set proper version for master artifacts
-#   - defaults are for stable
+# TODO: Move to Sovrin tests
+# sovrin dependencies
 #ARG LIBSOVTOKEN_INSTALL
 #ARG LIBSOVTOKEN_VERSION
 #ENV LIBSOVTOKEN_INSTALL=$LIBSOVTOKEN_INSTALL
@@ -63,6 +62,10 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
 #            libsovtoken=${LIBSOVTOKEN_VERSION}; \
 #        rm -rf /var/lib/apt/lists/*; \
 #    fi
+
+# repo cleanup
+RUN add-apt-repository --remove "deb https://repo.sovrin.org/sdk/deb xenial ${CLIENT_REPO_COMPONENT}" \
+    && rm -rf /var/lib/apt/lists/*
 
 # user
 ARG u_id=1000
