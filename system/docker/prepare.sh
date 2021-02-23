@@ -74,7 +74,7 @@ docker run -t --rm \
     -u "$user_id" \
     -e "IMAGE_REPOSITORY=$image_repository" \
     -e u_id="$user_id" \
-    -e NODE_REPO_COMPONENT \
+    -e CLIENT_REPO_COMPONENT \
     -e LIBINDY_VERSION \
     -e LIBSOVTOKEN_INSTALL \
     -e LIBSOVTOKEN_VERSION \
