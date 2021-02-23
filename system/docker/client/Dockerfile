@@ -31,8 +31,7 @@ RUN python3 -m pip install -U \
 
 # sovrin repo init
 ARG CLIENT_REPO_COMPONENT
-RUN echo "Check that CLIENT_REPO_COMPONENT is provided" \
-    && test -n "$CLIENT_REPO_COMPONENT"
+RUN : ${CLIENT_REPO_COMPONENT:?"CLIENT_REPO_COMPONENT must be provided"}
 ENV CLIENT_REPO_COMPONENT=${CLIENT_REPO_COMPONENT}
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
@@ -41,8 +40,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
 
 # indy dependencies
 ARG LIBINDY_VERSION
-RUN echo "Check that LIBINDY_VERSION is provided" \
-    && test -n "$LIBINDY_VERSION"
+RUN : ${LIBINDY_VERSION:?"LIBINDY_VERSION must be provided"}
 ENV LIBINDY_VERSION=${LIBINDY_VERSION}
 
 RUN apt-get install -y \
