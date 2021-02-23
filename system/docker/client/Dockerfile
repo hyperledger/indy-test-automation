@@ -46,7 +46,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
     && add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial ${LIBINDY_REPO_COMPONENT}" \
     && apt-get update && apt-get install -y \
         libindy=${LIBINDY_VERSION} \
-    && add-apt-repository --remove "deb https://repo.sovrin.org/sdk/deb xenial ${LIBINDY_REPO_COMPONENT}" \
+#    && add-apt-repository --remove "deb https://repo.sovrin.org/sdk/deb xenial ${LIBINDY_REPO_COMPONENT}" \
     && rm -rf /var/lib/apt/lists/*
 
 # libsovtoken
