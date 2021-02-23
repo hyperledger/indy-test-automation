@@ -17,7 +17,7 @@ RUN apt-get update -y && apt-get install -y \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install -U \
-        'pip<10.0.0' \
+        pip==10.0.0 \
         setuptools
 
 ARG INDY_NODE_REPO_COMPONENT

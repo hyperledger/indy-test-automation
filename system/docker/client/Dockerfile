@@ -33,29 +33,36 @@ RUN python3 -m pip install -U \
 
 # libindy
 ARG LIBINDY_REPO_COMPONENT
+RUN echo "Check that LIBINDY_REPO_COMPONENT is provided" \
+    test -n "$LIBINDY_REPO_COMPONENT"
+ENV LIBINDY_REPO_COMPONENT=${LIBINDY_REPO_COMPONENT}
+
 ARG LIBINDY_VERSION
-ENV LIBINDY_REPO_COMPONENT=${LIBINDY_REPO_COMPONENT:-master}
-ENV LIBINDY_VERSION=${LIBINDY_VERSION:-1.10.0~1171}
+RUN echo "Check that LIBINDY_VERSION is provided" \
+    test -n "$LIBINDY_VERSION"
+ENV LIBINDY_VERSION=${LIBINDY_VERSION}
+
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
     && add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial ${LIBINDY_REPO_COMPONENT}" \
     && apt-get update && apt-get install -y \
         libindy=${LIBINDY_VERSION} \
+    && add-apt-repository --remove "deb https://repo.sovrin.org/sdk/deb xenial ${LIBINDY_REPO_COMPONENT}" \
     && rm -rf /var/lib/apt/lists/*
 
 # libsovtoken
+# TODO: Remove it in indy-test-automation
 # FIXME
 #   - for now it's tricky to set proper version for master artifacts
 #   - defaults are for stable
-ARG LIBSOVTOKEN_INSTALL
-ARG LIBSOVTOKEN_VERSION
-ENV LIBSOVTOKEN_INSTALL=$LIBSOVTOKEN_INSTALL
-ENV LIBSOVTOKEN_VERSION=${LIBSOVTOKEN_VERSION:-0.10.0~74}
-RUN if [ "$LIBSOVTOKEN_INSTALL" = "yes" ]; then \
-        set -ex; \
-        apt-get update && apt-get install -y \
-            libsovtoken=${LIBSOVTOKEN_VERSION}; \
-        rm -rf /var/lib/apt/lists/*; \
-    fi
+#ARG LIBSOVTOKEN_INSTALL
+#ARG LIBSOVTOKEN_VERSION
+#ENV LIBSOVTOKEN_INSTALL=$LIBSOVTOKEN_INSTALL
+#ENV LIBSOVTOKEN_VERSION=${LIBSOVTOKEN_VERSION:-0.10.0~74}
+#RUN if [ "$LIBSOVTOKEN_INSTALL" = "yes" ]; then \
+#        apt-get update && apt-get install -y \
+#            libsovtoken=${LIBSOVTOKEN_VERSION}; \
+#        rm -rf /var/lib/apt/lists/*; \
+#    fi
 
 # user
 ARG u_id=1000

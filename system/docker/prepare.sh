@@ -1,5 +1,10 @@
 #!/bin/bash
 
+set -o errexit
+set -o pipefail
+set -o nounset
+set -o xtrace
+
 DEF_TEST_NETWORK_NAME="indy-test-automation-network"
 # TODO limit default subnet range to reduce risk of overlapping with system resources
 DEF_TEST_NETWORK_SUBNET="10.0.0.0/24"
@@ -17,8 +22,6 @@ if [ "$1" = "--help" ] ; then
     usage
     exit 0
 fi
-
-set -ex
 
 test_network_name="${1:-$DEF_TEST_NETWORK_NAME}"
 test_network_subnet="${2:-$DEF_TEST_NETWORK_SUBNET}"
