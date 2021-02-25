@@ -81,7 +81,7 @@ RUN apt-get install -y \
 #    fi
 
 # repo cleanup
-RUN sed '/deb https://repo.sovrin.org/sdk/deb xenial ${NODE_REPO_COMPONENT}/d' /etc/apt/sources.list \
+RUN sed '/deb https:\/\/repo.sovrin.org\/sdk\/deb xenial ${NODE_REPO_COMPONENT}/d' /etc/apt/sources.list \
     && rm -rf /var/lib/apt/lists/*
 
 # network config
