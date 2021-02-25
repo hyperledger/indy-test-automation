@@ -81,7 +81,7 @@ RUN apt-get install -y \
 #    fi
 
 # repo cleanup
-RUN add-apt-repository --remove "deb https://repo.sovrin.org/sdk/deb xenial ${CLIENT_REPO_COMPONENT}" \
+RUN add-apt-repository --remove "deb https://repo.sovrin.org/sdk/deb xenial ${NODE_REPO_COMPONENT}" \
     && rm -rf /var/lib/apt/lists/*
 
 # network config
