@@ -92,6 +92,7 @@ docker run -t --rm \
     -e CLIENT_REPO_COMPONENT \
     -e LIBINDY_CRYPTO_VERSION \
     -e PYTHON3_LIBINDY_CRYPTO_VERSION \
+    -e PYTHON3_PYZMQ_VERSION \
     -e INDY_PLENUM_VERSION \
     -e INDY_NODE_VERSION \
     -e TOKEN_PLUGINS_INSTALL \
@@ -102,7 +103,7 @@ docker run -t --rm \
 
 docker images "$image_repository"
 
-# 4. clean existing envronment
+# 4. clean existing environment
 $docker_routine_path/clean.sh "$test_network_name"
 
 # 5. remove test network if exists

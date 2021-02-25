@@ -23,28 +23,42 @@ RUN pip3 install -U \
 
 # sovrin repo init
 ARG NODE_REPO_COMPONENT
-ENV NODE_REPO_COMPONENT=${NODE_REPO_COMPONENT:-rc}
+RUN : ${NODE_REPO_COMPONENT:?"NODE_REPO_COMPONENT must be provided"}
+ENV NODE_REPO_COMPONENT=${NODE_REPO_COMPONENT}
 
-
-ARG LIBINDY_CRYPTO_VERSION
-ARG PYTHON3_LIBINDY_CRYPTO_VERSION
-ARG INDY_PLENUM_VERSION
-ARG INDY_NODE_VERSION
-ENV LIBINDY_CRYPTO_VERSION=${LIBINDY_CRYPTO_VERSION:-0.4.5}
-ENV PYTHON3_LIBINDY_CRYPTO_VERSION=${PYTHON3_LIBINDY_CRYPTO_VERSION:-0.4.5}
-ENV PYTHON3_PYZMQ_VERSION=${PYTHON3_PYZMQ_VERSION:-18.1.0}
-ENV INDY_PLENUM_VERSION=${INDY_PLENUM_VERSION:-1.12.2}
-ENV INDY_NODE_VERSION=${INDY_NODE_VERSION:-1.12.2~rc1}
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
     && echo "deb https://repo.sovrin.org/deb xenial ${NODE_REPO_COMPONENT}" >> /etc/apt/sources.list \
-    && apt-get update -y && apt-get install -y \
+    && apt-get update -y
+
+# indy depedencies
+ARG LIBINDY_CRYPTO_VERSION
+RUN : ${LIBINDY_CRYPTO_VERSION:?"LIBINDY_CRYPTO_VERSION must be provided"}
+ENV LIBINDY_CRYPTO_VERSION=${LIBINDY_CRYPTO_VERSION}
+
+ARG PYTHON3_LIBINDY_CRYPTO_VERSION
+RUN : ${PYTHON3_LIBINDY_CRYPTO_VERSION:?"PYTHON3_LIBINDY_CRYPTO_VERSION must be provided"}
+ENV PYTHON3_LIBINDY_CRYPTO_VERSION=${PYTHON3_LIBINDY_CRYPTO_VERSION}
+
+ARG PYTHON3_PYZMQ_VERSION
+RUN : ${PYTHON3_PYZMQ_VERSION:?"PYTHON3_PYZMQ_VERSION must be provided"}
+ENV PYTHON3_PYZMQ_VERSION=${PYTHON3_PYZMQ_VERSION}
+
+ARG INDY_PLENUM_VERSION
+RUN : ${INDY_PLENUM_VERSION:?"INDY_PLENUM_VERSION must be provided"}
+ENV INDY_PLENUM_VERSION=${INDY_PLENUM_VERSION}
+
+ARG INDY_NODE_VERSION
+RUN : ${INDY_NODE_VERSION:?"INDY_NODE_VERSION must be provided"}
+ENV INDY_NODE_VERSION=${INDY_NODE_VERSION}
+
+RUN apt-get install -y \
         libindy-crypto=${LIBINDY_CRYPTO_VERSION} \
         python3-indy-crypto=${PYTHON3_LIBINDY_CRYPTO_VERSION} \
         python3-pyzmq=${PYTHON3_PYZMQ_VERSION} \
         indy-plenum=${INDY_PLENUM_VERSION} \
-        indy-node=${INDY_NODE_VERSION} \
-	&& rm -rf /var/lib/apt/lists/*
+        indy-node=${INDY_NODE_VERSION}
 
+# TODO: Move to Sovrin tests
 # sovrin & token plugins
 # FIXME
 #   - for now it's tricky to set proper versions for master artifacts
@@ -66,6 +80,11 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
 #        rm -rf /var/lib/apt/lists/*; \
 #    fi
 
+# repo cleanup
+RUN add-apt-repository --remove "deb https://repo.sovrin.org/sdk/deb xenial ${CLIENT_REPO_COMPONENT}" \
+    && rm -rf /var/lib/apt/lists/*
+
+# network config
 RUN echo " " >> /etc/indy/indy_config.py \
     && echo "NETWORK_NAME = 'sandbox'" >> /etc/indy/indy_config.py \
     && echo " " >> /etc/indy/indy_config.py \
