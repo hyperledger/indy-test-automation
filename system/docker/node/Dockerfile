@@ -1,76 +1,81 @@
 FROM solita/ubuntu-systemd
 
+ARG uid=1000
+ARG user=indy
+
 # Install environment
 RUN apt-get update -y && apt-get install -y \
-        git \
-        wget \
-        python3.5 \
-        python3-pip \
-        python-setuptools \
-        python3-nacl \
-        apt-transport-https \
-        ca-certificates \
-        ssh \
-        vim \
-        mc \
-        stress \
-	&& rm -rf /var/lib/apt/lists/*
+    git \
+    wget \
+    python3-pip \
+    python3-nacl \
+    python-setuptools \
+    python3-nacl \
+    apt-transport-https \
+    ca-certificates \
+    ssh \
+    vim \
+    mc \
+    stress \
+    dbus \
+    && rm -rf /var/lib/apt/lists/*
 
+# pip<10.0.0 is important. pip==10.0.0 doesn't work.
 RUN pip3 install -U \
-        'pip<10.0.0' \
-        setuptools
+    'pip<10.0.0' \
+    setuptools
 
-ARG INDY_NODE_REPO_COMPONENT
-ARG LIBINDY_CRYPTO_VERSION
-ARG PYTHON3_LIBINDY_CRYPTO_VERSION
-ARG INDY_PLENUM_VERSION
-ARG INDY_NODE_VERSION
-ENV INDY_NODE_REPO_COMPONENT=${INDY_NODE_REPO_COMPONENT:-rc}
-ENV LIBINDY_CRYPTO_VERSION=${LIBINDY_CRYPTO_VERSION:-0.4.5}
-ENV PYTHON3_LIBINDY_CRYPTO_VERSION=${PYTHON3_LIBINDY_CRYPTO_VERSION:-0.4.5}
-ENV PYTHON3_PYZMQ_VERSION=${PYTHON3_PYZMQ_VERSION:-18.1.0}
-ENV INDY_PLENUM_VERSION=${INDY_PLENUM_VERSION:-1.12.2}
-ENV INDY_NODE_VERSION=${INDY_NODE_VERSION:-1.12.2~rc1}
-# ENV INDY_NODE_REPO_COMPONENT=${INDY_NODE_REPO_COMPONENT:-master}
-# ENV LIBINDY_CRYPTO_VERSION=${LIBINDY_CRYPTO_VERSION:-0.4.5}
-# ENV PYTHON3_LIBINDY_CRYPTO_VERSION=${PYTHON3_LIBINDY_CRYPTO_VERSION:-0.4.5}
-# ENV PYTHON3_PYZMQ_VERSION=${PYTHON3_PYZMQ_VERSION:-18.1.0}
-# ENV INDY_PLENUM_VERSION=${INDY_PLENUM_VERSION:-1.13.0~dev1012}
-# ENV INDY_NODE_VERSION=${INDY_NODE_VERSION:-1.13.0~dev1199}
+# sovrin repo init
+ARG NODE_REPO_COMPONENT
+RUN : ${NODE_REPO_COMPONENT:?"NODE_REPO_COMPONENT must be provided"}
+ENV NODE_REPO_COMPONENT=${NODE_REPO_COMPONENT}
+
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
-    && echo "deb https://repo.sovrin.org/deb xenial ${INDY_NODE_REPO_COMPONENT}" >> /etc/apt/sources.list \
-    && apt-get update -y && apt-get install -y \
-        libindy-crypto=${LIBINDY_CRYPTO_VERSION} \
-        python3-indy-crypto=${PYTHON3_LIBINDY_CRYPTO_VERSION} \
-        python3-pyzmq=${PYTHON3_PYZMQ_VERSION} \
-        indy-plenum=${INDY_PLENUM_VERSION} \
-        indy-node=${INDY_NODE_VERSION} \
-	&& rm -rf /var/lib/apt/lists/*
+    && echo "deb https://repo.sovrin.org/deb xenial ${NODE_REPO_COMPONENT}" >> /etc/apt/sources.list \
+    && apt-get update -y
 
+# indy depedencies
+ARG LIBINDY_CRYPTO_VERSION
+RUN : ${LIBINDY_CRYPTO_VERSION:?"LIBINDY_CRYPTO_VERSION must be provided"}
+ENV LIBINDY_CRYPTO_VERSION=${LIBINDY_CRYPTO_VERSION}
+
+ARG PYTHON3_LIBINDY_CRYPTO_VERSION
+RUN : ${PYTHON3_LIBINDY_CRYPTO_VERSION:?"PYTHON3_LIBINDY_CRYPTO_VERSION must be provided"}
+ENV PYTHON3_LIBINDY_CRYPTO_VERSION=${PYTHON3_LIBINDY_CRYPTO_VERSION}
+
+ARG PYTHON3_PYZMQ_VERSION
+RUN : ${PYTHON3_PYZMQ_VERSION:?"PYTHON3_PYZMQ_VERSION must be provided"}
+ENV PYTHON3_PYZMQ_VERSION=${PYTHON3_PYZMQ_VERSION}
+
+ARG INDY_PLENUM_VERSION
+RUN : ${INDY_PLENUM_VERSION:?"INDY_PLENUM_VERSION must be provided"}
+ENV INDY_PLENUM_VERSION=${INDY_PLENUM_VERSION}
+
+ARG INDY_NODE_VERSION
+RUN : ${INDY_NODE_VERSION:?"INDY_NODE_VERSION must be provided"}
+ENV INDY_NODE_VERSION=${INDY_NODE_VERSION}
+
+RUN apt-get install -y \
+    libindy-crypto=${LIBINDY_CRYPTO_VERSION} \
+    python3-indy-crypto=${PYTHON3_LIBINDY_CRYPTO_VERSION} \
+    python3-pyzmq=${PYTHON3_PYZMQ_VERSION} \
+    indy-plenum=${INDY_PLENUM_VERSION} \
+    indy-node=${INDY_NODE_VERSION}
 # sovrin & token plugins
-# FIXME
-#   - for now it's tricky to set proper versions for master artifacts
-#   - defaults are for stable
-ARG TOKEN_PLUGINS_INSTALL
+ARG SOVRIN_INSTALL
 ARG SOVRIN_VERSION
-ARG SOVTOKEN_VERSION
-ARG SOVTOKENFEES_VERSION
-ENV TOKEN_PLUGINS_INSTALL=$TOKEN_PLUGINS_INSTALL
+ENV SOVRIN_INSTALL=$SOVRIN_INSTALL
 ENV SOVRIN_VERSION=${SOVRIN_VERSION:-1.1.69}
-ENV SOVTOKEN_VERSION=${SOVTOKEN_VERSION:-1.0.8~dev151}
-# ENV SOVRIN_VERSION=${SOVRIN_VERSION:-1.1.207}
-# ENV SOVTOKEN_VERSION=${SOVTOKEN_VERSION:-1.0.8~dev150}
-ENV SOVTOKENFEES_VERSION=${SOVTOKENFEES_VERSION:-${SOVTOKEN_VERSION}}
-#RUN if [ "$TOKEN_PLUGINS_INSTALL" = "yes" ]; then \
-RUN \
-        set -ex; \
-        apt-get update && apt-get install -y \
-            sovrin=${SOVRIN_VERSION} \
-            sovtoken=${SOVTOKEN_VERSION} \
-            sovtokenfees=${SOVTOKENFEES_VERSION}; \
-        rm -rf /var/lib/apt/lists/*; \
+COPY . . 
+RUN if [ -n "$SOVRIN_INSTALL" ]; then \
+    dpkg -i "sovrin_${SOVRIN_VERSION}_amd64.deb"; \
     fi
 
+# repo cleanup
+RUN sed '/deb https:\/\/repo.sovrin.org\/sdk\/deb xenial ${NODE_REPO_COMPONENT}/d' /etc/apt/sources.list \
+    && rm -rf /var/lib/apt/lists/*
+
+# network config
 RUN echo " " >> /etc/indy/indy_config.py \
     && echo "NETWORK_NAME = 'sandbox'" >> /etc/indy/indy_config.py \
     && echo " " >> /etc/indy/indy_config.py \

@@ -37,17 +37,16 @@ image_repository="hyperledger/indy-test-automation"
 docker_compose_image_name="${image_repository}:docker-compose"
 
 node_env_variables=" \
-    NODE_REPO_COMPONENT \
-    LIBINDY_VERSION \
-    LIBSOVTOKEN_INSTALL \
-    LIBSOVTOKEN_VERSION \
-"
-client_env_variables=" \
     CLIENT_REPO_COMPONENT \
-    LIBINDY_CRYPTO_VERSION \
-    PYTHON3_LIBINDY_CRYPTO_VERSION \
     INDY_PLENUM_VERSION \
     INDY_NODE_VERSION \
+    SOVRIN_INSTALL \
+    SOVRIN_VERSION \
+    SOVTOKEN_VERSION \
+    SOVTOKENFEES_VERSION \
+    TOKEN_PLUGINS_INSTALL \
+    LIBINDY_CRYPTO_VERSION \
+    PYTHON3_LIBINDY_CRYPTO_VERSION \
 "
 
 echo "Docker version..."
@@ -55,7 +54,7 @@ docker version
 
 set +x
 echo "Environment env variables..."
-for i in $node_env_variables $client_env_variables
+for i in $node_env_variables
 do
     echo "$i=${!i}"
 done
@@ -64,21 +63,6 @@ set -x
 # 1. build docker-compose image
 # TODO pass optional docker composer version
 docker build -t "$docker_compose_image_name" "$docker_routine_path/docker-compose"
-
-# 2. build client image
-docker run -t --rm \
-    --group-add $(stat -c '%g' "$docker_socket_path") \
-    -v "$docker_socket_path:"$docker_socket_path \
-    -v "$repo_path:$workdir_path" \
-    -w "$workdir_path" \
-    -u "$user_id" \
-    -e "IMAGE_REPOSITORY=$image_repository" \
-    -e u_id="$user_id" \
-    -e CLIENT_REPO_COMPONENT \
-    -e LIBINDY_VERSION \
-    -e LIBSOVTOKEN_INSTALL \
-    -e LIBSOVTOKEN_VERSION \
-    "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build client
 
 # 3. build node image
 docker run -t --rm \
@@ -90,15 +74,16 @@ docker run -t --rm \
     -e "IMAGE_REPOSITORY=$image_repository" \
     -e u_id="$user_id" \
     -e NODE_REPO_COMPONENT \
-    -e LIBINDY_CRYPTO_VERSION \
-    -e PYTHON3_LIBINDY_CRYPTO_VERSION \
     -e PYTHON3_PYZMQ_VERSION \
     -e INDY_PLENUM_VERSION \
     -e INDY_NODE_VERSION \
     -e TOKEN_PLUGINS_INSTALL \
     -e SOVRIN_VERSION \
+    -e SOVRIN_INSTALL \
     -e SOVTOKEN_VERSION \
     -e SOVTOKENFEES_VERSION \
+    -e LIBINDY_CRYPTO_VERSION \
+    -e PYTHON3_LIBINDY_CRYPTO_VERSION \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build node
 
 docker images "$image_repository"
