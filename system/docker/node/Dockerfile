@@ -67,7 +67,7 @@ ARG SOVRIN_VERSION
 ENV SOVRIN_INSTALL=$SOVRIN_INSTALL
 ENV SOVRIN_VERSION=${SOVRIN_VERSION:-1.1.69}
 COPY . . 
-RUN if [ -n "$SOVRIN_INSTALL" ]; then \
+RUN if [ "$SOVRIN_INSTALL" = "yes" ]; then \
     dpkg -i "sovrin_${SOVRIN_VERSION}_amd64.deb"; \
     fi
 
