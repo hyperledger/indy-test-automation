@@ -45,8 +45,7 @@ node_env_variables=" \
     SOVTOKEN_VERSION \
     SOVTOKENFEES_VERSION \
     TOKEN_PLUGINS_INSTALL \
-    LIBINDY_CRYPTO_VERSION \
-    PYTHON3_LIBINDY_CRYPTO_VERSION \
+    URSA_VERSION \
 "
 
 echo "Docker version..."
@@ -82,8 +81,7 @@ docker run -t --rm \
     -e SOVRIN_INSTALL \
     -e SOVTOKEN_VERSION \
     -e SOVTOKENFEES_VERSION \
-    -e LIBINDY_CRYPTO_VERSION \
-    -e PYTHON3_LIBINDY_CRYPTO_VERSION \
+    -e URSA_VERSION \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build node
 
 docker images "$image_repository"

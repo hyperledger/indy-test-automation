@@ -35,13 +35,9 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
     && apt-get update -y
 
 # indy depedencies
-ARG LIBINDY_CRYPTO_VERSION
-RUN : ${LIBINDY_CRYPTO_VERSION:?"LIBINDY_CRYPTO_VERSION must be provided"}
-ENV LIBINDY_CRYPTO_VERSION=${LIBINDY_CRYPTO_VERSION}
-
-ARG PYTHON3_LIBINDY_CRYPTO_VERSION
-RUN : ${PYTHON3_LIBINDY_CRYPTO_VERSION:?"PYTHON3_LIBINDY_CRYPTO_VERSION must be provided"}
-ENV PYTHON3_LIBINDY_CRYPTO_VERSION=${PYTHON3_LIBINDY_CRYPTO_VERSION}
+ARG URSA_VERSION
+RUN : ${URSA_VERSION:?"URSA_VERSION must be provided"}
+ENV URSA_VERSION=${URSA_VERSION}
 
 ARG PYTHON3_PYZMQ_VERSION
 RUN : ${PYTHON3_PYZMQ_VERSION:?"PYTHON3_PYZMQ_VERSION must be provided"}
@@ -56,8 +52,7 @@ RUN : ${INDY_NODE_VERSION:?"INDY_NODE_VERSION must be provided"}
 ENV INDY_NODE_VERSION=${INDY_NODE_VERSION}
 
 RUN apt-get install -y \
-    libindy-crypto=${LIBINDY_CRYPTO_VERSION} \
-    python3-indy-crypto=${PYTHON3_LIBINDY_CRYPTO_VERSION} \
+    ursa=${URSA_VERSION} \
     python3-pyzmq=${PYTHON3_PYZMQ_VERSION} \
     indy-plenum=${INDY_PLENUM_VERSION} \
     indy-node=${INDY_NODE_VERSION}
@@ -70,6 +65,17 @@ COPY . .
 RUN if [ "$SOVRIN_INSTALL" = "yes" ]; then \
     dpkg -i "sovrin_${SOVRIN_VERSION}_amd64.deb"; \
     fi
+
+ARG SOVTOKEN_VERSION
+ARG SOVTOKENFEES_VERSION
+ENV SOVTOKEN_VERSION=${SOVTOKEN_VERSION:-1.0.8~dev153}
+ENV SOVTOKENFEES_VERSION=${SOVTOKENFEES_VERSION:-${SOVTOKEN_VERSION}}
+RUN \
+    set -ex; \
+    apt-get update && apt-get install -y \
+    sovtoken=${SOVTOKEN_VERSION} \
+    sovtokenfees=${SOVTOKENFEES_VERSION}; \
+    rm -rf /var/lib/apt/lists/*; 
 
 # repo cleanup
 RUN sed '/deb https:\/\/repo.sovrin.org\/sdk\/deb xenial ${NODE_REPO_COMPONENT}/d' /etc/apt/sources.list \

@@ -18,8 +18,7 @@ services:
       context: ./node
       args:
         - NODE_REPO_COMPONENT
-        - LIBINDY_CRYPTO_VERSION
-        - PYTHON3_LIBINDY_CRYPTO_VERSION
+        - URSA_VERSION
         - PYTHON3_PYZMQ_VERSION
         - INDY_PLENUM_VERSION
         - INDY_NODE_VERSION
