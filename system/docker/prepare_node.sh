@@ -37,7 +37,7 @@ image_repository="hyperledger/indy-test-automation"
 docker_compose_image_name="${image_repository}:docker-compose"
 
 node_env_variables=" \
-    CLIENT_REPO_COMPONENT \
+    NODE_REPO_COMPONENT \
     INDY_PLENUM_VERSION \
     INDY_NODE_VERSION \
     SOVRIN_INSTALL \
