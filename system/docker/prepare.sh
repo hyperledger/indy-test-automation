@@ -94,15 +94,15 @@ docker run -t --rm \
     -e "IMAGE_REPOSITORY=$image_repository" \
     -e u_id="$user_id" \
     -e NODE_REPO_COMPONENT \
-    -e LIBINDY_CRYPTO_VERSION \
-    -e PYTHON3_LIBINDY_CRYPTO_VERSION \
     -e PYTHON3_PYZMQ_VERSION \
     -e INDY_PLENUM_VERSION \
     -e INDY_NODE_VERSION \
     -e TOKEN_PLUGINS_INSTALL \
     -e SOVRIN_VERSION \
+    -e SOVRIN_INSTALL \
     -e SOVTOKEN_VERSION \
     -e SOVTOKENFEES_VERSION \
+    -e URSA_VERSION \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build node
 
 docker images "$image_repository"
