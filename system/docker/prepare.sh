@@ -38,16 +38,20 @@ docker_compose_image_name="${image_repository}:docker-compose"
 
 node_env_variables=" \
     NODE_REPO_COMPONENT \
-    LIBINDY_VERSION \
-    LIBSOVTOKEN_INSTALL \
-    LIBSOVTOKEN_VERSION \
+    INDY_PLENUM_VERSION \
+    INDY_NODE_VERSION \
+    SOVRIN_INSTALL \
+    SOVRIN_VERSION \
+    SOVTOKEN_VERSION \
+    SOVTOKENFEES_VERSION \
+    TOKEN_PLUGINS_INSTALL \
+    URSA_VERSION \
 "
 client_env_variables=" \
     CLIENT_REPO_COMPONENT \
     LIBINDY_CRYPTO_VERSION \
-    PYTHON3_LIBINDY_CRYPTO_VERSION \
-    INDY_PLENUM_VERSION \
-    INDY_NODE_VERSION \
+    LIBSOVTOKEN_INSTALL \
+    LIBSOVTOKEN_VERSION \
 "
 
 echo "Docker version..."
