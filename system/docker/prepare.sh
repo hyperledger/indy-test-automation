@@ -5,6 +5,7 @@ set -o pipefail
 #set -o nounset
 set -o xtrace
 
+export MSYS_NO_PATHCONV=1
 DEF_TEST_NETWORK_NAME="indy-test-automation-network"
 # TODO limit default subnet range to reduce risk of overlapping with system resources
 DEF_TEST_NETWORK_SUBNET="10.0.0.0/24"
@@ -29,9 +30,13 @@ test_network_subnet="${2:-$DEF_TEST_NETWORK_SUBNET}"
 user_id=$(id -u)
 repo_path=$(git rev-parse --show-toplevel)
 docker_routine_path="$repo_path/system/docker"
-# Set docker_socket_path prefix according to OS
+
+# Set the following variables based on the OS:
+# - docker_socket_path
+# - docker_socket_mount_path
+# - docker_socket_stat_path
 . set_docker_socket_path.sh
-docker_socket_mount_path="/var/run/docker.sock"
+
 workdir_path="/tmp/indy-test-automation"
 
 image_repository="hyperledger/indy-test-automation"
@@ -85,7 +90,7 @@ docker build -t "$docker_compose_image_name" "$docker_routine_path/docker-compos
 
 # 2. build client image
 # docker run -t --rm \
-#     --group-add $(stat -c '%g' "$docker_socket_mount_path") \
+#     --group-add $(stat -c '%g' "$docker_socket_stat_path") \
 #     -v "$docker_socket_path:"$docker_socket_mount_path \
 #     -v "$repo_path:$workdir_path" \
 #     -w "$workdir_path" \
@@ -99,7 +104,7 @@ docker build -t "$docker_compose_image_name" "$docker_routine_path/docker-compos
 #     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build client
 
 docker run -t --rm \
-    --group-add $(stat -c '%g' "$docker_socket_mount_path") \
+    --group-add $(stat -c '%g' "$docker_socket_stat_path") \
     -v "$docker_socket_path:"$docker_socket_mount_path \
     -v "$repo_path:$workdir_path" \
     -w "$workdir_path" \
@@ -112,7 +117,7 @@ docker run -t --rm \
 
 # 3. build node image
 # docker run -t --rm \
-#     --group-add $(stat -c '%g' "$docker_socket_mount_path") \
+#     --group-add $(stat -c '%g' "$docker_socket_stat_path") \
 #     -v "$docker_socket_path:"$docker_socket_mount_path \
 #     -v "$repo_path:$workdir_path" \
 #     -w "$workdir_path" \
@@ -132,7 +137,7 @@ docker run -t --rm \
 #     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build node
 
 docker run -t --rm \
-    --group-add $(stat -c '%g' "$docker_socket_mount_path") \
+    --group-add $(stat -c '%g' "$docker_socket_stat_path") \
     -v "$docker_socket_path:"$docker_socket_mount_path \
     -v "$repo_path:$workdir_path" \
     -w "$workdir_path" \

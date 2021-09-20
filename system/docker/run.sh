@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export MSYS_NO_PATHCONV=1
 DEF_TEST_TARGET="system/indy-node-tests"
 DEF_PYTEST_ARGS="-l -v"
 DEF_TEST_NETWORK_NAME="indy-test-automation-network"
@@ -28,9 +29,13 @@ test_network_name="${3:-$DEF_TEST_NETWORK_NAME}"
 repo_path=$(git rev-parse --show-toplevel)
 user_id=$(id -u)
 group_id=$(id -g)
-# Set docker_socket_path prefix according to OS
+
+# Set the following variables based on the OS:
+# - docker_socket_path
+# - docker_socket_mount_path
+# - docker_socket_stat_path
 . set_docker_socket_path.sh
-docker_socket_mount_path="/var/run/docker.sock"
+
 workdir_path="/tmp/indy-test-automation"
 
 image_repository="hyperledger/indy-test-automation"
@@ -68,10 +73,22 @@ fi
 ### TODO: Testing
 ##
 #
+# docker run $docker_opts --rm --name "$client_container_name" \
+#     --network "${test_network_name}" \
+#     --ip "10.0.0.99" \
+#     --group-add $(stat -c '%g' "$docker_socket_stat_path") \
+#     -v "$docker_socket_path:"$docker_socket_mount_path \
+#     -v "$repo_path:$workdir_path" \
+#     -v "/tmp:/tmp" \
+#     -u "$user_id:$group_id" \
+#     -w "$workdir_path" \
+#     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
+#     "$client_image_name" /bin/bash -c "$run_command"
+
 docker run $docker_opts --rm --name "$client_container_name" \
     --network "${test_network_name}" \
     --ip "10.0.0.99" \
-    --group-add $(stat -c '%g' "$docker_socket_mount_path") \
+    --group-add $(stat -c '%g' "$docker_socket_stat_path") \
     -v "$docker_socket_path:"$docker_socket_mount_path \
     -v "$repo_path:$workdir_path" \
     -v "/tmp:/tmp" \
