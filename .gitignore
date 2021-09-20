@@ -1,1 +1,3 @@
 *.swp
+Pipfile
+*report.xml

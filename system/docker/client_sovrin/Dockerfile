@@ -51,15 +51,15 @@ RUN apt-get install -y \
 
 # TODO: Move to Sovrin tests
 # sovrin dependencies
-# ARG LIBSOVTOKEN_INSTALL
-# ARG LIBSOVTOKEN_VERSION
-# ENV LIBSOVTOKEN_INSTALL=$LIBSOVTOKEN_INSTALL
-# ENV LIBSOVTOKEN_VERSION=${LIBSOVTOKEN_VERSION:-0.10.0~74}
-# RUN if [ "$LIBSOVTOKEN_INSTALL" = "yes" ]; then \
-#     apt-get update && apt-get install -y \
-#     libsovtoken=${LIBSOVTOKEN_VERSION}; \
-#     rm -rf /var/lib/apt/lists/*; \
-#     fi
+ARG LIBSOVTOKEN_INSTALL
+ARG LIBSOVTOKEN_VERSION
+ENV LIBSOVTOKEN_INSTALL=$LIBSOVTOKEN_INSTALL
+ENV LIBSOVTOKEN_VERSION=${LIBSOVTOKEN_VERSION:-0.10.0~74}
+RUN if [ "$LIBSOVTOKEN_INSTALL" = "yes" ]; then \
+    apt-get update && apt-get install -y \
+    libsovtoken=${LIBSOVTOKEN_VERSION}; \
+    rm -rf /var/lib/apt/lists/*; \
+    fi
 
 # repo cleanup
 RUN add-apt-repository --remove "deb https://repo.sovrin.org/sdk/deb xenial ${CLIENT_REPO_COMPONENT}" \

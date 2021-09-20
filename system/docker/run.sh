@@ -28,7 +28,9 @@ test_network_name="${3:-$DEF_TEST_NETWORK_NAME}"
 repo_path=$(git rev-parse --show-toplevel)
 user_id=$(id -u)
 group_id=$(id -g)
-docker_socket_path="/var/run/docker.sock"
+# Set docker_socket_path prefix according to OS
+. set_docker_socket_path.sh
+docker_socket_mount_path="/var/run/docker.sock"
 workdir_path="/tmp/indy-test-automation"
 
 image_repository="hyperledger/indy-test-automation"
@@ -63,11 +65,14 @@ else
 fi
 
 # TODO pass specified env variables
+### TODO: Testing
+##
+#
 docker run $docker_opts --rm --name "$client_container_name" \
     --network "${test_network_name}" \
     --ip "10.0.0.99" \
-    --group-add $(stat -c '%g' "$docker_socket_path") \
-    -v "$docker_socket_path:"$docker_socket_path \
+    --group-add $(stat -c '%g' "$docker_socket_mount_path") \
+    -v "$docker_socket_path:"$docker_socket_mount_path \
     -v "$repo_path:$workdir_path" \
     -v "/tmp:/tmp" \
     -u "$user_id:$group_id" \

@@ -20,7 +20,7 @@ The [Dockerfile](node/Dockerfile) describes environment of nodes inside a pool a
 
 #### Arguments
 
-- `INDY_NODE_REPO_COMPONENT`: Indy Node debian repo component.
+- `NODE_REPO_COMPONENT`: Indy Node debian repo component.
 - `LIBINDY_CRYPTO_VERSION`: version of the Indy Node debian package.
 - `PYTHON3_LIBINDY_CRYPTO_VERSION`: version of the Indy Node debian package.
 - `INDY_PLENUM_VERSION`: version of the Indy Node debian package.
@@ -71,9 +71,10 @@ Prepare docker environment
 Prepare docker environment for specific versions of packages
 
 ```bash
-INDY_NODE_REPO_COMPONENT=stable INDY_NODE_VERSION=1.8.1 INDY_PLENUM_VERSION=1.8.1 LIBINDY_REPO_COMPONENT=stable LIBINDY_VERSION=1.9.0 ./prepare.sh
+CLIENT_REPO_COMPONENT=stable NODE_REPO_COMPONENT=stable URSA_VERSION="0.3.2-2" INDY_NODE_VERSION=1.12.4 INDY_PLENUM_VERSION=1.12.4 LIBINDY_REPO_COMPONENT=stable LIBINDY_VERSION="1.13.0~1420" PYTHON3_PYZMQ_VERSION=18.1.0 ./prepare.sh
 ```
 
+> Note: Not supported anymore
 Prepare docker environment with plugins installed
 
 ```bash
