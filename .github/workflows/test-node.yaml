@@ -112,13 +112,13 @@ jobs:
         uses: docker/setup-buildx-action@v1
 
       - name: Build and push image
-        if: steps.cache-image.outputs.cache-hit != 'true'
+        # if: steps.cache-image.outputs.cache-hit != 'true'
         uses: docker/build-push-action@v2
         with:
           context: ./system/docker/node
           # file: /Dockerfile
           no-cache: true
-          # push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.prep.outputs.tags }}
           labels: |
             org.opencontainers.image.source=${{ github.event.repository.html_url }}
@@ -178,13 +178,13 @@ jobs:
         uses: docker/setup-buildx-action@v1
 
       - name: Build and push image
-        if: steps.cache-image.outputs.cache-hit != 'true'
+        # if: steps.cache-image.outputs.cache-hit != 'true'
         uses: docker/build-push-action@v2
         with:
           context: ./system/docker/client
           # file: /Dockerfile
           no-cache: true
-          # push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.prep.outputs.tags }}
           labels: |
             org.opencontainers.image.source=${{ github.event.repository.html_url }}
