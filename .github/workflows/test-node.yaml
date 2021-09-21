@@ -199,3 +199,23 @@ jobs:
         run: |
           mkdir -p ${GITHUB_WORKSPACE}/cache
           touch ${GITHUB_WORKSPACE}/cache/${{ env.CACHE_KEY_CLIENT }}
+ghcr.io/${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
+
+  node-tests:
+    name: Node Tests
+    needs: [ workflow-setup, node-image, client-image]
+    runs-on: ubuntu-latest
+    env: 
+      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v2
+
+      - name: run tests
+        run: |
+          DEF_TEST_NETWORK_SUBNET="10.0.0.0/24"
+          DEF_TEST_NETWORK_NAME="indy-test-automation-network"
+          docker network create --subnet="$DEF_TEST_NETWORK_SUBNET" "$DEF_TEST_NETWORK_NAME"
+          cd ./system/docker
+          ./run.sh system/indy-node-tests/test_ledger.py "-l -v --junit-xml=report.xml -k test_send_and_get_nym_positive" indy-test-automation-network ghcr.io/${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}

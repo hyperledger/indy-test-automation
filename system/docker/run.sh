@@ -4,6 +4,7 @@ export MSYS_NO_PATHCONV=1
 DEF_TEST_TARGET="system/indy-node-tests"
 DEF_PYTEST_ARGS="-l -v"
 DEF_TEST_NETWORK_NAME="indy-test-automation-network"
+IMAGE_REPOSITORY="hyperledger/indy-test-automation"
 
 function usage {
   echo "\
@@ -38,7 +39,7 @@ group_id=$(id -g)
 
 workdir_path="/tmp/indy-test-automation"
 
-image_repository="hyperledger/indy-test-automation"
+image_repository="${4:-$IMAGE_REPOSITORY}"
 client_image_name="${image_repository}:client"
 client_container_name="indy-test-automation-client"
 
