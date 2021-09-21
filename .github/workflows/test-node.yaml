@@ -40,7 +40,7 @@ jobs:
         id: cache
         run: |
           echo "::set-output name=CACHE_KEY_NODE::${{ hashFiles('./system/docker/node/Dockerfile') }}"
-          echo "::set-output name=CACHE_KEY_CLIENT::${{ hashFiles('./system/docker/client/Dockerfil4') }}"
+          echo "::set-output name=CACHE_KEY_CLIENT::${{ hashFiles('./system/docker/client/Dockerfile') }}"
 
       # - name: Set outputs
       #   id: cache
