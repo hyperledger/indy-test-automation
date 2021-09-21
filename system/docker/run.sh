@@ -33,7 +33,7 @@ group_id=$(id -g)
 # Set the following variables based on the OS:
 # - docker_socket_path
 # - docker_socket_mount_path
-# - docker_socket_stat_path
+# - $docker_socket_user_group
 . set_docker_socket_path.sh
 
 workdir_path="/tmp/indy-test-automation"
@@ -88,7 +88,7 @@ fi
 docker run $docker_opts --rm --name "$client_container_name" \
     --network "${test_network_name}" \
     --ip "10.0.0.99" \
-    --group-add $(stat -c '%g' "$docker_socket_stat_path") \
+    --group-add $docker_socket_user_group \
     -v "$docker_socket_path:"$docker_socket_mount_path \
     -v "$repo_path:$workdir_path" \
     -v "/tmp:/tmp" \

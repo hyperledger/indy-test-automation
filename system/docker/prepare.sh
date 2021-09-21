@@ -34,7 +34,7 @@ docker_routine_path="$repo_path/system/docker"
 # Set the following variables based on the OS:
 # - docker_socket_path
 # - docker_socket_mount_path
-# - docker_socket_stat_path
+# - $docker_socket_user_group
 . set_docker_socket_path.sh
 
 workdir_path="/tmp/indy-test-automation"
@@ -104,7 +104,7 @@ docker build -t "$docker_compose_image_name" "$docker_routine_path/docker-compos
 #     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build client
 
 docker run -t --rm \
-    --group-add $(stat -c '%g' "$docker_socket_stat_path") \
+    --group-add $docker_socket_user_group \
     -v "$docker_socket_path:"$docker_socket_mount_path \
     -v "$repo_path:$workdir_path" \
     -w "$workdir_path" \
@@ -137,7 +137,7 @@ docker run -t --rm \
 #     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build node
 
 docker run -t --rm \
-    --group-add $(stat -c '%g' "$docker_socket_stat_path") \
+    --group-add $docker_socket_user_group \
     -v "$docker_socket_path:"$docker_socket_mount_path \
     -v "$repo_path:$workdir_path" \
     -w "$workdir_path" \
@@ -150,7 +150,6 @@ docker run -t --rm \
     -e INDY_NODE_VERSION \
     -e URSA_VERSION \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build node
-
 
 docker images "$image_repository"
 
