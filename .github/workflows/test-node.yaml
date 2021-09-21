@@ -1,0 +1,132 @@
+name: test-node
+on:
+  push:
+    branches:
+      - local-test-env
+
+  pull_request:
+    branches:
+      - local-test-env
+
+jobs:
+  workflow-setup:
+    name: Initialize Workflow
+    runs-on: ubuntu-latest
+    outputs:
+      # CACHE_KEY_BUILD: ${{ steps.cache.outputs.CACHE_KEY_BUILD }}
+      # CACHE_KEY_LINT: ${{ steps.cache.outputs.CACHE_KEY_LINT }}
+      # UBUNTU_VERSION: ${{ steps.cache.outputs.UBUNTU_VERSION }}
+      # Expose the lowercase version of the GitHub repository name
+      # to all subsequent jobs that reference image repositories
+      # as the push and pull operations require the URL of the repository
+      # to be in lowercase.
+      GITHUB_REPOSITORY_NAME: ${{ steps.repository-name.outputs.lowercase }}
+      # GITHUB_REF: ${{ steps.cache.outputs.GITHUB_REF }}
+      # distribution: ${{ steps.cache.outputs.distribution }}
+      # isDev: ${{ steps.build-flags.outputs.isDev }}
+      # isRC: ${{ steps.build-flags.outputs.isRC }}
+      # publish: ${{ steps.build-flags.outputs.publish }}
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v2
+
+      - name: Convert the GitHub repository name to lowercase
+        id: repository-name
+        uses: ASzc/change-string-case-action@v1
+        with:
+          string: ${{ github.repository }}
+
+      # - name: Set outputs
+      #   id: cache
+      #   run: |
+      #     # Set variables according to version of ubuntu
+      #     if [[ "${{github.base_ref}}" == "master" || "${{github.ref}}" == "refs/heads/master" ]]; then
+      #       echo "::set-output name=CACHE_KEY_BUILD::${{ hashFiles('.github/workflows/build/Dockerfile.ubuntu-1604') }}"
+      #       echo "::set-output name=CACHE_KEY_LINT::${{ hashFiles('.github/workflows/lint/Dockerfile.ubuntu-1604') }}"
+      #       echo "::set-output name=UBUNTU_VERSION::ubuntu-1604"
+      #       echo "::set-output name=distribution::xenial"
+      #     fi
+      #     if [[ "${{github.base_ref}}" == "ubuntu-20.04-upgrade" || "${{github.ref}}" == "refs/heads/ubuntu-20.04-upgrade" ]]; then
+      #       echo "::set-output name=CACHE_KEY_BUILD::${{ hashFiles('.github/workflows/build/Dockerfile.ubuntu-2004') }}"
+      #       echo "::set-output name=CACHE_KEY_LINT::${{ hashFiles('.github/workflows/lint/Dockerfile.ubuntu-2004') }}"
+      #       echo "::set-output name=UBUNTU_VERSION::ubuntu-2004"
+      #       echo "::set-output name=distribution::focal"
+      #     fi
+     
+
+          # if [[ "${{github.base_ref}}" == 'master' || "${{github.ref}}" == 'refs/heads/master' || "${{github.base_ref}}" == 'main' || "${{github.ref}}" == 'refs/heads/main' ]]; then
+          #   echo "::set-output name=GITHUB_REF::main"
+          # elif [[ "${{github.base_ref}}" == 'release*' || "${{github.ref}}" == 'refs/heads/release*' ]]; then
+          #   echo "::set-output name=GITHUB_REF::rc"
+          # elif [[ "${{github.base_ref}}" == 'stable' || "${{github.ref}}" == 'refs/heads/stable' ]]; then
+          #   echo "::set-output name=GITHUB_REF::stable"
+          # else
+          #   echo "::set-output name=GITHUB_REF::dev"
+          # fi
+
+
+  node-image:
+    name: Create Node Image
+    needs: workflow-setup
+    runs-on: ubuntu-latest
+    env: 
+      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v2
+
+      # - name: Try load from cache
+      #   id: cache-image
+      #   uses: actions/cache@v2
+      #   with:
+      #     path: ${GITHUB_WORKSPACE}/cache
+      #     key: ${{ env.CACHE_KEY_BUILD}}
+
+      - name: Prepare image labels and tags
+        # if: steps.cache-image.outputs.cache-hit != 'true'
+        id: prep
+        shell: bash
+        run: |
+          DOCKER_IMAGE=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/node
+          TAGS="${DOCKER_IMAGE}:latest"
+          echo ::set-output name=tags::${TAGS}
+          echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+      - name: Log into the GitHub Container Registry
+        # if: steps.cache-image.outputs.cache-hit != 'true'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        # if: steps.cache-image.outputs.cache-hit != 'true'
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and push image
+        # if: steps.cache-image.outputs.cache-hit != 'true'
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./system/docker/node/Dockerfile
+          no-cache: true
+          # push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.prep.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.created=${{ steps.prep.outputs.created }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            NODE_REPO_COMPONENT="stable"
+            URSA_VERSION="0.3.2-2"
+            PYTHON3_PYZMQ_VERSION="18.1.0"
+            INDY_PLENUM_VERSION="1.12.4"
+            INDY_NODE_VERSION="1.12.4"
+
+      # - name: Touch Cache
+      #   if: steps.cache-image.outputs.cache-hit != 'true'
+      #   run: |
+      #     mkdir -p ${GITHUB_WORKSPACE}/cache
+      #     touch ${GITHUB_WORKSPACE}/cache/${{ env.CACHE_KEY_BUILD }}
+
