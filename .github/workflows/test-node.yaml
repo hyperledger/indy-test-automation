@@ -199,7 +199,6 @@ jobs:
         run: |
           mkdir -p ${GITHUB_WORKSPACE}/cache
           touch ${GITHUB_WORKSPACE}/cache/${{ env.CACHE_KEY_CLIENT }}
-ghcr.io/${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
 
   node-tests:
     name: Node Tests
