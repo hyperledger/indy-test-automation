@@ -13,8 +13,8 @@ jobs:
     name: Initialize Workflow
     runs-on: ubuntu-latest
     outputs:
-      # CACHE_KEY_BUILD: ${{ steps.cache.outputs.CACHE_KEY_BUILD }}
-      # CACHE_KEY_LINT: ${{ steps.cache.outputs.CACHE_KEY_LINT }}
+      CACHE_KEY_NODE: ${{ steps.cache.outputs.CACHE_KEY_NODE }}
+      CACHE_KEY_CLIENT: ${{ steps.cache.outputs.CACHE_KEY_CLIENT }}
       # UBUNTU_VERSION: ${{ steps.cache.outputs.UBUNTU_VERSION }}
       # Expose the lowercase version of the GitHub repository name
       # to all subsequent jobs that reference image repositories
@@ -35,6 +35,12 @@ jobs:
         uses: ASzc/change-string-case-action@v1
         with:
           string: ${{ github.repository }}
+
+      - name: Set outputs
+        id: cache
+        run: |
+        echo "::set-output name=CACHE_KEY_NODE::${{ hashFiles('./system/docker/node/Dockerfile') }}"
+        echo "::set-output name=CACHE_KEY_CLIENT::${{ hashFiles('./system/docker/client/Dockerfil4') }}"
 
       # - name: Set outputs
       #   id: cache
@@ -70,20 +76,21 @@ jobs:
     needs: workflow-setup
     runs-on: ubuntu-latest
     env: 
+      CACHE_KEY_NODE: ${{ needs.workflow-setup.outputs.CACHE_KEY_NODE }}
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
     steps:
       - name: Git checkout
         uses: actions/checkout@v2
 
-      # - name: Try load from cache
-      #   id: cache-image
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: ${GITHUB_WORKSPACE}/cache
-      #     key: ${{ env.CACHE_KEY_BUILD}}
+      - name: Try load from cache
+        id: cache-image
+        uses: actions/cache@v2
+        with:
+          path: ${GITHUB_WORKSPACE}/cache
+          key: ${{ env.CACHE_KEY_NODE}}
 
       - name: Prepare image labels and tags
-        # if: steps.cache-image.outputs.cache-hit != 'true'
+        if: steps.cache-image.outputs.cache-hit != 'true'
         id: prep
         shell: bash
         run: |
@@ -93,7 +100,7 @@ jobs:
           echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
       - name: Log into the GitHub Container Registry
-        # if: steps.cache-image.outputs.cache-hit != 'true'
+        if: steps.cache-image.outputs.cache-hit != 'true'
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
@@ -101,11 +108,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        # if: steps.cache-image.outputs.cache-hit != 'true'
+        if: steps.cache-image.outputs.cache-hit != 'true'
         uses: docker/setup-buildx-action@v1
 
       - name: Build and push image
-        # if: steps.cache-image.outputs.cache-hit != 'true'
+        if: steps.cache-image.outputs.cache-hit != 'true'
         uses: docker/build-push-action@v2
         with:
           context: ./system/docker/node
@@ -124,9 +131,71 @@ jobs:
             INDY_PLENUM_VERSION=1.12.4
             INDY_NODE_VERSION=1.12.4
 
-      # - name: Touch Cache
-      #   if: steps.cache-image.outputs.cache-hit != 'true'
-      #   run: |
-      #     mkdir -p ${GITHUB_WORKSPACE}/cache
-      #     touch ${GITHUB_WORKSPACE}/cache/${{ env.CACHE_KEY_BUILD }}
+      - name: Touch Cache
+        if: steps.cache-image.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ${GITHUB_WORKSPACE}/cache
+          touch ${GITHUB_WORKSPACE}/cache/${{ env.CACHE_KEY_NODE }}
 
+  client-image:
+    name: Create Client Image
+    needs: workflow-setup
+    runs-on: ubuntu-latest
+    env: 
+      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v2
+
+      - name: Try load from cache
+        id: cache-image
+        uses: actions/cache@v2
+        with:
+          path: ${GITHUB_WORKSPACE}/cache
+          key: ${{ env.CACHE_KEY_CLIENT}}
+
+      - name: Prepare image labels and tags
+        if: steps.cache-image.outputs.cache-hit != 'true'
+        id: prep
+        shell: bash
+        run: |
+          DOCKER_IMAGE=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/client
+          TAGS="${DOCKER_IMAGE}:latest"
+          echo ::set-output name=tags::${TAGS}
+          echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+      - name: Log into the GitHub Container Registry
+        if: steps.cache-image.outputs.cache-hit != 'true'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: steps.cache-image.outputs.cache-hit != 'true'
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and push image
+        if: steps.cache-image.outputs.cache-hit != 'true'
+        uses: docker/build-push-action@v2
+        with:
+          context: ./system/docker/client
+          # file: /Dockerfile
+          no-cache: true
+          # push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.prep.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.created=${{ steps.prep.outputs.created }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            CLIENT_REPO_COMPONENT=stable
+            LIBINDY_VERSION=1.13.0~1420
+                    
+      - name: Touch Cache
+        if: steps.cache-image.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ${GITHUB_WORKSPACE}/cache
+          touch ${GITHUB_WORKSPACE}/cache/${{ env.CACHE_KEY_CLIENT }}
