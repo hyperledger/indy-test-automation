@@ -108,8 +108,8 @@ jobs:
         # if: steps.cache-image.outputs.cache-hit != 'true'
         uses: docker/build-push-action@v2
         with:
-          context: .
-          file: ./system/docker/node/Dockerfile
+          context: ./system/docker/node
+          # file: /Dockerfile
           no-cache: true
           # push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.prep.outputs.tags }}
