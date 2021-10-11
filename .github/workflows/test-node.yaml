@@ -83,7 +83,7 @@ jobs:
           git clone https://github.com/teracyhq/docker-files.git
           cd docker-files
       
-       - name: Prepare image labels and tags
+      - name: Prepare image labels and tags
         # if: steps.cache-image.outputs.cache-hit != 'true'
         id: prep
         shell: bash
