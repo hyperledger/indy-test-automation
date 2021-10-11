@@ -80,7 +80,7 @@ jobs:
       - name: Git checkout
         uses: actions/checkout@v2
         with:
-          repository: https://github.com/teracyhq/docker-files
+          repository: clone https://github.com/teracyhq/docker-files.git
       
        - name: Prepare image labels and tags
         # if: steps.cache-image.outputs.cache-hit != 'true'
