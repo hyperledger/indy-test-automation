@@ -1,4 +1,6 @@
-FROM udosson/ubuntu:16.04-dind-latest
+ARG GITHUB_REPOSITORY_NAME
+FROM ghcr.io/${GITHUB_REPOSITORY_NAME}/ubuntu:16.04-dind
+
 
 # generally useful packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
