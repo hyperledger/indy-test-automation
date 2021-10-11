@@ -1,4 +1,4 @@
-FROM teracy/ubuntu:16.04-dind-latest
+FROM udosson/ubuntu:16.04-dind-latest
 
 # generally useful packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -35,8 +35,8 @@ ENV CLIENT_REPO_COMPONENT=${CLIENT_REPO_COMPONENT}
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
     && add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial ${CLIENT_REPO_COMPONENT}" \
-    && echo "deb http://security.ubuntu.com/ubuntu bionic-security main"  >> /etc/apt/sources.list \
-    && echo "deb https://repo.sovrin.org/sdk/deb bionic master" >> /etc/apt/sources.list \
+    && add-apt-repository "deb http://security.ubuntu.com/ubuntu bionic-security main"  \
+    && add-apt-repository "deb https://repo.sovrin.org/sdk/deb bionic master" \
     && apt-get update
 
 # indy dependencies
