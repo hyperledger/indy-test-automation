@@ -81,13 +81,6 @@ jobs:
         shell: bash
         run: |
           git clone https://github.com/teracyhq/docker-files.git
-
-      - name: Try load from cache
-        id: cache-image
-        uses: actions/cache@v2
-        with:
-          path: ${GITHUB_WORKSPACE}/cache
-          key: ${{ env.CACHE_KEY_CLIENT}}
              
       - name: Prepare image labels and tags
         # if: steps.cache-image.outputs.cache-hit != 'true'
