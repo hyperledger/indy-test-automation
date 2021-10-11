@@ -88,7 +88,7 @@ jobs:
         id: prep
         shell: bash
         run: |
-          DOCKER_IMAGE=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/ubuntu:16.04-dind
+          DOCKER_IMAGE=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/ubuntu-16.04-dind
           TAGS="${DOCKER_IMAGE}:latest"
           echo ::set-output name=tags::${TAGS}
           echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
