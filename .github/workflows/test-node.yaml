@@ -81,8 +81,7 @@ jobs:
         shell: bash
         run: |
           git clone https://github.com/teracyhq/docker-files.git
-          cd docker-files
-      
+             
       - name: Prepare image labels and tags
         # if: steps.cache-image.outputs.cache-hit != 'true'
         id: prep
@@ -109,7 +108,7 @@ jobs:
         # if: steps.cache-image.outputs.cache-hit != 'true'
         uses: docker/build-push-action@v2
         with:
-          context: ./ubuntu/base
+          context: ./docker-files/ubuntu/base
           # file: /Dockerfile
           no-cache: true
           push: ${{ github.event_name != 'pull_request' }}
