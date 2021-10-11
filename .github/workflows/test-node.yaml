@@ -78,9 +78,10 @@ jobs:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
     steps:
       - name: Git checkout
-        uses: actions/checkout@v2
-        with:
-          repository: clone https://github.com/teracyhq/docker-files.git
+        shell: bash
+        run: |
+          git clone https://github.com/teracyhq/docker-files.git
+          cd docker-files
       
        - name: Prepare image labels and tags
         # if: steps.cache-image.outputs.cache-hit != 'true'
