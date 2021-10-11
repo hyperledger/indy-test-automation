@@ -81,6 +81,13 @@ jobs:
         shell: bash
         run: |
           git clone https://github.com/teracyhq/docker-files.git
+
+      - name: Try load from cache
+        id: cache-image
+        uses: actions/cache@v2
+        with:
+          path: ${GITHUB_WORKSPACE}/cache
+          key: ${{ env.CACHE_KEY_CLIENT}}
              
       - name: Prepare image labels and tags
         # if: steps.cache-image.outputs.cache-hit != 'true'
@@ -271,4 +278,4 @@ jobs:
           DEF_TEST_NETWORK_NAME="indy-test-automation-network"
           docker network create --subnet="$DEF_TEST_NETWORK_SUBNET" "$DEF_TEST_NETWORK_NAME"
           cd ./system/docker
-          ./run.sh system/indy-node-tests/test_ledger.py "-l -v --junit-xml=report.xml -k test_send_and_get_nym_positive" indy-test-automation-network ghcr.io/${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}/
+          sudo ./run.sh system/indy-node-tests/test_ledger.py "-l -v --junit-xml=report.xml -k test_send_and_get_nym_positive" indy-test-automation-network ghcr.io/${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}/
