@@ -48,7 +48,7 @@ client_container_name="indy-test-automation-client"
 
 command_setup="
     set -ex
-    sudo -H pip3 install --user pipenv
+    pip3 install --user pipenv
     pipenv --three
     # We need this because pipenv installs the latest version of pip by default.
     # The latest version of pip requires the version in pypi exactly match the version in package's setup.py file.
@@ -90,6 +90,19 @@ fi
 #     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
 #     "$client_image_name" /bin/bash -c "$run_command"
 
+# docker run $docker_opts --rm --name "$client_container_name" \
+#     --network "${test_network_name}" \
+#     --ip "10.0.0.99" \
+#     --group-add $docker_socket_user_group \
+#     -v "$docker_socket_path:"$docker_socket_mount_path \
+#     -v "$repo_path:$workdir_path" \
+#     -v "/tmp:/tmp" \
+#     -u "$user_id:$group_id" \
+#     -w "$workdir_path" \
+#     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
+#     -e "INDY_SYSTEM_TESTS_DOCKER_NAME=$node_image_name" \
+#     "$client_image_name" /bin/bash -c "$run_command"
+
 docker run $docker_opts --rm --name "$client_container_name" \
     --network "${test_network_name}" \
     --ip "10.0.0.99" \
@@ -97,7 +110,7 @@ docker run $docker_opts --rm --name "$client_container_name" \
     -v "$docker_socket_path:"$docker_socket_mount_path \
     -v "$repo_path:$workdir_path" \
     -v "/tmp:/tmp" \
-    -u "$user_id:$group_id" \
+    -u "1000:$group_id" \
     -w "$workdir_path" \
     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
     -e "INDY_SYSTEM_TESTS_DOCKER_NAME=$node_image_name" \
