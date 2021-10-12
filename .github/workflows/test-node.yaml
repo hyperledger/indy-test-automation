@@ -272,7 +272,7 @@ jobs:
           DEF_TEST_NETWORK_NAME="indy-test-automation-network"
           docker network create --subnet="$DEF_TEST_NETWORK_SUBNET" "$DEF_TEST_NETWORK_NAME"
           cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+          sudo ./run.sh system/indy-node-tests-only/* "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
       - name: Publish Test Report
         if: success() || failure()
