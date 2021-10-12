@@ -41,6 +41,7 @@ workdir_path="/tmp/indy-test-automation"
 
 image_repository="${4:-$IMAGE_REPOSITORY}"
 client_image_name="${image_repository}client"
+node_image_name="${image_repository}node"
 client_container_name="indy-test-automation-client"
 
 
@@ -99,4 +100,5 @@ docker run $docker_opts --rm --name "$client_container_name" \
     -u "$user_id:$group_id" \
     -w "$workdir_path" \
     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
+    -e "INDY_SYSTEM_TESTS_DOCKER_NAME=$node_image_name"
     "$client_image_name" /bin/bash -c "$run_command"

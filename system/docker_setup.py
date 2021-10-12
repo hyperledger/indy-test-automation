@@ -18,8 +18,8 @@ logging.basicConfig(level=logging.NOTSET, format='%(asctime)s %(message)s')
 DOCKER_BUILD_CTX_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 'docker', 'node'
 )
-# DOCKER_IMAGE_NAME = os.environ.get('INDY_SYSTEM_TESTS_DOCKER_NAME', 'hyperledger/indy-test-automation:node')
-DOCKER_IMAGE_NAME = os.environ.get('INDY_SYSTEM_TESTS_DOCKER_NAME', 'ghcr.io/udosson/indy-test-automation/node')
+DOCKER_IMAGE_NAME = os.environ.get('INDY_SYSTEM_TESTS_DOCKER_NAME', 'hyperledger/indy-test-automation:node')
+# DOCKER_IMAGE_NAME = os.environ.get('INDY_SYSTEM_TESTS_DOCKER_NAME', 'ghcr.io/udosson/indy-test-automation/node')
 NETWORK_NAME = os.environ.get('INDY_SYSTEM_TESTS_NETWORK', 'indy-test-automation-network')
 # TODO limit subnet range to reduce risk of overlapping with system resources
 NETWORK_SUBNET = os.environ.get('INDY_SYSTEM_TESTS_SUBNET', '10.0.0.0/24')

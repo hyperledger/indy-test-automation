@@ -272,5 +272,3 @@ jobs:
           docker network create --subnet="$DEF_TEST_NETWORK_SUBNET" "$DEF_TEST_NETWORK_NAME"
           cd ./system/docker
           sudo ./run.sh system/indy-node-tests/test_ledger.py "-l -v --junit-xml=report.xml -k test_send_and_get_nym_positive" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
-        env: 
-          INDY_SYSTEM_TESTS_DOCKER_NAME: ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/node
