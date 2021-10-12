@@ -48,7 +48,7 @@ client_container_name="indy-test-automation-client"
 
 command_setup="
     set -ex
-    pip3 install --user pipenv
+    sudo -H pip3 install --user pipenv
     pipenv --three
     # We need this because pipenv installs the latest version of pip by default.
     # The latest version of pip requires the version in pypi exactly match the version in package's setup.py file.
