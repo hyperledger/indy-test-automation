@@ -45,7 +45,9 @@ def network_builder(network_subnet, network_name):
 
 def pool_builder(docker_build_ctx_path, node_image_name, node_name_base, network_name, nodes_num, start_from=0):
     try:
-        image = client.images.get(node_image_name)
+        #### TODO try get --> except try pull --> except try build
+        # image = client.images.get(node_image_name)
+        image = client.images.pull(node_image_name)
     except docker.errors.ImageNotFound:
         # build image from the Dockerfile
         output = []
