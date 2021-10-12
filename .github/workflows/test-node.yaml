@@ -273,3 +273,14 @@ jobs:
           docker network create --subnet="$DEF_TEST_NETWORK_SUBNET" "$DEF_TEST_NETWORK_NAME"
           cd ./system/docker
           sudo ./run.sh system/indy-node-tests-only "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+
+      - name: Publish Test Report
+        if: success() || failure()
+        uses: scacap/action-surefire-report@v1.0.7
+        continue-on-error: true
+        with:
+          check_name: Indy Node Tests
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          report_paths: "report.xml"
+
+   
