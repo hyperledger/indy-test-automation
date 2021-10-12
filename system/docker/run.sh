@@ -100,5 +100,5 @@ docker run $docker_opts --rm --name "$client_container_name" \
     -u "$user_id:$group_id" \
     -w "$workdir_path" \
     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
-    -e "INDY_SYSTEM_TESTS_DOCKER_NAME=$node_image_name"
+    -e "INDY_SYSTEM_TESTS_DOCKER_NAME=$node_image_name" \
     "$client_image_name" /bin/bash -c "$run_command"
