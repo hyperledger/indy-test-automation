@@ -262,6 +262,9 @@ jobs:
     env: 
       CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+    strategy:
+      matrix:
+        test: [ 'test_ledger.py', 'TestViewChangeSuite.py', 'TestConsensusSuite.py', 'test_state_proof.py']
     steps:
       - name: Git checkout
         uses: actions/checkout@v2
@@ -272,4 +275,4 @@ jobs:
           DEF_TEST_NETWORK_NAME="indy-test-automation-network"
           docker network create --subnet="$DEF_TEST_NETWORK_SUBNET" "$DEF_TEST_NETWORK_NAME"
           cd ./system/docker
-          sudo ./run.sh system/indy-node-tests "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+          sudo ./run.sh system/indy-node-tests/${{ matrix.test }} "-l -v --junit-xml=${{ matrix.test }}-report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
