@@ -47,7 +47,8 @@ def pool_builder(docker_build_ctx_path, node_image_name, node_name_base, network
     try:
         #### TODO try get --> except try pull --> except try build
         # image = client.images.get(node_image_name)
-        image = client.images.pull(node_image_name)
+        # image = client.images.pull(node_image_name)
+        image = client.images.pull('busybox')
     except docker.errors.ImageNotFound:
         # build image from the Dockerfile
         output = []
