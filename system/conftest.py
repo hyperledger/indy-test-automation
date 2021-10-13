@@ -24,7 +24,7 @@ def pytest_configure(config):
 
 
 def pytest_addoption(parser):
-       parser.addoption(
+    parser.addoption(
         "--gatherlogs", action='store_true', default=None,
         help="gather node logs for failed tests"
     )
