@@ -186,3 +186,6 @@
 #         print('Primary after promotion is {}'.format(primary4))
 #         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 #         await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
+
+
+docker run --rm --privileged -p 3000:3000 -p 3100:3100 -p 3200:32000 -p 4000:4000 -p 4100:4100 -p 4200:4200 ghcr.io/hyperledger/cactus-example-supply-chain-app:2021-09-08--docs-1312
