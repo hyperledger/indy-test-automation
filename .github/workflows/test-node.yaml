@@ -247,7 +247,10 @@ jobs:
           build-args: |
             CLIENT_REPO_COMPONENT=stable
             LIBINDY_VERSION=1.13.0~1420
-            GITHUB_REPOSITORY_NAME=${{ env.GITHUB_REPOSITORY_NAME }}
+            ### TODO adjust build args
+            DIND_CONTAINER_REGISTRY= ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}
+            DIND_IMAGE_NAME=indy-test-automation/ubuntu-16.04-dind
+            
                     
       - name: Touch Cache
         if: steps.cache-image.outputs.cache-hit != 'true'
@@ -266,13 +269,18 @@ jobs:
       - name: Git checkout
         uses: actions/checkout@v2
 
-      - name: run tests
+      - name: Create docker network
+          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+
+      - name: TestAuditSuite
         run: |
-          DEF_TEST_NETWORK_SUBNET="10.0.0.0/24"
-          DEF_TEST_NETWORK_NAME="indy-test-automation-network"
-          docker network create --subnet="$DEF_TEST_NETWORK_SUBNET" "$DEF_TEST_NETWORK_NAME"
           cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/* "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+          sudo ./run.sh system/indy-node-tests-only/TestAuditSuite.py "-l -v --junit-xml=TestAuditSuite-report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+
+      - name: test_freshness
+        run: |
+          cd ./system/docker
+          sudo ./run.sh system/indy-node-tests-only/test_freshness.py "-l -v --junit-xml=test_freshness-report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
       - name: Publish Test Report
         if: success() || failure()

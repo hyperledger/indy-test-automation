@@ -45,33 +45,37 @@ def network_builder(network_subnet, network_name):
 
 def pool_builder(docker_build_ctx_path, node_image_name, node_name_base, network_name, nodes_num, start_from=0):
     try:
-        #### TODO try get --> except try pull --> except try build
-        # image = client.images.get(node_image_name)
-        image = client.images.pull(node_image_name)
+        # get image from local registry
+        image = client.images.get(node_image_name)
     except docker.errors.ImageNotFound:
-        # build image from the Dockerfile
-        output = []
+        # pull image from registry
         try:
-            image, output = client.images.build(path=docker_build_ctx_path, tag=node_image_name)
-        except Exception as exc:
-            print("Failed to build docker image for Indy Node: {}".format(exc))
-            raise
-        finally:
-            print(
-                "Docker build logs ...\n:"
-                "=====================\n"
-            )
-            for line in output:
-                print(line)
+            image = client.images.pull(node_image_name)
+            image = image[0]
+        except docker.errors.ImageNotFound:
+             # build image from the Dockerfile
+            output = []
+            try:
+                image, output = client.images.build(path=docker_build_ctx_path, tag=node_image_name)
+            except Exception as exc:
+                print("Failed to build docker image for Indy Node: {}".format(exc))
+                raise
+            finally:
+                print(
+                    "Docker build logs ...\n:"
+                    "=====================\n"
+                )
+                for line in output:
+                    print(line)
 
     # enable systemd
-    client.containers.run(image[0],
+    client.containers.run(image,
                           'setup',
                           remove=True,
                           privileged=True,
                           volumes={'/': {'bind': '/host', 'mode': 'rw'}})
     # run pool containers
-    return [client.containers.run(image[0],
+    return [client.containers.run(image,
                                   name=node_name_base+str(i),
                                   detach=True,
                                   tty=True,
