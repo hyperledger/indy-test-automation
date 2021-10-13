@@ -249,7 +249,7 @@ jobs:
             LIBINDY_VERSION=1.13.0~1420
             ### TODO adjust build args
             DIND_CONTAINER_REGISTRY= ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}
-            DIND_IMAGE_NAME=indy-test-automation/ubuntu-16.04-dind
+            DIND_IMAGE_NAME=ubuntu-16.04-dind
             
                     
       - name: Touch Cache
