@@ -272,6 +272,7 @@ jobs:
         run: |
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
+      ### ERROR: https://github.com/udosson/indy-test-automation/runs/3873381852?check_suite_focus=true#step:3:578
       # - name: TestAuditSuite
       #   run: |
       #     cd ./system/docker
