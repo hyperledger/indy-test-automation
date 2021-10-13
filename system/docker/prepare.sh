@@ -71,6 +71,9 @@ node_env_variables=" \
 client_env_variables=" \
     CLIENT_REPO_COMPONENT \
     LIBINDY_CRYPTO_VERSION \
+    DIND_CONTAINER_REGISTRY \
+    DIND_IMAGE_NAME\
+
 "
 
 echo "Docker version..."
@@ -113,6 +116,8 @@ docker run -t --rm \
     -e u_id="$user_id" \
     -e CLIENT_REPO_COMPONENT \
     -e LIBINDY_VERSION \
+    -e DIND_CONTAINER_REGISTRY \
+    -e DIND_IMAGE_NAME \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build client
 
 # 3. build node image
@@ -150,6 +155,7 @@ docker run -t --rm \
     -e INDY_NODE_VERSION \
     -e URSA_VERSION \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build node
+
 
 docker images "$image_repository"
 

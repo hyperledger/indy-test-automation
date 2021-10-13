@@ -9,6 +9,8 @@ services:
         - CLIENT_REPO_COMPONENT
         - LIBINDY_VERSION
         - u_id
+        - DIND_CONTAINER_REGISTRY
+        - DIND_IMAGE_NAME
     image: ${IMAGE_REPOSITORY}:client
 
   node:
