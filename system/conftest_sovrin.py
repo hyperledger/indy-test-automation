@@ -5,15 +5,17 @@ import os
 from datetime import datetime
 from async_generator import async_generator, yield_
 
-from indy import pool, did, ledger
+from indy import pool, payment, did, ledger
 
 from .utils import (
     pool_helper, wallet_helper, default_trustee,
-    check_no_failures, NodeHost, send_nym
+    check_no_failures, NodeHost, payment_initializer,
+    send_nym
 )
 from .docker_setup import setup, teardown
 
 ATOMS = 100000
+PAYMENT_METHOD = 'sov'
 _failed_nodes = {}
 
 
@@ -24,7 +26,11 @@ def pytest_configure(config):
 
 
 def pytest_addoption(parser):
-       parser.addoption(
+    parser.addoption(
+        "--payments", action='store_true', default=None,
+        help="run payment oriented tests as well"
+    )
+    parser.addoption(
         "--gatherlogs", action='store_true', default=None,
         help="gather node logs for failed tests"
     )
@@ -88,6 +94,74 @@ async def get_default_trustee(wallet_handler):
     trustee_did, trustee_vk = await default_trustee(wallet_handler)
     await yield_((trustee_did, trustee_vk))
 
+
+# TODO different payment plugins (libsovtoken, libnullpay, ...)
+# @pytest.fixture(scope="module")
+# def payment_init_module(request):
+#     if True or request.config.getoption("payments"):
+#         loop = asyncio.get_event_loop()
+#         loop.run_until_complete(payment_initializer('libsovtoken.so', 'sovtoken_init'))
+
+
+# @pytest.fixture()
+# def payment_init(request, payment_init_module):
+#     # it will skips any test that depends on payment plugins
+#     # if pytest is run without '--payments' option
+#     # (more details: https://docs.pytest.org/en/latest/reference.html#_pytest.config.Config.getoption)
+#     request.config.getoption("payments", skip=False)
+
+
+# @pytest.fixture()
+# @async_generator
+# async def initial_token_minting(payment_init, pool_handler, wallet_handler, get_default_trustee):
+#     trustee_did, _ = get_default_trustee
+#     address = await payment.create_payment_address(
+#         wallet_handler, PAYMENT_METHOD, json.dumps({"seed": str('0000000000000000000000000Wallet0')})
+#     )
+#     trustee_did_second, trustee_vk_second = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+#     trustee_did_third, trustee_vk_third = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+#     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_second, trustee_vk_second, None, 'TRUSTEE')
+#     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_third, trustee_vk_third, None, 'TRUSTEE')
+#     req, _ = await payment.build_mint_req(
+#         wallet_handler, trustee_did, json.dumps([{'recipient': address, 'amount': 1000 * ATOMS}]), None
+#     )
+#     req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+#     req = await ledger.multi_sign_request(wallet_handler, trustee_did_second, req)
+#     req = await ledger.multi_sign_request(wallet_handler, trustee_did_third, req)
+#     res = json.loads(await ledger.submit_request(pool_handler, req))
+#     assert res['op'] == 'REPLY'
+#     await yield_(address)
+
+
+# @pytest.fixture()
+# @async_generator
+# async def initial_fees_setting(payment_init, pool_handler, wallet_handler, get_default_trustee):
+#     trustee_did, _ = get_default_trustee
+#     trustee_did_second, trustee_vk_second = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+#     trustee_did_third, trustee_vk_third = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+#     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_second, trustee_vk_second, None, 'TRUSTEE')
+#     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_third, trustee_vk_third, None, 'TRUSTEE')
+#     fees = {
+#         'trustee_0': 0 * ATOMS,
+#         'steward_0': 0 * ATOMS,
+#         'trust_anchor_0': 0 * ATOMS,
+#         'network_monitor_0': 0 * ATOMS,
+#         'add_identity_owner_50': 50 * ATOMS,
+#         'edit_identity_owner_0': 0 * ATOMS,
+#         'add_schema_250': 250 * ATOMS,
+#         'add_cred_def_125': 125 * ATOMS,
+#         'add_rrd_100': 100 * ATOMS,
+#         'add_rre_0_5': int(0.5 * ATOMS)
+#         }
+#     req = await payment.build_set_txn_fees_req(
+#         wallet_handler, trustee_did, PAYMENT_METHOD, json.dumps(fees)
+#     )
+#     req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
+#     req = await ledger.multi_sign_request(wallet_handler, trustee_did_second, req)
+#     req = await ledger.multi_sign_request(wallet_handler, trustee_did_third, req)
+#     res = json.loads(await ledger.submit_request(pool_handler, req))
+#     assert res['op'] == 'REPLY'
+#     await yield_(fees)
 
 
 @pytest.fixture(scope='function')
