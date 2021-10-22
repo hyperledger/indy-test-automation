@@ -89,9 +89,9 @@ ENV LANG=C.UTF-8
 
 COPY test_key /root/.ssh/
 RUN chmod 0400 /root/.ssh/test_key \
-    && chown -R /home/root/.ssh
+    && chown -R /root/.ssh
 
 ENV IN_DOCKER_ENV yes
 
-USER $u_id
-WORKDIR /home/$u_name
+# USER $u_id
+# WORKDIR /home/$u_name
