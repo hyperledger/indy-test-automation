@@ -508,27 +508,7 @@ jobs:
       - name: test
         run: |
           cd ./system/docker
-          sudo -u user ./run.sh system/indy-node-tests-only/TestCatchUpSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
-
-  TestCatchUpSuite1:
-    name: TestCatchUpSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
-
-      - name: test
-        run: |
-          cd ./system/docker
-           sudo su - user ./run.sh system/indy-node-tests-only/TestCatchUpSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+          sudo ./run.sh system/indy-node-tests-only/TestCatchUpSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
   # TestCatchUpSuiteExtended:
   #   name: TestCatchUpSuiteExtended
