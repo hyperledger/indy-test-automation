@@ -123,11 +123,7 @@ async def ssh_config():
     ])
     # with open(os.path.expanduser('~/.ssh/config'), 'w') as f:
     # os.environ["HOME"] = "/home/user"
-<<<<<<< HEAD
     with open(os.path.expanduser('/home/user/.ssh/config'), 'w') as f:
-=======
-    with open(os.path.expanduser('~/.ssh/config'), 'w') as f:
->>>>>>> 6e154fd4a2217dad360e1ac3977874206e3fd81c
         f.write(config)
 
 
