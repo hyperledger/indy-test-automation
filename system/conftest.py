@@ -122,8 +122,8 @@ async def ssh_config():
         for i in range(NODES_NUM)
     ])
     # with open(os.path.expanduser('~/.ssh/config'), 'w') as f:
-    os.environ["HOME"] = "/home/user"
-    with open(os.path.expanduser('~/.ssh/config'), 'w') as f:
+    # os.environ["HOME"] = "/home/user"
+    with open(os.path.expanduser('/home/user/.ssh/config'), 'w') as f:
         f.write(config)
 
 

@@ -71,10 +71,6 @@ Prepare docker environment
 Prepare docker environment for specific versions of packages
 
 ```bash
-CLIENT_REPO_COMPONENT=stable NODE_REPO_COMPONENT=stable URSA_VERSION="0.3.2-2" INDY_NODE_VERSION=1.12.4 INDY_PLENUM_VERSION=1.12.4 LIBINDY_REPO_COMPONENT=stable LIBINDY_VERSION="1.13.0~1420" PYTHON3_PYZMQ_VERSION=18.1.0 ./prepare.sh
-```
-
-```
 DIND_CONTAINER_REGISTRY=docker.io/teracy DIND_IMAGE_NAME=ubuntu:16.04-dind-latest  CLIENT_REPO_COMPONENT=stable NODE_REPO_COMPONENT=stable URSA_VERSION="0.3.2-2" INDY_NODE_VERSION=1.12.4 INDY_PLENUM_VERSION=1.12.4 LIBINDY_REPO_COMPONENT=stable LIBINDY_VERSION="1.13.0~1420" PYTHON3_PYZMQ_VERSION=18.1.0 ./prepare.sh
 ```
 
@@ -96,6 +92,8 @@ Run some test target with specific pytest arguments
 ```bash
 ./run.sh system/indy-node-tests/test_ledger.py "-l -v --junit-xml=report.xml -k test_send_and_get_nym_positive"
 ```
+
+./run.sh system/indy-node-tests/TestCatchUpSuite.py
 
 Run with live logs enabled (please check [pytest docs](https://docs.pytest.org/en/3.6.4/logging.html) for more info)
 
