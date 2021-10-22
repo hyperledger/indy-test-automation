@@ -114,7 +114,7 @@ async def ssh_config():
         "Host node{node_id}\n"
         "    HostName 10.0.0.{node_ip_part}\n"
         "    User root\n"
-        "    IdentityFile ~/.ssh/test_key\n"
+        "    IdentityFile /home/user/.ssh/test_key\n"
         "    StrictHostKeyChecking no"
         "    UserKnownHostsFile=/dev/null"
     )
