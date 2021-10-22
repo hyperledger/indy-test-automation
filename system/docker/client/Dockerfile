@@ -88,8 +88,8 @@ ENV LANG=C.UTF-8
 #     && chown -R $u_name:$u_name /home/$u_name/.ssh
 
 COPY test_key /root/.ssh/
-RUN chmod 0400 /root/.ssh/test_key \
-    && chown -R /root/.ssh
+RUN chmod 700 /root/.ssh/test_key \
+    && chown 600 -R /root/.ssh
 
 ENV IN_DOCKER_ENV yes
 
