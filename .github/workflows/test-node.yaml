@@ -350,145 +350,145 @@ jobs:
           cd ./system/docker
           sudo ./run.sh system/indy-node-tests-only/test_roles.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestAuthMapAttribSuite:
-    name: TestAuthMapAttribSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestAuthMapAttribSuite:
+  #   name: TestAuthMapAttribSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestAuthMapAttribSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestAuthMapAttribSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestAuthMapCredDefSuite:
-    name: TestAuthMapCredDefSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestAuthMapCredDefSuite:
+  #   name: TestAuthMapCredDefSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestAuthMapCredDefSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestAuthMapCredDefSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestAuthMapMiscSuite:
-    name: TestAuthMapMiscSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestAuthMapMiscSuite:
+  #   name: TestAuthMapMiscSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestAuthMapMiscSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestAuthMapMiscSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestAuthMapNymSuite:
-    name: TestAuthMapNymSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestAuthMapNymSuite:
+  #   name: TestAuthMapNymSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestAuthMapNymSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestAuthMapNymSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestAuthMapRevocRegDefSuite:
-    name: TestAuthMapRevocRegDefSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestAuthMapRevocRegDefSuite:
+  #   name: TestAuthMapRevocRegDefSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestAuthMapRevocRegDefSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestAuthMapRevocRegDefSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestAuthMapSchemaSuite:
-    name: TestAuthMapSchemaSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestAuthMapSchemaSuite:
+  #   name: TestAuthMapSchemaSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestAuthMapSchemaSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestAuthMapSchemaSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestAuthMapUpgradeSuite:
-    name: TestAuthMapUpgradeSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestAuthMapUpgradeSuite:
+  #   name: TestAuthMapUpgradeSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestAuthMapUpgradeSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestAuthMapUpgradeSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
   TestCatchUpSuite:
     name: TestCatchUpSuite
@@ -508,10 +508,10 @@ jobs:
       - name: test
         run: |
           cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestCatchUpSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+          sudo -u user ./run.sh system/indy-node-tests-only/TestCatchUpSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestCatchUpSuiteExtended:
-    name: TestCatchUpSuiteExtended
+  TestCatchUpSuite1:
+    name: TestCatchUpSuite
     needs: [ workflow-setup, node-image, client-image]
     runs-on: ubuntu-latest
     env: 
@@ -528,104 +528,124 @@ jobs:
       - name: test
         run: |
           cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestCatchUpSuiteExtended.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+           sudo su - user ./run.sh system/indy-node-tests-only/TestCatchUpSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestConsensusSuite:
-    name: TestConsensusSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestCatchUpSuiteExtended:
+  #   name: TestCatchUpSuiteExtended
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestConsensusSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestCatchUpSuiteExtended.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestMultiSigSuite:
-    name: TestMultiSigSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestConsensusSuite:
+  #   name: TestConsensusSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestMultiSigSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestConsensusSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestProductionSuite:
-    name: TestProductionSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestMultiSigSuite:
+  #   name: TestMultiSigSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestProductionSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestMultiSigSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestTAASuite:
-    name: TestTAASuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestProductionSuite:
+  #   name: TestProductionSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestTAASuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestProductionSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestViewChangeSuite:
-    name: TestViewChangeSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # TestTAASuite:
+  #   name: TestTAASuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestViewChangeSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestTAASuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+
+  # TestViewChangeSuite:
+  #   name: TestViewChangeSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestViewChangeSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/

@@ -114,7 +114,7 @@ async def ssh_config():
         "Host node{node_id}\n"
         "    HostName 10.0.0.{node_ip_part}\n"
         "    User root\n"
-        "    IdentityFile /home/user/.ssh/test_key\n"
+        "    IdentityFile ~/.ssh/test_key\n"
         "    StrictHostKeyChecking no\n"
         "    UserKnownHostsFile=/dev/null"
     )
@@ -124,7 +124,7 @@ async def ssh_config():
     ])
     # with open(os.path.expanduser('~/.ssh/config'), 'w') as f:
     # os.environ["HOME"] = "/home/user"
-    with open(os.path.expanduser('/home/user/.ssh/config'), 'w') as f:
+    with open(os.path.expanduser('~/.ssh/config'), 'w') as f:
         f.write(config)
 
 
