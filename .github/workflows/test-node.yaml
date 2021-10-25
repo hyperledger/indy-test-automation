@@ -310,45 +310,45 @@ jobs:
   #         github_token: ${{ secrets.GITHUB_TOKEN }}
   #         report_paths: "report.xml"
 
-  test_ledger:
-    name: Test Ledger
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # test_ledger:
+  #   name: Test Ledger
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test_ledger
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/test_ledger.py "-l -v --junit-xml=test_ledger-report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test_ledger
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/test_ledger.py "-l -v --junit-xml=test_ledger-report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  test_roles:
-    name: Test Roles
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
+  # test_roles:
+  #   name: Test Roles
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
 
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/test_roles.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/test_roles.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
   # TestAuthMapAttribSuite:
   #   name: TestAuthMapAttribSuite
@@ -650,8 +650,48 @@ jobs:
           cd ./system/docker
           sudo ./run.sh system/indy-node-tests-only/test_state_proof.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  test_off_ledger_signature:
-    name: test_off_ledger_signature
+  # test_off_ledger_signature:
+  #   name: test_off_ledger_signature
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/test_off_ledger_signature.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+
+  # TestAdHocSuite:
+  #   name: TestAdHocSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestAdHocSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+
+  TestAuditSuite:
+    name: TestAuditSuite
     needs: [ workflow-setup, node-image, client-image]
     runs-on: ubuntu-latest
     env: 
@@ -668,24 +708,4 @@ jobs:
       - name: test
         run: |
           cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/test_off_ledger_signature.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
-
-  TestAdHocSuite:
-    name: TestAdHocSuite
-    needs: [ workflow-setup, node-image, client-image]
-    runs-on: ubuntu-latest
-    env: 
-      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
-      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
-    steps:
-      - name: Git checkout
-        uses: actions/checkout@v2
-
-      - name: Create docker network
-        run: |
-          docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
-
-      - name: test
-        run: |
-          cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestAdHocSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+          sudo ./run.sh system/indy-node-tests-only/TestAuditSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
