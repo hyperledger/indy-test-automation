@@ -690,8 +690,28 @@ jobs:
   #         cd ./system/docker
   #         sudo ./run.sh system/indy-node-tests-only/TestAdHocSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
 
-  TestAuditSuite:
-    name: TestAuditSuite
+  # TestAuditSuite:
+  #   name: TestAuditSuite
+  #   needs: [ workflow-setup, node-image, client-image]
+  #   runs-on: ubuntu-latest
+  #   env: 
+  #     CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+  #     GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+  #   steps:
+  #     - name: Git checkout
+  #       uses: actions/checkout@v2
+
+  #     - name: Create docker network
+  #       run: |
+  #         docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
+
+  #     - name: test
+  #       run: |
+  #         cd ./system/docker
+  #         sudo ./run.sh system/indy-node-tests-only/TestAuditSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+
+  test_freshness:
+    name: test_freshness
     needs: [ workflow-setup, node-image, client-image]
     runs-on: ubuntu-latest
     env: 
@@ -708,4 +728,5 @@ jobs:
       - name: test
         run: |
           cd ./system/docker
-          sudo ./run.sh system/indy-node-tests-only/TestAuditSuite.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+          sudo ./run.sh system/indy-node-tests-only/test_freshness.py "-l -v --junit-xml=report.xml" indy-test-automation-network ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/
+
