@@ -94,7 +94,7 @@ Run some test target with specific pytest arguments
 ```
 
 ./run.sh system/indy-node-tests/TestCatchUpSuite.py
-
+./run.sh system/indy-node-tests-only/test_off_ledger_signature.py "-l -v --junit-xml=report.xml"
 Run with live logs enabled (please check [pytest docs](https://docs.pytest.org/en/3.6.4/logging.html) for more info)
 
 ```bash
