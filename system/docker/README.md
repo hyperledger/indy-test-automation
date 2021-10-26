@@ -90,11 +90,9 @@ Collect tests for some test target
 Run some test target with specific pytest arguments
 
 ```bash
-./run.sh system/indy-node-tests/test_ledger.py "-l -v --junit-xml=report.xml -k test_send_and_get_nym_positive"
+./run.sh system/indy-node-tests-only/test_ledger.py "-l -v --junit-xml=report.xml -k test_send_and_get_nym_positive"
 ```
 
-./run.sh system/indy-node-tests/TestCatchUpSuite.py
-./run.sh system/indy-node-tests-only/test_off_ledger_signature.py "-l -v --junit-xml=report.xml"
 Run with live logs enabled (please check [pytest docs](https://docs.pytest.org/en/3.6.4/logging.html) for more info)
 
 ```bash
