@@ -40,8 +40,8 @@ group_id=$(id -g)
 workdir_path="/tmp/indy-test-automation"
 
 image_repository="${4:-$IMAGE_REPOSITORY}"
-client_image_name="${image_repository}client"
-node_image_name="${image_repository}node"
+client_image_name=${image_repository}"${5:-client}"
+node_image_name=${image_repository}"${6:-node}"
 client_container_name="indy-test-automation-client"
 
 
