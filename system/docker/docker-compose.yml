@@ -8,9 +8,9 @@ services:
         - PYTHON3_VERSION
         - CLIENT_REPO_COMPONENT
         - LIBINDY_VERSION
-        - LIBSOVTOKEN_INSTALL
-        - LIBSOVTOKEN_VERSION
         - u_id
+        - DIND_CONTAINER_REGISTRY
+        - DIND_IMAGE_NAME
     image: ${IMAGE_REPOSITORY}:client
 
   node:
@@ -22,8 +22,4 @@ services:
         - PYTHON3_PYZMQ_VERSION
         - INDY_PLENUM_VERSION
         - INDY_NODE_VERSION
-        - TOKEN_PLUGINS_INSTALL
-        - SOVRIN_VERSION
-        - SOVTOKEN_VERSION
-        - SOVTOKENFEES_VERSION
     image: ${IMAGE_REPOSITORY}:node

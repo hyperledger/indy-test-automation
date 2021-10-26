@@ -56,26 +56,26 @@ RUN apt-get install -y \
     python3-pyzmq=${PYTHON3_PYZMQ_VERSION} \
     indy-plenum=${INDY_PLENUM_VERSION} \
     indy-node=${INDY_NODE_VERSION}
-# sovrin & token plugins
-ARG SOVRIN_INSTALL
-ARG SOVRIN_VERSION
-ENV SOVRIN_INSTALL=$SOVRIN_INSTALL
-ENV SOVRIN_VERSION=${SOVRIN_VERSION:-1.1.69}
-COPY . . 
-RUN if [ "$SOVRIN_INSTALL" = "yes" ]; then \
-    dpkg -i "sovrin_${SOVRIN_VERSION}_amd64.deb"; \
-    fi
+# # sovrin & token plugins
+# ARG SOVRIN_INSTALL
+# ARG SOVRIN_VERSION
+# ENV SOVRIN_INSTALL=$SOVRIN_INSTALL
+# ENV SOVRIN_VERSION=${SOVRIN_VERSION:-1.1.69}
+# COPY . . 
+# RUN if [ "$SOVRIN_INSTALL" = "yes" ]; then \
+#     dpkg -i "sovrin_${SOVRIN_VERSION}_amd64.deb"; \
+#     fi
 
-ARG SOVTOKEN_VERSION
-ARG SOVTOKENFEES_VERSION
-ENV SOVTOKEN_VERSION=${SOVTOKEN_VERSION:-1.0.8~dev153}
-ENV SOVTOKENFEES_VERSION=${SOVTOKENFEES_VERSION:-${SOVTOKEN_VERSION}}
-RUN \
-    set -ex; \
-    apt-get update && apt-get install -y \
-    sovtoken=${SOVTOKEN_VERSION} \
-    sovtokenfees=${SOVTOKENFEES_VERSION}; \
-    rm -rf /var/lib/apt/lists/*; 
+# ARG SOVTOKEN_VERSION
+# ARG SOVTOKENFEES_VERSION
+# ENV SOVTOKEN_VERSION=${SOVTOKEN_VERSION:-1.0.8~dev153}
+# ENV SOVTOKENFEES_VERSION=${SOVTOKENFEES_VERSION:-${SOVTOKEN_VERSION}}
+# RUN \
+#     set -ex; \
+#     apt-get update && apt-get install -y \
+#     sovtoken=${SOVTOKEN_VERSION} \
+#     sovtokenfees=${SOVTOKENFEES_VERSION}; \
+#     rm -rf /var/lib/apt/lists/*; 
 
 # repo cleanup
 RUN sed '/deb https:\/\/repo.sovrin.org\/sdk\/deb xenial ${NODE_REPO_COMPONENT}/d' /etc/apt/sources.list \
@@ -88,8 +88,12 @@ RUN echo " " >> /etc/indy/indy_config.py \
     && echo "logLevel = 0" >> /etc/indy/indy_config.py \
     && echo " " >> /etc/indy/indy_config.py
 
+# Server side ssh configuration
 RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 COPY test_key.pub /root/.ssh/authorized_keys
+RUN chmod 700 /root/.ssh && \
+    chmod 600 /root/.ssh/authorized_keys
+
 ## hotfix indy-node-control files here
 #COPY node_control_utils_1_1_35.py /usr/local/lib/python3.5/dist-packages/indy_node/utils/node_control_utils.py
 #RUN chmod 644 /usr/local/lib/python3.5/dist-packages/indy_node/utils/node_control_utils.py \

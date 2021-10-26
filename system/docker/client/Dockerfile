@@ -1,4 +1,7 @@
-FROM teracy/ubuntu:16.04-dind-latest
+ARG DIND_CONTAINER_REGISTRY
+ARG DIND_IMAGE_NAME
+FROM ${DIND_CONTAINER_REGISTRY}/${DIND_IMAGE_NAME}
+
 
 # generally useful packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -23,7 +26,7 @@ RUN apt-get update && apt-get install -y \
 # https://github.com/pypa/pip/issues/5221
 RUN python3 -m pip install -U \
     pip==10.0.0 \
-    setuptools \
+    setuptools==50.2.0 \
     virtualenv==16.0.0 \
     pipenv==2018.11.26 \
     && pip3 list
@@ -35,8 +38,8 @@ ENV CLIENT_REPO_COMPONENT=${CLIENT_REPO_COMPONENT}
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
     && add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial ${CLIENT_REPO_COMPONENT}" \
-    && echo "deb http://security.ubuntu.com/ubuntu bionic-security main"  >> /etc/apt/sources.list \
-    && echo "deb https://repo.sovrin.org/sdk/deb bionic master" >> /etc/apt/sources.list \
+    && add-apt-repository "deb http://security.ubuntu.com/ubuntu bionic-security main"  \
+    && add-apt-repository "deb https://repo.sovrin.org/sdk/deb bionic master" \
     && apt-get update
 
 # indy dependencies
@@ -51,27 +54,27 @@ RUN apt-get install -y \
 
 # TODO: Move to Sovrin tests
 # sovrin dependencies
-ARG LIBSOVTOKEN_INSTALL
-ARG LIBSOVTOKEN_VERSION
-ENV LIBSOVTOKEN_INSTALL=$LIBSOVTOKEN_INSTALL
-ENV LIBSOVTOKEN_VERSION=${LIBSOVTOKEN_VERSION:-0.10.0~74}
-RUN if [ "$LIBSOVTOKEN_INSTALL" = "yes" ]; then \
-    apt-get update && apt-get install -y \
-    libsovtoken=${LIBSOVTOKEN_VERSION}; \
-    rm -rf /var/lib/apt/lists/*; \
-    fi
+# ARG LIBSOVTOKEN_INSTALL
+# ARG LIBSOVTOKEN_VERSION
+# ENV LIBSOVTOKEN_INSTALL=$LIBSOVTOKEN_INSTALL
+# ENV LIBSOVTOKEN_VERSION=${LIBSOVTOKEN_VERSION:-0.10.0~74}
+# RUN if [ "$LIBSOVTOKEN_INSTALL" = "yes" ]; then \
+#     apt-get update && apt-get install -y \
+#     libsovtoken=${LIBSOVTOKEN_VERSION}; \
+#     rm -rf /var/lib/apt/lists/*; \
+#     fi
 
 # repo cleanup
 RUN add-apt-repository --remove "deb https://repo.sovrin.org/sdk/deb xenial ${CLIENT_REPO_COMPONENT}" \
     && rm -rf /var/lib/apt/lists/*
 
 # user
-ARG u_id=1000
-ARG u_name=user
+# ARG u_id=1000
+# ARG u_name=user
 
-RUN if [ "$u_id" != "0" ]; then \
-    useradd -ms /bin/bash -u $u_id $u_name; \
-    fi
+# RUN if [ "$u_id" != "0" ]; then \
+#     useradd -ms /bin/bash -u $u_id $u_name; \
+#     fi
 
 # TODO workaround (suggested by http://click.pocoo.org/5/python3/)
 # to use pipenv's dependency 'click' (http://click.pocoo.org)
@@ -80,11 +83,15 @@ ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
 # init ssh env
-COPY test_key /home/$u_name/.ssh/
-RUN chmod 0400 /home/$u_name/.ssh/test_key \
-    && chown -R $u_name:$u_name /home/$u_name/.ssh
+# COPY test_key /home/$u_name/.ssh/
+# RUN chmod 0400 /home/$u_name/.ssh/test_key \
+#     && chown -R $u_name:$u_name /home/$u_name/.ssh
+
+COPY test_key /root/.ssh/
+RUN chmod 700 /root/.ssh/test_key \
+    && chown 600 -R /root/.ssh
 
 ENV IN_DOCKER_ENV yes
 
-USER $u_id
-WORKDIR /home/$u_name
+# USER $u_id
+# WORKDIR /home/$u_name

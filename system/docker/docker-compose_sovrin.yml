@@ -1,0 +1,29 @@
+version: "3.4"
+
+services:
+  client:
+    build:
+      context: ./client
+      args:
+        - PYTHON3_VERSION
+        - CLIENT_REPO_COMPONENT
+        - LIBINDY_VERSION
+        - LIBSOVTOKEN_INSTALL
+        - LIBSOVTOKEN_VERSION
+        - u_id
+    image: ${IMAGE_REPOSITORY}:client
+
+  node:
+    build:
+      context: ./node
+      args:
+        - NODE_REPO_COMPONENT
+        - URSA_VERSION
+        - PYTHON3_PYZMQ_VERSION
+        - INDY_PLENUM_VERSION
+        - INDY_NODE_VERSION
+        - TOKEN_PLUGINS_INSTALL
+        - SOVRIN_VERSION
+        - SOVTOKEN_VERSION
+        - SOVTOKENFEES_VERSION
+    image: ${IMAGE_REPOSITORY}:node

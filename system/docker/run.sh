@@ -1,8 +1,10 @@
 #!/bin/bash
 
+export MSYS_NO_PATHCONV=1
 DEF_TEST_TARGET="system/indy-node-tests"
 DEF_PYTEST_ARGS="-l -v"
 DEF_TEST_NETWORK_NAME="indy-test-automation-network"
+IMAGE_REPOSITORY="hyperledger/indy-test-automation:"
 
 function usage {
   echo "\
@@ -28,15 +30,25 @@ test_network_name="${3:-$DEF_TEST_NETWORK_NAME}"
 repo_path=$(git rev-parse --show-toplevel)
 user_id=$(id -u)
 group_id=$(id -g)
-docker_socket_path="/var/run/docker.sock"
+
+# Set the following variables based on the OS:
+# - docker_socket_path
+# - docker_socket_mount_path
+# - $docker_socket_user_group
+. set_docker_socket_path.sh
+
 workdir_path="/tmp/indy-test-automation"
 
-image_repository="hyperledger/indy-test-automation"
-client_image_name="${image_repository}:client"
+image_repository="${4:-$IMAGE_REPOSITORY}"
+client_image_name=${image_repository}"${5:-client}"
+node_image_name=${image_repository}"${6:-node}"
 client_container_name="indy-test-automation-client"
+
+
 
 command_setup="
     set -ex
+    pip3 install --user pipenv
     pipenv --three
     # We need this because pipenv installs the latest version of pip by default.
     # The latest version of pip requires the version in pypi exactly match the version in package's setup.py file.
@@ -63,14 +75,42 @@ else
 fi
 
 # TODO pass specified env variables
+### TODO: Testing
+##
+#
+# docker run $docker_opts --rm --name "$client_container_name" \
+#     --network "${test_network_name}" \
+#     --ip "10.0.0.99" \
+#     --group-add $(stat -c '%g' "$docker_socket_stat_path") \
+#     -v "$docker_socket_path:"$docker_socket_mount_path \
+#     -v "$repo_path:$workdir_path" \
+#     -v "/tmp:/tmp" \
+#     -u "$user_id:$group_id" \
+#     -w "$workdir_path" \
+#     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
+#     "$client_image_name" /bin/bash -c "$run_command"
+
+# docker run $docker_opts --rm --name "$client_container_name" \
+#     --network "${test_network_name}" \
+#     --ip "10.0.0.99" \
+#     --group-add $docker_socket_user_group \
+#     -v "$docker_socket_path:"$docker_socket_mount_path \
+#     -v "$repo_path:$workdir_path" \
+#     -v "/tmp:/tmp" \
+#     -u "$user_id:$group_id" \
+#     -w "$workdir_path" \
+#     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
+#     -e "INDY_SYSTEM_TESTS_DOCKER_NAME=$node_image_name" \
+#     "$client_image_name" /bin/bash -c "$run_command"
+
 docker run $docker_opts --rm --name "$client_container_name" \
     --network "${test_network_name}" \
     --ip "10.0.0.99" \
-    --group-add $(stat -c '%g' "$docker_socket_path") \
-    -v "$docker_socket_path:"$docker_socket_path \
+    --group-add $docker_socket_user_group \
+    -v "$docker_socket_path:"$docker_socket_mount_path \
     -v "$repo_path:$workdir_path" \
     -v "/tmp:/tmp" \
-    -u "$user_id:$group_id" \
     -w "$workdir_path" \
     -e "INDY_SYSTEM_TESTS_NETWORK=$test_network_name" \
+    -e "INDY_SYSTEM_TESTS_DOCKER_NAME=$node_image_name" \
     "$client_image_name" /bin/bash -c "$run_command"

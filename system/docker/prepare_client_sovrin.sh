@@ -30,24 +30,17 @@ user_id=$(id -u)
 repo_path=$(git rev-parse --show-toplevel)
 docker_routine_path="$repo_path/system/docker"
 
-# Set docker_socket_path prefix according to OS
-. set_docker_socket_path.sh
-docker_socket_mount_path="/var/run/docker.sock"
+docker_socket_path="/var/run/docker.sock"
 workdir_path="/tmp/indy-test-automation"
 
 image_repository="hyperledger/indy-test-automation"
 docker_compose_image_name="${image_repository}:docker-compose"
 
-# client_env_variables=" \
-#     CLIENT_REPO_COMPONENT \
-#     LIBINDY_CRYPTO_VERSION \
-#     LIBSOVTOKEN_INSTALL \
-#     LIBSOVTOKEN_VERSION \
-# "
-
 client_env_variables=" \
     CLIENT_REPO_COMPONENT \
-    LIBINDY_CRYPTO_VERSION 
+    LIBINDY_CRYPTO_VERSION \
+    LIBSOVTOKEN_INSTALL \
+    LIBSOVTOKEN_VERSION \
 "
 
 echo "Docker version..."
@@ -66,20 +59,6 @@ set -x
 docker build -t "$docker_compose_image_name" "$docker_routine_path/docker-compose"
 
 # 2. build client image
-# docker run -t --rm \
-#     --group-add $(stat -c '%g' "$docker_socket_path") \
-#     -v "$docker_socket_path:"$docker_socket_path \
-#     -v "$repo_path:$workdir_path" \
-#     -w "$workdir_path" \
-#     -u "$user_id" \
-#     -e "IMAGE_REPOSITORY=$image_repository" \
-#     -e u_id="$user_id" \
-#     -e CLIENT_REPO_COMPONENT \
-#     -e LIBINDY_VERSION \
-#     -e LIBSOVTOKEN_INSTALL \
-#     -e LIBSOVTOKEN_VERSION \
-#     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build client
-
 docker run -t --rm \
     --group-add $(stat -c '%g' "$docker_socket_path") \
     -v "$docker_socket_path:"$docker_socket_path \
@@ -89,8 +68,11 @@ docker run -t --rm \
     -e "IMAGE_REPOSITORY=$image_repository" \
     -e u_id="$user_id" \
     -e CLIENT_REPO_COMPONENT \
-    -e LIBINDY_VERSION 
+    -e LIBINDY_VERSION \
+    -e LIBSOVTOKEN_INSTALL \
+    -e LIBSOVTOKEN_VERSION \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build client
+
 docker images "$image_repository"
 
 # 4. clean existing environment
