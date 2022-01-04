@@ -1,0 +1,80 @@
+FROM solita/ubuntu-systemd:16.04
+
+# Install environment
+RUN apt-get update -y && apt-get install -y \
+    git \
+    wget \
+    python3-pip \
+    python3-nacl \
+    python-setuptools \
+    python3-nacl \
+    apt-transport-https \
+    ca-certificates \
+    ssh \
+    vim \
+    mc \
+    stress \
+    dbus \
+    && rm -rf /var/lib/apt/lists/*
+
+# pip<10.0.0 is important. pip==10.0.0 doesn't work.
+RUN pip3 install -U \
+    'pip<10.0.0' \
+    'setuptools<=50.3.2'
+
+# sovrin repo init
+ARG NODE_SOVRIN_REPO_COMPONENT
+RUN : ${NODE_SOVRIN_REPO_COMPONENT:?"SOVRIN_REPO_COMPONENT must be provided"}
+ENV NODE_SOVRIN_REPO_COMPONENT=${NODE_SOVRIN_REPO_COMPONENT}
+
+# sovrin repo
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
+    && echo "deb https://repo.sovrin.org/deb xenial ${NODE_SOVRIN_REPO_COMPONENT}" >> /etc/apt/sources.list 
+
+# Hyperledger repo init
+ARG NODE_REPO_COMPONENT
+RUN : ${NODE_REPO_COMPONENT:?"NODE_REPO_COMPONENT must be provided"}
+ENV NODE_REPO_COMPONENT=${NODE_REPO_COMPONENT}
+
+# Hyperledger Artifactory
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9692C00E657DDE61 \
+    && echo "deb https://hyperledger.jfrog.io/artifactory/indy xenial ${NODE_REPO_COMPONENT}" >> /etc/apt/sources.list \
+    && apt-get update -y
+
+# indy depedencies
+ARG URSA_VERSION
+RUN : ${URSA_VERSION:?"URSA_VERSION must be provided"}
+ENV URSA_VERSION=${URSA_VERSION}
+
+ARG PYTHON3_PYZMQ_VERSION
+RUN : ${PYTHON3_PYZMQ_VERSION:?"PYTHON3_PYZMQ_VERSION must be provided"}
+ENV PYTHON3_PYZMQ_VERSION=${PYTHON3_PYZMQ_VERSION}
+
+ARG INDY_PLENUM_VERSION
+RUN : ${INDY_PLENUM_VERSION:?"INDY_PLENUM_VERSION must be provided"}
+ENV INDY_PLENUM_VERSION=${INDY_PLENUM_VERSION}
+
+ARG INDY_NODE_VERSION
+RUN : ${INDY_NODE_VERSION:?"INDY_NODE_VERSION must be provided"}
+ENV INDY_NODE_VERSION=${INDY_NODE_VERSION}
+
+RUN apt-get install -y \
+    ursa=${URSA_VERSION} \
+    python3-pyzmq=${PYTHON3_PYZMQ_VERSION} \
+    indy-plenum=${INDY_PLENUM_VERSION} \
+    indy-node=${INDY_NODE_VERSION} \
+    && rm -rf /var/lib/apt/lists/*
+
+# network config
+RUN echo " " >> /etc/indy/indy_config.py \
+    && echo "NETWORK_NAME = 'sandbox'" >> /etc/indy/indy_config.py \
+    && echo " " >> /etc/indy/indy_config.py \
+    && echo "logLevel = 0" >> /etc/indy/indy_config.py \
+    && echo " " >> /etc/indy/indy_config.py
+
+# Server side ssh configuration
+RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+COPY test_key.pub /root/.ssh/authorized_keys
+RUN chmod 700 /root/.ssh && \
+    chmod 600 /root/.ssh/authorized_keys
+
