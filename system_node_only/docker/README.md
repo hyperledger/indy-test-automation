@@ -66,12 +66,27 @@ Each script provides a short help, use `--help` for the details.
 
 Prepare docker environment for specific versions of packages
 
+1. Build Docker-in-Docker (DinD) Image
+```bash
+### Clone teracyhq/docker-files
+git clone git@github.com:teracyhq/docker-files.git teracy-docker-files
+
+### Build DinD - Ubuntu 16.04
+cd ./ubuntu/base
+docker build -t teracy/ubuntu:16.04-dind-latest --build-arg UBUNTU_VERSION=16.04 .
+
+### Build DinD - Ubuntu 20.04
+cd ./ubuntu/base
+docker build -t teracy/ubuntu:20.04-dind-latest --build-arg UBUNTU_VERSION=20.04 .
+```
+
+2. Prepare Indy-Test-Automation
 ```bash
 ### Ubuntu 16.04
-DIND_CONTAINER_REGISTRY=docker.io/teracy DIND_IMAGE_NAME=ubuntu:16.04-dind-latest CLIENT_SOVRIN_REPO_COMPONENT=master NODE_REPO_COMPONENT=main NODE_SOVRIN_REPO_COMPONENT=master INDY_NODE_VERSION="1.13.0~dev197" INDY_PLENUM_VERSION="1.13.0~dev169" URSA_VERSION="0.3.2-2" PYTHON3_PYZMQ_VERSION="18.1.0" LIBINDY_VERSION="1.15.0~1625-xenial" UBUNTU_VERSION="ubuntu-1604" ./prepare.sh
+DIND_CONTAINER_REGISTRY=teracy DIND_IMAGE_NAME=ubuntu:16.04-dind-latest CLIENT_SOVRIN_REPO_COMPONENT=master NODE_REPO_COMPONENT=main NODE_SOVRIN_REPO_COMPONENT=master INDY_NODE_VERSION="1.13.0~dev197" INDY_PLENUM_VERSION="1.13.0~dev169" URSA_VERSION="0.3.2-2" PYTHON3_PYZMQ_VERSION="18.1.0" LIBINDY_VERSION="1.15.0~1625-xenial" UBUNTU_VERSION="ubuntu-1604" ./prepare.sh
 
 ### Ubuntu 20.04
-DIND_CONTAINER_REGISTRY=docker.io/teracy DIND_IMAGE_NAME=ubuntu:20.04 CLIENT_SOVRIN_REPO_COMPONENT=master NODE_REPO_COMPONENT=dev NODE_SOVRIN_REPO_COMPONENT=master INDY_NODE_VERSION="1.13.0~dev206" INDY_PLENUM_VERSION="1.13.0~dev175" LIBINDY_VERSION="1.15.0~1625-bionic" URSA_VERSION="0.3.2-1" PYTHON3_PYZMQ_VERSION="18.1.0" UBUNTU_VERSION="ubuntu-2004" ./prepare.sh
+DIND_CONTAINER_REGISTRY=teracy DIND_IMAGE_NAME=ubuntu:20.04-dind-latest CLIENT_SOVRIN_REPO_COMPONENT=master NODE_REPO_COMPONENT=dev NODE_SOVRIN_REPO_COMPONENT=master INDY_NODE_VERSION="1.13.0~dev206" INDY_PLENUM_VERSION="1.13.0~dev175" LIBINDY_VERSION="1.15.0~1625-bionic" URSA_VERSION="0.3.2-1" PYTHON3_PYZMQ_VERSION="18.1.0" UBUNTU_VERSION="ubuntu-2004" ./prepare.sh
 ```
 
 Collect tests for some test target
