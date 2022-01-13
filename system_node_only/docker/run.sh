@@ -41,7 +41,7 @@ workdir_path="/tmp/indy-test-automation"
 image_repository=${IMAGE_REPOSITORY:="hyperledger/indy-test-automation"}
 client_image=${CLIENT_IMAGE:=":client-${UBUNTU_VERSION}"}
 client_image_name="${image_repository}${client_image}"
-node_image=${NODE_IMAGE=:":node-${UBUNTU_VERSION}"}
+node_image=${NODE_IMAGE:=":node-${UBUNTU_VERSION}"}
 node_image_name="${image_repository}${node_image}"
 ubuntu_version="${UBUNTU_VERSION}" 
 client_container_name="indy-test-automation-client"
