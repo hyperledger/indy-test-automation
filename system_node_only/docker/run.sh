@@ -26,6 +26,22 @@ test_target="${1:-$DEF_TEST_TARGET}"
 pytest_args="${2:-$DEF_PYTEST_ARGS}"
 test_network_name="${3:-$DEF_TEST_NETWORK_NAME}"
 
+# Set the name of the output file of tests
+cd ../..
+if [[ -d $test_target ]]; then
+    echo "$test_target is a directory"
+    test_output_file="test-result-indy-test-automation.txt"
+elif [[ -f $test_target ]]; then
+    echo "$test_target is a file"
+    test_name=$(echo $test_target | sed -nr 's;.*tests/(.*).py.*;\1;p')
+    test_output_file="test-result-indy-test-automation-${test_name}.txt"
+else
+    echo "$test_target is not valid"
+    exit 1
+fi
+cd -
+
+
 repo_path=$(git rev-parse --show-toplevel)
 user_id=$(id -u)
 group_id=$(id -g)
@@ -84,7 +100,7 @@ else
 fi
 
 command_run="
-    pipenv run python -m pytest $pytest_args $test_target
+    pipenv run python -m pytest $pytest_args $test_target > $test_output_file
 "
 
 if [ "$INDY_SYSTEM_TESTS_MODE" = "debug" ] ; then
