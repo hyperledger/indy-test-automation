@@ -1,0 +1,297 @@
+name: Manual indy-test-automation
+on: 
+  workflow_dispatch:
+    inputs:
+      nodeVersion: 
+        description: 'Version of Indy Node'
+        required: true
+        type: string
+      plenumVersion:
+        description: 'Version of Indy Plenum'
+        required: true
+        type: string
+      ursaVersion:
+        description: 'Version of Ursa'
+        required: true
+        type: string
+      pyzmqVersion:
+        description: 'Version of PYZMQ'
+        required: true
+        default: "18.1.0"
+        type: string
+      libIndyVersion: 
+        description: 'Version of Libindy'
+        required: true
+        type: string
+      ubuntuVersion:
+        description: 'Version of Ubuntu base image'
+        required: true
+        default: 'ubuntu-1604'
+        type: string
+      nodeRepoComponent:
+        description: 'Hyperledger Artifactory repository component of Indy-Node'
+        required: true
+        default: 'main'
+        type: string
+      nodeSovrinRepoComponent: 
+        description: 'Sovrin repository component of dependcies of Indy-Node artifacts'
+        required: true
+        default: 'master' 
+        type: string
+      clientSovrinRepoComponent: 
+        description: 'Sovrin repository component of Indy SDK artifacts'
+        required: true
+        default: 'master' 
+        type: string
+   
+
+env:
+  INPUT_NODEVERSION: ${{ github.event.inputs.nodeVersion }}
+  INPUT_PLENUMVERSION: ${{ github.event.inputs.plenumVersion }}
+  INPUT_URSAVERSION: ${{ github.event.inputs.ursaVersion }}
+  INPUT_PYZMQVERSION: ${{ github.event.inputs.pyzmqVersion }}
+  INPUT_LIBINDYVERSION: ${{ github.event.inputs.libIndyVersion}}
+  INPUT_UBUNTUVERSION: ${{ github.event.inputs.ubuntuVersion }}
+  INPUT_NODEREPOCOMPONENT: ${{ github.event.inputs.nodeRepoComponent }}
+  INPUT_NODESOVRINREPOCOMPONENT:  ${{ github.event.inputs.nodeSovrinRepoComponent }}
+  INPUT_CLIENTSOVRINREPOCOMPONENT:  ${{ github.event.inputs.clientSovrinRepoComponent }}
+  TEST_AUTOMATION_BRANCH: "main"
+
+
+jobs:
+  workflow-setup:
+    name: Initialize Workflow
+    runs-on: ubuntu-latest
+    outputs:
+      GITHUB_REPOSITORY_NAME: ${{ steps.repository-name.outputs.lowercase }}
+      DIND_BUILD_ARG: ${{ steps.cache.outputs.DIND_BUILD_ARG}}
+    steps:
+      - name: Convert the GitHub repository name to lowercase
+        id: repository-name
+        uses: ASzc/change-string-case-action@v1
+        with:
+          string: ${{ github.repository }}
+
+      - name: Set outputs
+        id: cache
+        run: |
+          # Set variables according to version of ubuntu
+          if [[ "${{ env.INPUT_UBUNTUVERSION }}" == "ubuntu-1604" ]]; then
+            echo "::set-output name=DIND_BUILD_ARG::16.04"
+            echo "::set-output name=distribution::xenial"
+          fi
+          if [[ "${{ env.INPUT_UBUNTUVERSION }}" == "ubuntu-2004" ]]; then
+            echo "::set-output name=DIND_BUILD_ARG::20.04"
+            echo "::set-output name=distribution::focal"
+          fi
+          
+  dind-image:
+    name: Create DinD Image
+    needs: workflow-setup
+    runs-on: ubuntu-latest
+    env: 
+      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
+      DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
+    steps:
+      - name: Git checkout teracyhq/docker-files
+        uses: actions/checkout@v2
+        with:
+          repository: teracyhq/docker-files
+            
+      - name: Prepare image labels and tags
+        id: prep
+        shell: bash
+        run: |
+          DOCKER_IMAGE=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/dind
+          TAGS="${DOCKER_IMAGE}:latest,${DOCKER_IMAGE}:${{ env.INPUT_UBUNTUVERSION }}"
+          echo ::set-output name=tags::${TAGS}
+          echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+      - name: Log into the GitHub Container Registry
+        if: steps.cache-image.outputs.cache-hit != 'true'
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx
+
+      - name: Build and push image
+        uses: docker/build-push-action@v2
+        with:
+          context: ./ubuntu/base
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.prep.outputs.tags }}
+          build-args: |
+            UBUNTU_VERSION=${{ env.DIND_BUILD_ARG }}
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.created=${{ steps.prep.outputs.created }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+      
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  node-image:
+    name: Create Node Image
+    needs: workflow-setup
+    runs-on: ubuntu-latest
+    env: 
+      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
+    steps:
+      - name: Git checkout hyperledger/indy-test-automation
+        uses: actions/checkout@v2
+        with:
+          repository: hyperledger/indy-test-automation
+          ref: ${{ env.TEST_AUTOMATION_BRANCH }}
+
+      - name: Prepare image labels and tags
+        if: steps.cache-image.outputs.cache-hit != 'true'
+        id: prep
+        shell: bash
+        run: |
+          DOCKER_IMAGE=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/node-${{ env.INPUT_UBUNTUVERSION }}
+          # TAGS="${DOCKER_IMAGE}:latest,${DOCKER_IMAGE}:${{ env.INPUT_UBUNTUVERSION }}"
+          TAGS="${DOCKER_IMAGE}:latest"
+          echo ::set-output name=tags::${TAGS}
+          echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+      - name: Set up Docker Buildx
+        if: steps.cache-image.outputs.cache-hit != 'true'
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx
+
+      - name: Build and cache image
+        if: steps.cache-image.outputs.cache-hit != 'true'
+        uses: docker/build-push-action@v2
+        with:
+          context: ./system_node_only/docker/node
+          file: ./system_node_only/docker/node/Dockerfile.${{ env.INPUT_UBUNTUVERSION }}
+          push: false
+          tags: ${{ steps.prep.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.created=${{ steps.prep.outputs.created }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            NODE_REPO_COMPONENT=${{ env.INPUT_NODEREPOCOMPONENT }}
+            NODE_SOVRIN_REPO_COMPONENT=${{ env.INPUT_NODESOVRINREPOCOMPONENT}}
+            INDY_NODE_VERSION=${{ env.INPUT_NODEVERSION }}
+            INDY_PLENUM_VERSION=${{ env.INPUT_PLENUMVERSION }}
+            URSA_VERSION=${{ env.INPUT_URSAVERSION }}
+            PYTHON3_PYZMQ_VERSION=${{ env.INPUT_PYZMQVERSION }}
+
+          outputs: type=docker,dest=/tmp/node_image_${{ env.INPUT_UBUNTUVERSION }}.tar
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Upload node docker image artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: node_image
+          path: /tmp/node_image_${{ env.INPUT_UBUNTUVERSION }}.tar
+          retention-days: 1
+      
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+  client-image:
+    name: Create Client Image
+    needs: [ workflow-setup, dind-image ]
+    runs-on: ubuntu-latest
+    env: 
+      CACHE_KEY_CLIENT: ${{ needs.workflow-setup.outputs.CACHE_KEY_CLIENT }}
+      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
+      DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
+    steps:
+      - name: Git checkout hyperledger/indy-test-automation
+        uses: actions/checkout@v2
+        with:
+          repository: hyperledger/indy-test-automation
+          ref: ${{ env.TEST_AUTOMATION_BRANCH }}
+
+      - name: Prepare image labels and tags
+        id: prep
+        shell: bash
+        run: |
+          DOCKER_IMAGE=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/client
+          TAGS="${DOCKER_IMAGE}:latest,${DOCKER_IMAGE}:${{ env.INPUT_UBUNTUVERSION }}"
+          echo ::set-output name=tags::${TAGS}
+          echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx
+          
+      - name: Build and cache image
+        uses: docker/build-push-action@v2
+        with:
+          context: ./system_node_only/docker/client/
+          file: ./system_node_only/docker/client/Dockerfile.${{ env.INPUT_UBUNTUVERSION }}
+          push: false
+          tags: ${{ steps.prep.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.created=${{ steps.prep.outputs.created }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            CLIENT_SOVRIN_REPO_COMPONENT=${{ env.INPUT_CLIENTSOVRINREPOCOMPONENT}}
+            LIBINDY_VERSION=${{ env.INPUT_LIBINDYVERSION}}
+            DIND_CONTAINER_REGISTRY=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}
+            DIND_IMAGE_NAME=dind:${{ env.INPUT_UBUNTUVERSION }}
+          outputs: type=docker,dest=/tmp/client_image_${{ env.INPUT_UBUNTUVERSION }}.tar
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Upload client docker image artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: client_image
+          path: /tmp/client_image_${{ env.INPUT_UBUNTUVERSION }}.tar
+          retention-days: 1
+      
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache                     
+
+  ### 1 step in workflow  per test
+  ### The tests rely on docker in docker with the fixed network name and fixed IP addresses. 
+  ### That's why the tests cannot be run in matrix mode because all tests would share the same host and same docker engine.
+  run_tests:
+    needs: [ workflow-setup, node-image, client-image ]
+    uses: ./.github/workflows/reuseable_tests.yaml
+    with:
+      GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }} 
+      ubuntuVersion: ${{ github.event.inputs.ubuntuVersion }}
+    
