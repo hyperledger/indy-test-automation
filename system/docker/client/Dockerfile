@@ -2,6 +2,8 @@ FROM teracy/ubuntu:16.04-dind-latest
 
 # generally useful packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
+        openssl \
+        gnupg \
         ca-certificates \
         apt-transport-https \
         software-properties-common \
@@ -25,11 +27,13 @@ RUN apt-get update && apt-get install -y \
 # https://github.com/pypa/pip/issues/5240
 # https://github.com/pypa/pip/issues/5221
 RUN python3 -m pip install -U \
-        pip \
-        setuptools \
+        'pip<10.0.0' \
+        'setuptools<=50.3.2' \
         virtualenv==16.0.0 \
         pipenv==2018.11.26 \
     && pip3 list
+
+RUN apt-get update -y && apt-get upgrade -y
 
 # libindy
 ARG LIBINDY_REPO_COMPONENT

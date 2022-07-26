@@ -18,7 +18,7 @@ RUN apt-get update -y && apt-get install -y \
 
 RUN pip3 install -U \
         'pip<10.0.0' \
-        setuptools
+        'setuptools<=50.3.2'
 
 ARG INDY_NODE_REPO_COMPONENT
 ARG LIBINDY_CRYPTO_VERSION
@@ -61,8 +61,8 @@ ENV SOVTOKEN_VERSION=${SOVTOKEN_VERSION:-1.0.8~dev151}
 # ENV SOVRIN_VERSION=${SOVRIN_VERSION:-1.1.207}
 # ENV SOVTOKEN_VERSION=${SOVTOKEN_VERSION:-1.0.8~dev150}
 ENV SOVTOKENFEES_VERSION=${SOVTOKENFEES_VERSION:-${SOVTOKEN_VERSION}}
-#RUN if [ "$TOKEN_PLUGINS_INSTALL" = "yes" ]; then \
-RUN \
+RUN if [ "$TOKEN_PLUGINS_INSTALL" = "yes" ]; then \
+# RUN \
         set -ex; \
         apt-get update && apt-get install -y \
             sovrin=${SOVRIN_VERSION} \
