@@ -77,8 +77,12 @@ RUN echo " " >> /etc/indy/indy_config.py \
     && echo "logLevel = 0" >> /etc/indy/indy_config.py \
     && echo " " >> /etc/indy/indy_config.py
 
+# Server side ssh configuration
 RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 COPY test_key.pub /root/.ssh/authorized_keys
+RUN chmod 700 /root/.ssh && \
+    chmod 600 /root/.ssh/authorized_keys
+
 ## hotfix indy-node-control files here
 #COPY node_control_utils_1_1_35.py /usr/local/lib/python3.5/dist-packages/indy_node/utils/node_control_utils.py
 #RUN chmod 644 /usr/local/lib/python3.5/dist-packages/indy_node/utils/node_control_utils.py \
