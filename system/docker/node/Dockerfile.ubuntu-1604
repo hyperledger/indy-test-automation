@@ -1,12 +1,4 @@
-#FROM jrei/systemd-ubuntu:20.04
-# 
-# FROM systemd-ubuntu-20.04:latest
-FROM fauust/docker-systemd:ubuntu-20.04
-
-ARG DEBIAN_FRONTEND=noninteractive
-
-ARG uid=1000
-ARG user=indy
+FROM solita/ubuntu-systemd:16.04
 
 # Install environment
 RUN apt-get update -y && apt-get install -y \
@@ -23,33 +15,21 @@ RUN apt-get update -y && apt-get install -y \
     mc \
     stress \
     dbus \
-    ## ToDo remove unused packages
-    libgflags-dev \
-    libsnappy-dev \
-    zlib1g-dev \
-    libbz2-dev \
-    liblz4-dev \
-    libgflags-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # pip<10.0.0 is important. pip==10.0.0 doesn't work.
 RUN pip3 install -U \
     'pip<10.0.0' \
-    setuptools
-
-# Bionic-security-main for libssl1.0.0
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32 \
-    && echo "deb http://security.ubuntu.com/ubuntu bionic-security main"  >> /etc/apt/sources.list
+    'setuptools<=50.3.2'
 
 # sovrin repo init
 ARG NODE_SOVRIN_REPO_COMPONENT
-RUN : ${NODE_SOVRIN_REPO_COMPONENT:?"NODE_SOVRIN_REPO_COMPONENT must be provided"}
+RUN : ${NODE_SOVRIN_REPO_COMPONENT:?"SOVRIN_REPO_COMPONENT must be provided"}
 ENV NODE_SOVRIN_REPO_COMPONENT=${NODE_SOVRIN_REPO_COMPONENT}
 
 # sovrin repo
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
-    && echo "deb https://repo.sovrin.org/deb bionic ${NODE_SOVRIN_REPO_COMPONENT}" >> /etc/apt/sources.list \
-    && apt-get update -y
+    && echo "deb https://repo.sovrin.org/deb xenial ${NODE_SOVRIN_REPO_COMPONENT}" >> /etc/apt/sources.list 
 
 # Hyperledger repo init
 ARG NODE_REPO_COMPONENT
@@ -58,8 +38,7 @@ ENV NODE_REPO_COMPONENT=${NODE_REPO_COMPONENT}
 
 # Hyperledger Artifactory
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9692C00E657DDE61 \
-    && echo "deb https://hyperledger.jfrog.io/artifactory/indy focal ${NODE_REPO_COMPONENT}" >> /etc/apt/sources.list \
-    && printf '%s\n%s\n%s\n' 'Package: *' 'Pin: origin hyperledger.jfrog.io' 'Pin-Priority: 1001' >> /etc/apt/preferences \
+    && echo "deb https://hyperledger.jfrog.io/artifactory/indy xenial ${NODE_REPO_COMPONENT}" >> /etc/apt/sources.list \
     && apt-get update -y
 
 # indy depedencies
@@ -84,10 +63,7 @@ RUN apt-get install -y \
     python3-pyzmq=${PYTHON3_PYZMQ_VERSION} \
     indy-plenum=${INDY_PLENUM_VERSION} \
     indy-node=${INDY_NODE_VERSION} \
-    rocksdb=5.8.8 \
-    && rm -rf /var/lib/apt/lists/* \
-    # fix missing path to libursa
-    && ln -s /usr/lib/ursa/libursa.so /usr/lib/libursa.so
+    && rm -rf /var/lib/apt/lists/*
 
 # network config
 RUN echo " " >> /etc/indy/indy_config.py \
