@@ -34,31 +34,23 @@ RUN apt-get update -y && apt-get install -y \
 
 # pip<10.0.0 is important. pip==10.0.0 doesn't work.
 RUN pip3 install -U \
-    'pip<10.0.0' \
+    # 'pip<10.0.0' \
+    pip \
     setuptools
 
 # Bionic-security-main for libssl1.0.0
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32 \
     && echo "deb http://security.ubuntu.com/ubuntu bionic-security main"  >> /etc/apt/sources.list
 
-# sovrin repo init
-ARG NODE_SOVRIN_REPO_COMPONENT
-RUN : ${NODE_SOVRIN_REPO_COMPONENT:?"NODE_SOVRIN_REPO_COMPONENT must be provided"}
-ENV NODE_SOVRIN_REPO_COMPONENT=${NODE_SOVRIN_REPO_COMPONENT}
 
 # sovrin repo
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
-    && echo "deb https://repo.sovrin.org/deb bionic ${NODE_SOVRIN_REPO_COMPONENT}" >> /etc/apt/sources.list \
+    && echo "deb https://repo.sovrin.org/deb bionic master" >> /etc/apt/sources.list \
     && apt-get update -y
-
-# Hyperledger repo init
-ARG NODE_REPO_COMPONENT
-RUN : ${NODE_REPO_COMPONENT:?"NODE_REPO_COMPONENT must be provided"}
-ENV NODE_REPO_COMPONENT=${NODE_REPO_COMPONENT}
 
 # Hyperledger Artifactory
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9692C00E657DDE61 \
-    && echo "deb https://hyperledger.jfrog.io/artifactory/indy focal ${NODE_REPO_COMPONENT}" >> /etc/apt/sources.list \
+    && echo "deb https://hyperledger.jfrog.io/artifactory/indy focal dev rc master" >> /etc/apt/sources.list \
     && printf '%s\n%s\n%s\n' 'Package: *' 'Pin: origin hyperledger.jfrog.io' 'Pin-Priority: 1001' >> /etc/apt/preferences \
     && apt-get update -y
 
@@ -88,6 +80,38 @@ RUN apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     # fix missing path to libursa
     && ln -s /usr/lib/ursa/libursa.so /usr/lib/libursa.so
+ 
+ARG TOKEN_PLUGINS_INSTALL
+ENV TOKEN_PLUGINS_INSTALL=${TOKEN_PLUGINS_INSTALL}
+ARG SOVTOKEN_VERSION
+ENV SOVTOKEN_VERSION=${SOVTOKEN_VERSION:-1.2.0-dev1663181681}
+ARG SOVTOKENFEES_VERSION
+ENV SOVTOKENFEES_VERSION=${SOVTOKENFEES_VERSION:-${SOVTOKEN_VERSION}}
+RUN echo "TOKEN_PLUGINS_INSTALL: ${TOKEN_PLUGINS_INSTALL}"
+RUN if [ "${TOKEN_PLUGINS_INSTALL}" = "yes" ]; then \
+        apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3BC8C2DD662F1C45 \
+        # && rm /etc/apt/sources.list.d/sovrin* \
+        # && add-apt-repository "deb https://sovrin.jfrog.io/artifactory/deb focal ${SOVTOKEN_REPO_COMPONENT}" \
+        && echo "deb https://sovrin.jfrog.io/artifactory/deb focal dev rc master" >> /etc/apt/sources.list \
+        && apt-get update && apt-get install -y \
+                # ToDo:
+                #   - Need an Ubuntu 20.04 SOVRIN Build.
+                #    sovrin=${SOVRIN_VERSION} \
+                   sovtoken=${SOVTOKEN_VERSION} \
+                   sovtokenfees=${SOVTOKENFEES_VERSION} \
+        && rm -rf /var/lib/apt/lists/*; \
+        # && pip install /sovtoken /sovtokenfees; \
+    fi
+RUN pip install /sovtoken /sovtokenfees
+ARG SOVRIN_INSTALL
+ENV SOVRIN_INSTALL=$SOVRIN_INSTALL
+COPY . . 
+
+RUN echo "SOVRIN_INSTALL: ${SOVRIN_INSTALL}"
+RUN if [ "${SOVRIN_INSTALL}" = "yes" ]; then \
+    dpkg -i "sovrin.deb"; \
+    fi
+
 
 # network config
 RUN echo " " >> /etc/indy/indy_config.py \

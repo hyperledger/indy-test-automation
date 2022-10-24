@@ -44,41 +44,38 @@ def network_builder(network_subnet, network_name):
 
 def pool_builder(docker_build_ctx_path, node_image_name, node_name_base, network_name, nodes_num, start_from=0):
     try:
+        # get image from local registry
         image = client.images.get(node_image_name)
     except docker.errors.ImageNotFound:
-        # build image from the Dockerfile
-        output = []
+        # pull image from registry
         try:
-            image, output = client.images.build(path=docker_build_ctx_path, tag=node_image_name)
-        except Exception as exc:
-            print("Failed to build docker image for Indy Node: {}".format(exc))
-            raise
-        finally:
-            print(
-                "Docker build logs ...\n:"
-                "=====================\n"
-            )
-            for line in output:
-                print(line)
+            image = client.images.pull(node_image_name)
+            image = image[0]
+        except docker.errors.ImageNotFound:
+             # build image from the Dockerfile
+            output = []
+            try:
+                image, output = client.images.build(path=docker_build_ctx_path, tag=node_image_name)
+            except Exception as exc:
+                print("Failed to build docker image for Indy Node: {}".format(exc))
+                raise
+            finally:
+                print(
+                    "Docker build logs ...\n:"
+                    "=====================\n"
+                )
+                for line in output:
+                    print(line)
 
-    # enable systemd
-    client.containers.run(image,
-                          'setup',
-                          remove=True,
-                          privileged=True,
-                          volumes={'/': {'bind': '/host', 'mode': 'rw'}})
     # run pool containers
     return [client.containers.run(image,
                                   name=node_name_base+str(i),
                                   detach=True,
                                   tty=True,
                                   network=network_name,
-                                  volumes={'/sys/fs/cgroup': {'bind': '/sys/fs/cgroup', 'mode': 'ro'}},
-                                  security_opt=['seccomp=unconfined'],
-                                  tmpfs={'/run': '',
-                                         '/run/lock': ''})
+                                  privileged=True,
+                                  volumes={'/sys/fs/cgroup': {'bind': '/sys/fs/cgroup', 'mode': 'ro'}})
             for i in range(start_from + 1, start_from+nodes_num + 1)]
-
 
 def pool_starter(node_containers):
     for node in node_containers:

@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -36,13 +36,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -70,7 +70,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.test_consensus.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-test_consensus
           path: test-result-indy-test-automation-test_consensus.txt
@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -91,13 +91,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
       
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -125,7 +125,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.test_freshness.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-test_freshness
           path: test-result-indy-test-automation-test_freshness.txt
@@ -136,7 +136,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -146,13 +146,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -180,7 +180,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.test_ledger.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-test_ledger
           path: test-result-indy-test-automation-test_ledger.txt
@@ -191,7 +191,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -201,13 +201,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -235,7 +235,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.test_off_ledger_signature.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-test_off_ledger_signature
           path: test-result-indy-test-automation-test_off_ledger_signature.txt
@@ -246,7 +246,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -256,13 +256,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -290,7 +290,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.test_roles.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-test_roles
           path: test-result-indy-test-automation-test_roles.txt
@@ -301,7 +301,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -311,13 +311,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -345,7 +345,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.test_state_proof.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-test_state_proof
           path: test-result-indy-test-automation-test_state_proof.txt
@@ -356,7 +356,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -366,13 +366,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -400,7 +400,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.test_vc.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-test_vc
           path: test-result-indy-test-automation-test_vc.txt
@@ -411,7 +411,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -421,13 +421,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -455,7 +455,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestAdHocSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestAdHocSuite
           path: test-result-indy-test-automation-TestAdHocSuite.txt
@@ -466,7 +466,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -476,13 +476,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -510,7 +510,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestAuditSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestAuditSuite
           path: test-result-indy-test-automation-TestAuditSuite.txt
@@ -521,7 +521,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -531,13 +531,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -565,7 +565,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestAuthMapAttribSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestAuthMapAttribSuite
           path: test-result-indy-test-automation-TestAuthMapAttribSuite.txt
@@ -576,7 +576,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -586,13 +586,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -620,7 +620,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestAuthMapCredDefSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestAuthMapCredDefSuite
           path: test-result-indy-test-automation-TestAuthMapCredDefSuite.txt
@@ -631,7 +631,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -641,13 +641,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -675,7 +675,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestAuthMapMiscSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestAuthMapMiscSuite
           path: test-result-indy-test-automation-TestAuthMapMiscSuite.txt
@@ -686,7 +686,7 @@ jobs:
     runs-on: ubuntu-latest 
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -696,13 +696,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -730,7 +730,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestAuthMapNymSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestAuthMapNymSuite
           path: test-result-indy-test-automation-TestAuthMapNymSuite.txt
@@ -741,7 +741,7 @@ jobs:
     runs-on: ubuntu-latest 
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -751,13 +751,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -785,7 +785,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestAuthMapRevocRegDefSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestAuthMapRevocRegDefSuite
           path: test-result-indy-test-automation-TestAuthMapRevocRegDefSuite.txt
@@ -796,7 +796,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -806,13 +806,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -840,7 +840,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestAuthMapRevocRegEntrySuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestAuthMapRevocRegEntrySuite
           path: test-result-indy-test-automation-TestAuthMapRevocRegEntrySuite.txt
@@ -851,7 +851,7 @@ jobs:
     runs-on: ubuntu-latest 
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -861,13 +861,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -895,7 +895,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestAuthMapSchemaSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestAuthMapSchemaSuite
           path: test-result-indy-test-automation-TestAuthMapSchemaSuite.txt
@@ -906,7 +906,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -916,13 +916,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -950,7 +950,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestAuthMapUpgradeSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestAuthMapUpgradeSuite
           path: test-result-indy-test-automation-TestAuthMapUpgradeSuite.txt
@@ -961,7 +961,7 @@ jobs:
     runs-on: ubuntu-latest 
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -971,13 +971,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -1005,7 +1005,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestCatchUpSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestCatchUpSuite
           path: test-result-indy-test-automation-TestCatchUpSuite.txt
@@ -1016,7 +1016,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -1026,13 +1026,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
       
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -1060,7 +1060,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestCatchUpSuiteExtended.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestCatchUpSuiteExtended
           path: test-result-indy-test-automation-TestCatchUpSuiteExtended.txt
@@ -1071,7 +1071,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -1081,13 +1081,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -1115,7 +1115,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestConsensusSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestConsensusSuite
           path: test-result-indy-test-automation-TestConsensusSuite.txt
@@ -1126,7 +1126,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -1136,13 +1136,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -1170,7 +1170,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestMultiSigSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestMultiSigSuite
           path: test-result-indy-test-automation-TestMultiSigSuite.txt
@@ -1181,7 +1181,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -1191,13 +1191,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -1225,7 +1225,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestProductionSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestProductionSuite
           path: test-result-indy-test-automation-TestProductionSuite.txt
@@ -1236,7 +1236,7 @@ jobs:
     runs-on: ubuntu-latest 
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -1246,13 +1246,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -1280,7 +1280,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestTAASuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestTAASuite
           path: test-result-indy-test-automation-TestTAASuite.txt
@@ -1291,7 +1291,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -1301,13 +1301,13 @@ jobs:
           docker network create --subnet="10.0.0.0/24" "indy-test-automation-network"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: node_image
           path: /tmp
@@ -1335,7 +1335,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.TestViewChangeSuite.outcome == 'failure') && failure()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: detailed-test-result-TestViewChangeSuite
           path: test-result-indy-test-automation-TestViewChangeSuite.txt

@@ -68,7 +68,7 @@ jobs:
     steps:
       - name: Convert the GitHub repository name to lowercase
         id: repository-name
-        uses: ASzc/change-string-case-action@v1
+        uses: ASzc/change-string-case-action@v5
         with:
           string: ${{ github.repository }}
 
@@ -77,12 +77,12 @@ jobs:
         run: |
           # Set variables according to version of ubuntu
           if [[ "${{ env.INPUT_UBUNTUVERSION }}" == "ubuntu-1604" ]]; then
-            echo "::set-output name=DIND_BUILD_ARG::16.04"
-            echo "::set-output name=distribution::xenial"
+            echo "DIND_BUILD_ARG=16.04" >> $GITHUB_OUTPUT
+            echo "distribution=xenial" >> $GITHUB_OUTPUT
           fi
           if [[ "${{ env.INPUT_UBUNTUVERSION }}" == "ubuntu-2004" ]]; then
-            echo "::set-output name=DIND_BUILD_ARG::20.04"
-            echo "::set-output name=distribution::focal"
+            echo "DIND_BUILD_ARG=20.04" >> $GITHUB_OUTPUT
+            echo "distribution=focal" >> $GITHUB_OUTPUT
           fi
           
   dind-image:
@@ -94,7 +94,7 @@ jobs:
       DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
     steps:
       - name: Git checkout teracyhq/docker-files
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: teracyhq/docker-files
             
@@ -104,22 +104,22 @@ jobs:
         run: |
           DOCKER_IMAGE=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/dind
           TAGS="${DOCKER_IMAGE}:latest,${DOCKER_IMAGE}:${{ env.INPUT_UBUNTUVERSION }}"
-          echo ::set-output name=tags::${TAGS}
-          echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
       - name: Log into the GitHub Container Registry
         if: steps.cache-image.outputs.cache-hit != 'true'
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -127,7 +127,7 @@ jobs:
             ${{ runner.os }}-buildx
 
       - name: Build and push image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: ./ubuntu/base
           push: ${{ github.event_name != 'pull_request' }}
@@ -154,7 +154,7 @@ jobs:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -167,15 +167,15 @@ jobs:
           DOCKER_IMAGE=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/node-${{ env.INPUT_UBUNTUVERSION }}
           # TAGS="${DOCKER_IMAGE}:latest,${DOCKER_IMAGE}:${{ env.INPUT_UBUNTUVERSION }}"
           TAGS="${DOCKER_IMAGE}:latest"
-          echo ::set-output name=tags::${TAGS}
-          echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         if: steps.cache-image.outputs.cache-hit != 'true'
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -184,7 +184,7 @@ jobs:
 
       - name: Build and cache image
         if: steps.cache-image.outputs.cache-hit != 'true'
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: ./system_node_only/docker/node
           file: ./system_node_only/docker/node/Dockerfile.${{ env.INPUT_UBUNTUVERSION }}
@@ -207,7 +207,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
       - name: Upload node docker image artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: node_image
           path: /tmp/node_image_${{ env.INPUT_UBUNTUVERSION }}.tar
@@ -228,7 +228,7 @@ jobs:
       DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -239,14 +239,14 @@ jobs:
         run: |
           DOCKER_IMAGE=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/client
           TAGS="${DOCKER_IMAGE}:latest,${DOCKER_IMAGE}:${{ env.INPUT_UBUNTUVERSION }}"
-          echo ::set-output name=tags::${TAGS}
-          echo ::set-output name=created::$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+          echo "created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Cache Docker layers
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -254,7 +254,7 @@ jobs:
             ${{ runner.os }}-buildx
           
       - name: Build and cache image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: ./system_node_only/docker/client/
           file: ./system_node_only/docker/client/Dockerfile.${{ env.INPUT_UBUNTUVERSION }}
@@ -274,7 +274,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
       - name: Upload client docker image artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: client_image
           path: /tmp/client_image_${{ env.INPUT_UBUNTUVERSION }}.tar
