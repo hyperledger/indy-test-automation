@@ -196,8 +196,7 @@ async def ssh_config():
         config_entry.format(node_id=(i + 1), node_ip_part=(i + 2))
         for i in range(NODES_NUM)
     ])
-    # with open(os.path.expanduser('~/.ssh/config'), 'w') as f:
-    # os.environ["HOME"] = "/home/user"
+
     with open(os.path.expanduser('~/.ssh/config'), 'w') as f:
         f.write(config)
 

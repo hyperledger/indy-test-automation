@@ -72,32 +72,19 @@ do
     echo "$i=${!i}"
 done
 
-if [[ "${ubuntu_version}" ==  "ubuntu-1604" ]]; then
-    command_setup="
-        set -ex
-        pip3 install --user pipenv
-        pipenv --three
-        # We need this because pipenv installs the latest version of pip by default.
-        # The latest version of pip requires the version in pypi exactly match the version in package's setup.py file.
-        # But they don't match for python3-indy... so we need to have the old version of pip pinned.
-        pipenv run pip install pip==10.0.1
-        pipenv run pip install -r system/requirements-ubuntu-1604.txt
-    "
-elif [[ "${ubuntu_version}" == "ubuntu-2004" ]]; then
-        command_setup="
-        set -ex
-        pip3 install --user pipenv
-        pipenv --three
-        # We need this because pipenv installs the latest version of pip by default.
-        # The latest version of pip requires the version in pypi exactly match the version in package's setup.py file.
-        # But they don't match for python3-indy... so we need to have the old version of pip pinned.
-        pipenv run pip install pip==10.0.1
-        pipenv run pip install -r system/requirements-ubuntu-2004.txt
-    "
-else
-    echo "Please, specify the version of ubuntu (ubuntu-1604|ubuntu-2004)"
-    exit 1
-fi
+
+
+command_setup="
+    set -ex
+    pip3 install --user pipenv
+    pipenv --three
+    # We need this because pipenv installs the latest version of pip by default.
+    # The latest version of pip requires the version in pypi exactly match the version in package's setup.py file.
+    # But they don't match for python3-indy... so we need to have the old version of pip pinned.
+    pipenv run pip install pip==10.0.1
+    pipenv run pip install -r system/requirements-${ubuntu_version}.txt
+"
+
 
 command_run="
     pipenv run python -m pytest $pytest_args $test_target > $test_output_file
