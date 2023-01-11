@@ -5,6 +5,7 @@ set -o pipefail
 #set -o nounset
 set -o xtrace
 
+export MSYS_NO_PATHCONV=1
 DEF_TEST_NETWORK_NAME="indy-test-automation-network"
 # TODO limit default subnet range to reduce risk of overlapping with system resources
 DEF_TEST_NETWORK_SUBNET="10.0.0.0/24"
@@ -30,16 +31,22 @@ user_id=$(id -u)
 repo_path=$(git rev-parse --show-toplevel)
 docker_routine_path="$repo_path/system/docker"
 
-docker_socket_path="/var/run/docker.sock"
+# Set the following variables based on the OS:
+# - docker_socket_path
+# - docker_socket_mount_path
+# - $docker_socket_user_group
+. set_docker_socket_path.sh
+
 workdir_path="/tmp/indy-test-automation"
 
 image_repository="hyperledger/indy-test-automation"
 docker_compose_image_name="${image_repository}:docker-compose"
 
 node_env_variables=" \
-    NODE_REPO_COMPONENT \
     INDY_PLENUM_VERSION \
     INDY_NODE_VERSION \
+    UBUNTU_VERSION \
+    PYTHON3_PYZMQ_VERSION \
     SOVRIN_INSTALL \
     SOVRIN_VERSION \
     SOVTOKEN_VERSION \
@@ -47,11 +54,14 @@ node_env_variables=" \
     TOKEN_PLUGINS_INSTALL \
     URSA_VERSION \
 "
+
 client_env_variables=" \
-    CLIENT_REPO_COMPONENT \
     LIBINDY_CRYPTO_VERSION \
     LIBSOVTOKEN_INSTALL \
     LIBSOVTOKEN_VERSION \
+    DIND_CONTAINER_REGISTRY \
+    DIND_IMAGE_NAME\
+    UBUNTU_VERSION \
 "
 
 echo "Docker version..."
@@ -71,39 +81,42 @@ docker build -t "$docker_compose_image_name" "$docker_routine_path/docker-compos
 
 # 2. build client image
 docker run -t --rm \
-    --group-add $(stat -c '%g' "$docker_socket_path") \
-    -v "$docker_socket_path:"$docker_socket_path \
+    --group-add $docker_socket_user_group \
+    -v "$docker_socket_path:"$docker_socket_mount_path \
     -v "$repo_path:$workdir_path" \
     -w "$workdir_path" \
     -u "$user_id" \
     -e "IMAGE_REPOSITORY=$image_repository" \
     -e u_id="$user_id" \
-    -e CLIENT_REPO_COMPONENT \
     -e LIBINDY_VERSION \
     -e LIBSOVTOKEN_INSTALL \
     -e LIBSOVTOKEN_VERSION \
+    -e DIND_CONTAINER_REGISTRY \
+    -e DIND_IMAGE_NAME \
+    -e UBUNTU_VERSION \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build client
 
 # 3. build node image
 docker run -t --rm \
-    --group-add $(stat -c '%g' "$docker_socket_path") \
-    -v "$docker_socket_path:"$docker_socket_path \
+    --group-add $docker_socket_user_group \
+    -v "$docker_socket_path:"$docker_socket_mount_path \
     -v "$repo_path:$workdir_path" \
     -w "$workdir_path" \
     -u "$user_id" \
     -e "IMAGE_REPOSITORY=$image_repository" \
     -e u_id="$user_id" \
-    -e NODE_REPO_COMPONENT \
-    -e PYTHON3_PYZMQ_VERSION \
-    -e INDY_PLENUM_VERSION \
     -e INDY_NODE_VERSION \
+    -e INDY_PLENUM_VERSION \
     -e TOKEN_PLUGINS_INSTALL \
     -e SOVRIN_VERSION \
     -e SOVRIN_INSTALL \
     -e SOVTOKEN_VERSION \
     -e SOVTOKENFEES_VERSION \
     -e URSA_VERSION \
+    -e PYTHON3_PYZMQ_VERSION \
+    -e UBUNTU_VERSION \
     "$docker_compose_image_name" docker-compose -f system/docker/docker-compose.yml build node
+
 
 docker images "$image_repository"
 

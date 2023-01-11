@@ -4,31 +4,33 @@
 
 ### Client
 
-The [Dockerfile](client/Dockerfile) describes system tests environment.
+The [Dockerfile.ubuntu-1604](client/Dockerfile.ubuntu-1604) describes system tests environment for Hyperledger Indy based on Ubuntu 16.04.
+The [Dockerfile.ubuntu-2004](client/Dockerfile.ubuntu-2004) describes system tests environment for Hyperledger Indy based on Ubuntu 20.04.
 
 #### Arguments
 
-- `PYTHON3_VERSION`: version of the python3 to install.
-- `LIBINDY_REPO_COMPONENT`: Indy SDK debian repo component.
-- `LIBINDY_VERSION`: version of the libindy library.
-- `LIBSOVTOKEN_INSTALL`: should be set to `yes` to trigger `libsovtoken` installation.
-- `LIBSOVTOKEN_VERSION`: version of the libsovtoken library to install.
+- `CLIENT_SOVRIN_REPO_COMPONENT`: Indy SDK debian repo component.
+- `LIBINDY_CRYPTO_VERSION`: version of the libindy library.
+- `DIND_CONTAINER_REGISTRY`: Container registry of DIND image (needed for GHA)
+- `DIND_IMAGE_NAME`: name of the DIND container image
+- `UBUNTU_VERSION`: version of Ubuntu (16.04 or 20.04)
+
 
 ### Node
 
-The [Dockerfile](node/Dockerfile) describes environment of nodes inside a pool as a counterpart for system tests.
+The [Dockerfile.ubuntu-1604](node/Dockerfile.ubuntu-1604) describes environment of nodes inside a pool as a counterpart for system tests for Hyperledger Indy based on Ubuntu 16.04.
+The [Dockerfile.ubuntu-2004](node/Dockerfile.ubuntu-2004) describes environment of nodes inside a pool as a counterpart for system tests for Hyperledger Indy based on Ubuntu 20.04.
 
 #### Arguments
 
-- `INDY_NODE_REPO_COMPONENT`: Indy Node debian repo component.
-- `LIBINDY_CRYPTO_VERSION`: version of the Indy Node debian package.
-- `PYTHON3_LIBINDY_CRYPTO_VERSION`: version of the Indy Node debian package.
+- `NODE_REPO_COMPONENT`: Indy Node debian repo component (Hyperledger Artifactory).
+- `NODE_SOVRIN_REPO_COMPONENT`: Sovrin repo component
 - `INDY_PLENUM_VERSION`: version of the Indy Node debian package.
 - `INDY_NODE_VERSION`: version of the Indy Node debian package.
-- `TOKEN_PLUGINS_INSTALL`: should be set to `yes` to trigger installation of `sovrin` with `sovtoken` and `sovtokenfees`.
-- `SOVRIN_VERSION`: version of the `sovtoken` plugin.
-- `SOVTOKEN_VERSION`: version of the `sovtoken` plugin.
-- `SOVTOKENFEES_VERSION`: version of the `sovtokenfees` plugin.
+- `PYTHON3_PYZMQ_VERSION`: version of pyzmq
+- `UBUNTU_VERSION`: version of Ubuntu (16.04 or 20.04)
+- `URSA_VERSION`: version of Ursa debian package
+
 
 ### Images Builder (docker-compose)
 
@@ -62,40 +64,59 @@ Each script provides a short help, use `--help` for the details.
 
 ### Examples
 
-Prepare docker environment
-
-```bash
-./prepare.sh
-```
-
 Prepare docker environment for specific versions of packages
 
+1. Build Docker-in-Docker (DinD) Image
 ```bash
-INDY_NODE_REPO_COMPONENT=stable INDY_NODE_VERSION=1.8.1 INDY_PLENUM_VERSION=1.8.1 LIBINDY_REPO_COMPONENT=stable LIBINDY_VERSION=1.9.0 ./prepare.sh
+### Clone teracyhq/docker-files
+git clone git@github.com:teracyhq/docker-files.git teracy-docker-files
+
+### Build DinD - Ubuntu 16.04
+cd ./ubuntu/base
+docker build -t teracy/ubuntu:16.04-dind-latest --build-arg UBUNTU_VERSION=16.04 .
+
+### Build DinD - Ubuntu 20.04
+cd ./ubuntu/base
+docker build -t teracy/ubuntu:20.04-dind-latest --build-arg UBUNTU_VERSION=20.04 .
 ```
 
-Prepare docker environment with plugins installed
-
+2. Prepare Indy-Test-Automation
 ```bash
-LIBSOVTOKEN_INSTALL=yes TOKEN_PLUGINS_INSTALL=yes ./prepare.sh
+### Ubuntu 16.04
+DIND_CONTAINER_REGISTRY=teracy DIND_IMAGE_NAME=ubuntu:16.04-dind-latest CLIENT_SOVRIN_REPO_COMPONENT=master NODE_REPO_COMPONENT=main NODE_SOVRIN_REPO_COMPONENT=master INDY_NODE_VERSION="1.13.0~dev197" INDY_PLENUM_VERSION="1.13.0~dev169" URSA_VERSION="0.3.2-2" PYTHON3_PYZMQ_VERSION="18.1.0" LIBINDY_VERSION="1.15.0~1625-xenial" UBUNTU_VERSION="ubuntu-1604" ./prepare.sh
+
+### Ubuntu 20.04
+DIND_CONTAINER_REGISTRY=teracy DIND_IMAGE_NAME=ubuntu:20.04-dind-latest CLIENT_SOVRIN_REPO_COMPONENT=master NODE_REPO_COMPONENT=dev NODE_SOVRIN_REPO_COMPONENT=master INDY_NODE_VERSION="1.13.0~dev5" INDY_PLENUM_VERSION="1.13.0~dev175" LIBINDY_VERSION="1.15.0~1625-bionic" URSA_VERSION="0.3.2-1" PYTHON3_PYZMQ_VERSION="18.1.0" UBUNTU_VERSION="ubuntu-2004" ./prepare.sh
 ```
 
 Collect tests for some test target
 
 ```bash
-./run.sh system/indy-node-tests --collect-only
+### Ubuntu 16.04
+UBUNTU_VERSION="ubuntu-1604" ./run.sh system/indy-node-tests --collect-only
+
+### Ubuntu 20.04
+UBUNTU_VERSION="ubuntu-2004" ./run.sh system/indy-node-tests --collect-only
 ```
 
 Run some test target with specific pytest arguments
 
 ```bash
-./run.sh system/indy-node-tests/test_ledger.py "-l -v --junit-xml=report.xml -k test_send_and_get_nym_positive"
+### Ubuntu 16.04
+UBUNTU_VERSION="ubuntu-1604" ./run.sh system/indy-node-tests/test_ledger.py "-l -v --junit-xml=test_ledger-report.xml -k test_send_and_get_nym_positive"
+
+### Ubuntu 20.04
+UBUNTU_VERSION="ubuntu-2004" ./run.sh system/indy-node-tests/test_ledger.py "-l -v --junit-xml=test_ledger-report.xml --log-cli-level 0"
 ```
 
 Run with live logs enabled (please check [pytest docs](https://docs.pytest.org/en/3.6.4/logging.html) for more info)
 
 ```bash
-./run.sh system/indy-node-tests "--log-cli-level 0"
+### Ubuntu 16.04
+UBUNTU_VERSION="ubuntu-1604" ./run.sh system/indy-node-tests "--log-cli-level 0"
+
+### Ubuntu 20.04
+UBUNTU_VERSION="ubuntu-2004" ./run.sh system/indy-node-tests "--log-cli-level 0"
 ```
 
 Clean all related docker resources
@@ -103,8 +124,17 @@ Clean all related docker resources
 ```bash
 ./clean.sh
 ```
+### GitHub Actions
+To run the tests in GitHub Actions pipeline, additional envs have to be set to run the tests.
+```bash
+### Ubuntu 16.04
+UBUNTU_VERSION="${{ env.INPUT_UBUNTUVERSION }}" IMAGE_REPOSITORY="ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/" CLIENT_IMAGE="client:${{ env.INPUT_UBUNTUVERSION }}" NODE_IMAGE="node-${{ env.INPUT_UBUNTUVERSION }}" ./run.sh system/indy-node-tests/test_ledger.py "-l -v --junit-xml=test_ledger-report.xml -k test_send_and_get_nym_positive"
+
+### Ubuntu 20.04
+UBUNTU_VERSION="${{ env.INPUT_UBUNTUVERSION }}" IMAGE_REPOSITORY="ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/" CLIENT_IMAGE="client:${{ env.INPUT_UBUNTUVERSION }}" NODE_IMAGE="node-${{ env.INPUT_UBUNTUVERSION }}" ./run.sh system/indy-node-tests/test_ledger.py "-l -v --junit-xml=test_ledger-report.xml -k test_send_and_get_nym_positive"
+```
 
 ## Requirements
 
 - `bash`
-- `docker` `17.09.0+`
+- `docker` `20.10.07`
