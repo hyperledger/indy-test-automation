@@ -99,17 +99,18 @@ RUN if [ "${TOKEN_PLUGINS_INSTALL}" = "yes" ]; then \
                 #    sovrin=${SOVRIN_VERSION} \
                    sovtoken=${SOVTOKEN_VERSION} \
                    sovtokenfees=${SOVTOKENFEES_VERSION} \
-        && rm -rf /var/lib/apt/lists/*; \
-        # && pip install /sovtoken /sovtokenfees; \
+        && rm -rf /var/lib/apt/lists/* \
+        && pip install /sovtoken /sovtokenfees; \
     fi
-RUN pip install /sovtoken /sovtokenfees
 ARG SOVRIN_INSTALL
 ENV SOVRIN_INSTALL=$SOVRIN_INSTALL
 COPY . . 
 
 RUN echo "SOVRIN_INSTALL: ${SOVRIN_INSTALL}"
 RUN if [ "${SOVRIN_INSTALL}" = "yes" ]; then \
-    dpkg -i "sovrin.deb"; \
+        sovrin_package=$(find ./ -name "sovrin_*.deb" | head -n 1); \
+        echo "Installing ${sovrin_package} ..."; \
+        dpkg -i "${sovrin_package}"; \
     fi
 
 
