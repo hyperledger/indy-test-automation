@@ -113,7 +113,7 @@ on:
         default: "sovrin"
 
 env:
-  INPUT_UBUNTUVERSION: ${{ inputs.ubuntuVersion }}
+  INPUT_UBUNTUVERSION: "ubuntu-2004"
 
   INPUT_LIBSOVTOKEN_INSTALL: "no"
   INPUT_LIBSOVTOKEN_VERSION: ""
