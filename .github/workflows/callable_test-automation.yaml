@@ -115,28 +115,28 @@ on:
 env:
   INPUT_UBUNTUVERSION: ${{ inputs.ubuntuVersion }}
 
-  INPUT_LIBSOVTOKEN_INSTALL: ${{ fromJSON(inputs.libsovtokenJSON).install }}
-  INPUT_LIBSOVTOKEN_VERSION: ${{ fromJSON(inputs.libsovtokenJSON).version }}
+  INPUT_LIBSOVTOKEN_INSTALL: "no"
+  INPUT_LIBSOVTOKEN_VERSION: ""
 
-  INPUT_TOKEN_PLUGINS_INSTALL: ${{ fromJSON(inputs.tokenPluginJSON).install }}
-  INPUT_SOVTOKEN_VERSION: ${{ fromJSON(inputs.tokenPluginJSON).sovtokenVersion }}
-  INPUT_SOVTOKENFEES_VERSION: ${{ fromJSON(inputs.tokenPluginJSON).sovtokenFeesVersion }}
+  INPUT_TOKEN_PLUGINS_INSTALL: "no"
+  INPUT_SOVTOKEN_VERSION: ""
+  INPUT_SOVTOKENFEES_VERSION: ""
 
-  INPUT_SOVRIN_INSTALL: ${{ fromJSON(inputs.sovrinJSON).install }}
+  INPUT_SOVRIN_INSTALL: "no"
 
-  INPUT_NODEVERSION: ${{ fromJSON(inputs.indyJSON).nodeVersion }}
-  INPUT_PLENUMVERSION: ${{ fromJSON(inputs.indyJSON).plenumVersion }}
-  INPUT_URSAVERSION: ${{ fromJSON(inputs.indyJSON).ursaVersion }}
-  INPUT_PYZMQVERSION: ${{ fromJSON(inputs.indyJSON).pyzmqVersion }}
+  INPUT_NODEVERSION: "1.13.2~rc3"
+  INPUT_PLENUMVERSION: "1.13.1~rc2"
+  INPUT_URSAVERSION: "0.3.2-1"
+  INPUT_PYZMQVERSION: "22.3.0"
 
-  INPUT_LIBINDYVERSION: ${{ inputs.libIndyVersion }}
+  INPUT_LIBINDYVERSION: "1.15.0~1625-bionic"
 
-  TEST_AUTOMATION_BRANCH: ${{ inputs.testAutomationBranch }}
+  TEST_AUTOMATION_BRANCH: "vdr-askar-migration"
 
-  NETWORK_NAME: ${{ fromJSON(inputs.networkJSON).networkName }}
-  NETWORK_SUBNET: ${{ fromJSON(inputs.networkJSON).networkSubnet }}
-  TEST_DIRECTORY: ${{ inputs.testDirectory }}
-  INCLUDE_PAYMENT_TESTS: ${{ inputs.includePaymentTests }}
+  NETWORK_NAME: "indy-test-automation-network"
+  NETWORK_SUBNET: "10.0.0.0\/24"
+  TEST_DIRECTORY: "system/indy-node-tests"
+  INCLUDE_PAYMENT_TESTS: false
 
 jobs:
   workflow-setup:
