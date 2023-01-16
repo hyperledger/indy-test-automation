@@ -261,11 +261,11 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx
-      - name: Download Pipeline sovrin.deb artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: sovrin.deb
-          path: ./system/docker/node/
+      # - name: Download Pipeline sovrin.deb artifact
+      #   uses: actions/download-artifact@v3
+      #   with:
+      #     name: sovrin.deb
+      #     path: ./system/docker/node/
       - name: LS DEBUG
         run: ls ./system/docker/node/
       - name: Build and cache image
