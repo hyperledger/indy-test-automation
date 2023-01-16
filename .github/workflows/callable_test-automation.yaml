@@ -1,7 +1,7 @@
 name: indy-test-automation
 on:
-  # push:
-  #   branches: [sovrin]
+  push:
+    branches: [vdr-askar-migration]
   workflow_call:
     inputs:
       ubuntuVersion:
