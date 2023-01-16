@@ -102,7 +102,7 @@ RUN if [ "${TOKEN_PLUGINS_INSTALL}" = "yes" ]; then \
         && rm -rf /var/lib/apt/lists/*; \
         # && pip install /sovtoken /sovtokenfees; \
     fi
-RUN pip install /sovtoken /sovtokenfees
+# RUN pip install /sovtoken /sovtokenfees
 ARG SOVRIN_INSTALL
 ENV SOVRIN_INSTALL=$SOVRIN_INSTALL
 COPY . . 
