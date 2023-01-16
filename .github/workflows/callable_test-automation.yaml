@@ -134,7 +134,7 @@ env:
   TEST_AUTOMATION_BRANCH: "vdr-askar-migration"
 
   NETWORK_NAME: "indy-test-automation-network"
-  NETWORK_SUBNET: "10.0.0.0\/24"
+  NETWORK_SUBNET: "10.0.0.0/24"
   TEST_DIRECTORY: "system/indy-node-tests"
   INCLUDE_PAYMENT_TESTS: false
 
