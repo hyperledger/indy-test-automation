@@ -233,7 +233,8 @@ jobs:
     env:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
     steps:
-      - name: Git checkout hyperledger/indy-test-automation
+      # - name: Git checkout hyperledger/indy-test-automation
+      - name: Git checkout VladimirWork/indy-test-automation
         uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
@@ -314,7 +315,8 @@ jobs:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
       DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
     steps:
-      - name: Git checkout hyperledger/indy-test-automation
+      # - name: Git checkout hyperledger/indy-test-automation
+      - name: Git checkout VladimirWork/indy-test-automation
         uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
@@ -379,7 +381,8 @@ jobs:
     outputs:
       modules: ${{ steps.get-module-list.outputs.file_names }}
     steps:
-      - name: Git checkout hyperledger/indy-test-automation
+      # - name: Git checkout hyperledger/indy-test-automation
+      - name: Git checkout VladimirWork/indy-test-automation
         uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
@@ -420,7 +423,8 @@ jobs:
         module: ${{ fromJson(needs.get-test-modules.outputs.modules) }}
       fail-fast: false
     steps:
-      - name: Git checkout hyperledger/indy-test-automation
+      # - name: Git checkout hyperledger/indy-test-automation
+      - name: Git checkout VladimirWork/indy-test-automation
         uses: actions/checkout@v3
         with:
           repository: hyperledger/indy-test-automation
