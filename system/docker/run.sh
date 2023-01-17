@@ -81,7 +81,7 @@ command_setup="
     # We need this because pipenv installs the latest version of pip by default.
     # The latest version of pip requires the version in pypi exactly match the version in package's setup.py file.
     # But they don't match for python3-indy... so we need to have the old version of pip pinned.
-    pipenv run pip install pip==10.0.1
+    pipenv run pip install pip==22.3.1
     pipenv run pip install -r system/requirements-${ubuntu_version}.txt
 "
 

@@ -7,3 +7,6 @@ indy-vdr
 docker==3.7.0
 more-itertools==8.10.0
 async_generator
+indy_vdr==0.3.4
+aries-askar==0.2.7
+indy-credx==0.3.1
