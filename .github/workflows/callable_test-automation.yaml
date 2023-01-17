@@ -405,7 +405,7 @@ jobs:
           # is not really needed, but left in to make
           # it clear the files are being ignored.
           # ==============================================
-          ignore_files_starts_with: ${{ inputs.ignoreTests }}
+          ignore_files_starts_with: "TestCatchUpSuite"
 
   ### 1 Job in workflow per test
   ### The tests rely on docker in docker with the fixed network name and fixed IP addresses.
