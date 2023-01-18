@@ -5,7 +5,9 @@ import os
 from datetime import datetime
 from async_generator import async_generator, yield_
 
-from indy import pool, payment, did, ledger
+from indy import payment, did
+
+from indy_vdr import set_protocol_version, ledger
 
 from .utils import (
     pool_helper, wallet_helper, default_trustee,
@@ -57,7 +59,7 @@ def pytest_runtest_makereport(item, call):
 @pytest.fixture(scope='session', autouse=True)
 def event_loop():
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(pool.set_protocol_version(2))
+    set_protocol_version(2)
     yield loop
     loop.close()
 
