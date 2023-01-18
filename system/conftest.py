@@ -98,20 +98,20 @@ async def get_default_trustee(wallet_handler):
     await yield_((trustee_did, trustee_vk))
 
 
-# TODO different payment plugins (libsovtoken, libnullpay, ...)
-@pytest.fixture(scope="module")
-def payment_init_module(request):
-    if request.config.getoption("payments"):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(payment_initializer('libsovtoken.so', 'sovtoken_init'))
+# # TODO different payment plugins (libsovtoken, libnullpay, ...)
+# @pytest.fixture(scope="module")
+# def payment_init_module(request):
+#     if request.config.getoption("payments"):
+#         loop = asyncio.get_event_loop()
+#         loop.run_until_complete(payment_initializer('libsovtoken.so', 'sovtoken_init'))
 
 
-@pytest.fixture()
-def payment_init(request, payment_init_module):
-    # it will skips any test that depends on payment plugins
-    # if pytest is run without '--payments' option
-    # (more details: https://docs.pytest.org/en/latest/reference.html#_pytest.config.Config.getoption)
-    request.config.getoption("payments", skip=True)
+# @pytest.fixture()
+# def payment_init(request, payment_init_module):
+#     # it will skips any test that depends on payment plugins
+#     # if pytest is run without '--payments' option
+#     # (more details: https://docs.pytest.org/en/latest/reference.html#_pytest.config.Config.getoption)
+#     request.config.getoption("payments", skip=True)
 
 
 # @pytest.fixture()
