@@ -4,6 +4,7 @@ from indy import payment
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
+@pytest.mark.usefixtures('payment_init')
 class TestFeesSuite:
 
     @pytest.mark.asyncio
