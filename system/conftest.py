@@ -59,6 +59,7 @@ def pytest_runtest_makereport(item, call):
 @pytest.fixture(scope='session', autouse=True)
 def event_loop():
     loop = asyncio.get_event_loop()
+    # set_protocol_version became syncronical 
     set_protocol_version(2)
     yield loop
     loop.close()
