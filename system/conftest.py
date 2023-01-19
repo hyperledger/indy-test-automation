@@ -102,8 +102,9 @@ async def get_default_trustee(wallet_handler):
 @pytest.fixture(scope="module")
 def payment_init_module(request):
     if request.config.getoption("payments"):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(payment_initializer('libsovtoken.so', 'sovtoken_init'))
+        pass
+        # loop = asyncio.get_event_loop()
+        # loop.run_until_complete(payment_initializer('libsovtoken.so', 'sovtoken_init'))
 
 
 @pytest.fixture()
