@@ -537,8 +537,8 @@ class TestLedgerSuite:
     @pytest.mark.asyncio
     # 						    GET_TXN
     async def test_get_txn(
-            self, pool_handler, wallet_handler, get_default_trustee, initial_token_minting, initial_fees_setting,
-            payment_init, ledger_type, seqno
+            self, payment_init, pool_handler, wallet_handler, get_default_trustee, initial_token_minting, initial_fees_setting,
+            ledger_type, seqno
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
