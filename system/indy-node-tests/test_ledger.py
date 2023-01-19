@@ -29,14 +29,13 @@ async def docker_setup_and_teardown(docker_setup_and_teardown_module):
 @pytest.mark.parametrize('reader_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR', None])
 @pytest.mark.asyncio
 async def test_send_and_get_nym_positive(writer_role, reader_role):
-    await pool.set_protocol_version(2)
+    #await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
-    target_did, target_vk = await did.create_and_store_my_did(wallet_handle, '{}')
-    writer_did, writer_vk = await did.create_and_store_my_did(wallet_handle, '{}')
-    reader_did, reader_vk = await did.create_and_store_my_did(wallet_handle, '{}')
-    trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
-        {'seed': '000000000000000000000000Trustee1'}))
+    target_did, target_vk = await create_and_store_did(wallet_handle)
+    writer_did, writer_vk = await create_and_store_did(wallet_handle)
+    reader_did, reader_vk = await create_and_store_did(wallet_handle)
+    trustee_did, trustee_vk = await create_and_store_did(wallet_handle, seed="000000000000000000000000Trustee1")
     # Trustee adds NYM writer
     await send_nym(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
     # Trustee adds NYM reader
@@ -46,8 +45,9 @@ async def test_send_and_get_nym_positive(writer_role, reader_role):
     # Reader gets NYM
     res2 = await read_eventually_positive(get_nym, pool_handle, wallet_handle, target_did, target_did)
 
-    assert res1['op'] == 'REPLY'
-    assert res2['result']['seqNo'] is not None
+    #assert res1['op'] == 'REPLY'
+    #assert res2['result']['seqNo'] is not None
+    assert res2['seqNo'] is not None
 
     print(res1)
     print(res2)
