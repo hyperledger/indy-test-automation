@@ -18,8 +18,11 @@ import testinfra
 import json
 from json import JSONDecodeError
 import hashlib
-from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError, payment
-
+#from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError, payment
+from indy import did, anoncreds, blob_storage, IndyError, payment
+import indy_vdr
+from indy_vdr import ledger, open_pool
+from aries_askar import Store, Key, KeyAlg, AskarError, AskarErrorCode
 
 import logging
 logger = logging.getLogger(__name__)
@@ -170,47 +173,111 @@ async def ensure_pool_helper():
     )
 
 
-async def pool_helper(pool_name=None, path_to_genesis=POOL_GENESIS_PATH, node_list=None):
-    REQ_TIMEOUT = 5
-    if not pool_name:
-        pool_name = random_string(25)
-    if node_list:
-        pool_config = json.dumps(
-            {"genesis_txn": path_to_genesis, "preordered_nodes": node_list, "timeout": REQ_TIMEOUT}
-        )
-    else:
-        pool_config = json.dumps({"genesis_txn": path_to_genesis, "timeout": REQ_TIMEOUT})
-    await pool.create_pool_ledger_config(pool_name, pool_config)
-    pool_handle = await pool.open_pool_ledger(pool_name, pool_config)
-
-    return pool_handle, pool_name
+async def pool_helper(path_to_genesis=POOL_GENESIS_PATH):
+    indy_vdr.set_protocol_version(2)
+    pool_handle = await open_pool(transactions_path=path_to_genesis)
+    return pool_handle, "default_pool_name"
 
 
-async def wallet_helper(wallet_id=None, wallet_key='', wallet_key_derivation_method='ARGON2I_INT'):
-    if not wallet_id:
-        wallet_id = random_string(25)
-    wallet_config = json.dumps({"id": wallet_id})
+async def wallet_helper(wallet_key='', wallet_key_derivation_method='kdf:argon2i:mod'):
+    wuri = "sqlite://:memory:"
+    wallet_h = await Store.provision(wuri, wallet_key_derivation_method, wallet_key, recreate=False)
+    session_handle = await wallet_h.session()
+    wallet_config = json.dumps({"id": wuri})
     wallet_credentials = json.dumps({"key": wallet_key, "key_derivation_method": wallet_key_derivation_method})
-    await wallet.create_wallet(wallet_config, wallet_credentials)
-    wallet_handle = await wallet.open_wallet(wallet_config, wallet_credentials)
 
-    return wallet_handle, wallet_config, wallet_credentials
+    return session_handle, wallet_config, wallet_credentials
 
 
-async def pool_destructor(pool_handle, pool_name):
-    await pool.close_pool_ledger(pool_handle)
-    await pool.delete_pool_ledger_config(pool_name)
+async def pool_destructor(pool_handle):
+    await pool_handle.close()
 
 
 async def wallet_destructor(wallet_handle, wallet_config, wallet_credentials):
-    await wallet.close_wallet(wallet_handle)
-    await wallet.delete_wallet(wallet_config, wallet_credentials)
+    #await wallet_handle.close(remove=True)
+    await wallet_handle.close()
+
+
+def key_helper(seed=None):
+    alg = KeyAlg.ED25519
+    if seed:
+         keypair = Key.from_secret_bytes(alg, seed)
+    else:
+        keypair = Key.generate(alg)
+    verkey_bytes = keypair.get_public_bytes()
+    verkey = base58.b58encode(verkey_bytes).decode("ascii")
+    did = base58.b58encode(verkey_bytes[:16]).decode("ascii")
+    return keypair, did, verkey
+
+
+async def key_insert_helper(wallet_handle, keypair, did, verkey):
+    try:
+        await wallet_handle.insert_key(verkey, keypair, metadata=json.dumps({}))
+    except AskarError as err:
+        if err.code == AskarErrorCode.DUPLICATE:
+            pass
+        else:
+            raise err
+    item = await wallet_handle.fetch("did", did, for_update=True)
+    if item:
+        did_info = item.value_json
+        if did_info.get("verkey") != verkey:
+            raise Exception("DID already present in wallet")
+        did_info["metadata"] = {}
+        await wallet_handle.replace("did", did, value_json=did_info, tags=item.tags)
+    else:
+        await wallet_handle.insert("did", did,
+                                   value_json={
+                                       "did": did,
+                                       "method": "sov",
+                                       "verkey": verkey,
+                                       "verkey_type": "ed25519",
+                                       "metadata": {},
+                                   },
+                                   tags={
+                                       "method": "sov",
+                                       "verkey": verkey,
+                                       "verkey_type": "ed25519",
+                                   },
+                                   )
+
+
+async def get_did_signing_key(wallet_handle, did):
+    item = await wallet_handle.fetch("did", did, for_update=False)
+    if item:
+        kp = await wallet_handle.fetch_key(item.value_json.get("verkey"))
+        return kp.key
+    return None
+
+
+async def sign_request(wallet_handle, trustee_did, req):
+    key = await get_did_signing_key(wallet_handle, trustee_did)
+    if not key:
+        raise Exception(f"Key for DID {trustee_did} is empty")
+    req.set_signature(key.sign_message(req.signature_input))
+    return req
+
+
+async def sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req):
+    sreq = await sign_request(wallet_handle, trustee_did, req)
+    request_result = await pool_handle.submit_action(sreq)
+    return request_result
+
+
+async def sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req):
+    sreq = await sign_request(wallet_handle, trustee_did, req)
+    request_result = await pool_handle.submit_request(sreq)
+    return request_result
+
+
+async def create_and_store_did(wallet_handle, seed=None):
+    keypair, did, verkey = key_helper(seed=seed)
+    await key_insert_helper(wallet_handle, keypair, did, verkey)
+    return did, verkey
 
 
 async def default_trustee(wallet_handle):
-    trustee_did, trustee_vk = await did.create_and_store_my_did(
-        wallet_handle, json.dumps({'seed': '000000000000000000000000Trustee1'}))
-    return trustee_did, trustee_vk
+    return await create_and_store_did(wallet_handle, seed='000000000000000000000000Trustee1')
 
 
 # TODO why we need that async ???
@@ -273,8 +340,8 @@ async def eventually(awaited_func,
 async def send_nym(
         pool_handle, wallet_handle, submitter_did, target_did, target_vk=None, target_alias=None, target_role=None
 ):
-    req = await ledger.build_nym_request(submitter_did, target_did, target_vk, target_alias, target_role)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_nym_request(submitter_did, target_did, target_vk, target_alias, target_role)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
@@ -345,8 +412,8 @@ async def send_revoc_reg_entry(
 
 
 async def get_nym(pool_handle, wallet_handle, submitter_did, target_did):
-    req = await ledger.build_get_nym_request(submitter_did, target_did)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_nym_request(submitter_did, target_did)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
@@ -428,9 +495,9 @@ def check_no_failures(hosts):
 async def check_pool_performs_write(pool_handle, wallet_handle, submitter_did, nyms_count=1):
     res = []
     for _ in range(nyms_count):
-        some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
+        some_did, _ = await create_and_store_did(wallet_handle)
         resp = await send_nym(pool_handle, wallet_handle, submitter_did, some_did)
-        assert resp['op'] == 'REPLY'
+        #assert resp['op'] == 'REPLY'
         res.append(resp)
     return res
 
@@ -439,7 +506,8 @@ async def check_pool_performs_read(pool_handle, wallet_handle, submitter_did, di
     res = []
     for did in dids:
         resp = await get_nym(pool_handle, wallet_handle, submitter_did, did)
-        assert resp['result']['seqNo'] is not None
+        #assert resp['result']['seqNo'] is not None
+        assert resp['seqNo'] is not None
         res.append(resp)
     return res
 
@@ -450,7 +518,8 @@ async def check_pool_performs_write_read(
     writes = await check_pool_performs_write(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
     )
-    dids = [resp['result']['txn']['data']['dest'] for resp in writes]
+    #dids = [resp['result']['txn']['data']['dest'] for resp in writes]
+    dids = [resp['txn']['data']['dest'] for resp in writes]
     return await eventually(
         check_pool_performs_read, pool_handle, wallet_handle, trustee_did, dids, timeout=timeout
     )
@@ -569,8 +638,8 @@ async def ensure_pool_is_okay(pool_handle, wallet_handle, trustee_did):
 
 
 async def get_validator_info(pool_handle, wallet_handle, trustee_did):
-    req = await ledger.build_get_validator_info_request(trustee_did)
-    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+    req = ledger.build_get_validator_info_request(trustee_did)
+    results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
     # remove all timeout entries
     try:
         for i in range(len(results)):
@@ -1002,7 +1071,8 @@ async def write_eventually_positive(func, *args, cycles_limit=40):
 async def read_eventually_positive(func, *args, cycles_limit=30):
     cycles = 0
     res = await func(*args)
-    while res['result']['seqNo'] is None:
+    #while res['result']['seqNo'] is None:
+    while res['seqNo'] is None:
         cycles += 1
         if cycles >= cycles_limit:
             print('CYCLES LIMIT IS EXCEEDED!')
