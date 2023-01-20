@@ -6,9 +6,11 @@ import logging
 import asyncio
 from async_generator import async_generator, yield_
 
-from indy import pool, did, ledger, IndyError
+from indy import did, ledger, IndyError
 
 from system.utils import *
+from indy_vdr.error import VdrError, VdrErrorCode
+from indy_credx.error import CredxError, CredxErrorCode
 
 # logger = logging.getLogger(__name__)
 # logging.basicConfig(level=0, format='%(asctime)s %(message)s')
@@ -29,7 +31,6 @@ async def docker_setup_and_teardown(docker_setup_and_teardown_module):
 @pytest.mark.parametrize('reader_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR', None])
 @pytest.mark.asyncio
 async def test_send_and_get_nym_positive(writer_role, reader_role):
-    #await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     target_did, target_vk = await create_and_store_did(wallet_handle)
@@ -45,38 +46,29 @@ async def test_send_and_get_nym_positive(writer_role, reader_role):
     # Reader gets NYM
     res2 = await read_eventually_positive(get_nym, pool_handle, wallet_handle, target_did, target_did)
 
-    #assert res1['op'] == 'REPLY'
-    #assert res2['result']['seqNo'] is not None
     assert res2['seqNo'] is not None
 
     print(res1)
     print(res2)
 
 
-@pytest.mark.parametrize('submitter_seed', ['{}',
-                                            random_did_and_json()[1],
-                                            random_seed_and_json()[1],
-                                            ])
+@pytest.mark.parametrize('submitter_seed', ['', random_seed_and_json()[0],])
 @pytest.mark.asyncio
 async def test_send_and_get_nym_negative(submitter_seed):
-    await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
-    target_did, target_vk = await did.create_and_store_my_did(wallet_handle, '{}')
-    submitter_did, submitter_vk = await did.create_and_store_my_did(wallet_handle, submitter_seed)
-    trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
-        {'seed': '000000000000000000000000Trustee1'}))
+    target_did, target_vk = await create_and_store_did(wallet_handle)
+    submitter_did, submitter_vk = await create_and_store_did(wallet_handle, seed=submitter_seed)
+    trustee_did, trustee_vk = await create_and_store_did(wallet_handle, seed='000000000000000000000000Trustee1')
     # Trustee adds submitter
     await send_nym(pool_handle, wallet_handle, trustee_did, submitter_did, submitter_vk)
     # None role submitter tries to send NYM (rejected) and gets no data about this NYM from ledger
-    res1 = await send_nym(pool_handle, wallet_handle, submitter_did, target_did)
-    res2 = await get_nym(pool_handle, wallet_handle, submitter_did, target_did)
+    with pytest.raises(VdrError) as exp_err:
+        await send_nym(pool_handle, wallet_handle, submitter_did, target_did)
+    assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
 
-    assert res1['op'] == 'REJECT'
-    assert res2['result']['seqNo'] is None
-
-    print(res1)
-    print(res2)
+    res = await get_nym(pool_handle, wallet_handle, submitter_did, target_did)
+    assert res["seqNo"] is None
 
 
 @pytest.mark.parametrize('xhash, raw, enc, raw_key', [
@@ -86,12 +78,10 @@ async def test_send_and_get_nym_negative(submitter_seed):
 ])
 @pytest.mark.asyncio
 async def test_send_and_get_attrib_positive(xhash, raw, enc, raw_key):
-    await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
-    target_did, target_vk = await did.create_and_store_my_did(wallet_handle, '{}')
-    submitter_did, submitter_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
-        {'seed': '000000000000000000000000Trustee1'}))
+    target_did, target_vk = await create_and_store_did(wallet_handle)
+    submitter_did, submitter_vk = await create_and_store_did(wallet_handle, seed='000000000000000000000000Trustee1')
     await send_nym(pool_handle, wallet_handle, submitter_did, target_did, target_vk)
     # Writer sends ATTRIB
     res1 = await send_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
@@ -100,15 +90,14 @@ async def test_send_and_get_attrib_positive(xhash, raw, enc, raw_key):
         get_attrib, pool_handle, wallet_handle, target_did, target_did, xhash, raw_key, enc
     )
 
-    assert res1['op'] == 'REPLY'
-    assert res2['result']['seqNo'] is not None
+    assert res2['seqNo'] is not None
 
     print(res1)
     print(res2)
 
 
 @pytest.mark.parametrize('xhash, raw, enc, error, readonly', [
-    (None, None, None, IndyError, False),
+    (None, None, None, VdrError, False),
     (hashlib.sha256().hexdigest(), json.dumps({'key': 'value'}), None, None, False),
     (None, json.dumps({'key': 'value'}), 'ENCRYPTED_STRING', None, False),
     (hashlib.sha256().hexdigest(), None, 'ENCRYPTED_STRING', None, False),
@@ -119,12 +108,10 @@ async def test_send_and_get_attrib_positive(xhash, raw, enc, raw_key):
 ])
 @pytest.mark.asyncio
 async def test_send_and_get_attrib_negative(xhash, raw, enc, error, readonly):
-    await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
-    target_did, target_vk = await did.create_and_store_my_did(wallet_handle, '{}')
-    submitter_did, submitter_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
-        {'seed': '000000000000000000000000Trustee1'}))
+    target_did, target_vk = await create_and_store_did(wallet_handle)
+    submitter_did, submitter_vk = await create_and_store_did(wallet_handle, seed='000000000000000000000000Trustee1')
     await send_nym(pool_handle, wallet_handle, submitter_did, target_did, target_vk)
     if error:
         with pytest.raises(error):
@@ -133,28 +120,26 @@ async def test_send_and_get_attrib_negative(xhash, raw, enc, error, readonly):
             await get_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
     elif readonly:
         res = await get_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
-        assert res['result']['seqNo'] is None
+        assert res['seqNo'] is None
         print(res)
     else:
-        res1 = await send_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
-        res2 = await get_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
-        assert res1['op'] == 'REQNACK'
-        assert res2['op'] == 'REQNACK'
-        print(res1)
-        print(res2)
+        with pytest.raises(VdrError) as exp_err:
+            await send_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
+        with pytest.raises(VdrError) as exp_err:
+            await get_attrib(pool_handle, wallet_handle, target_did, target_did, xhash, raw, enc)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
 
 
 @pytest.mark.parametrize('writer_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])
 @pytest.mark.parametrize('reader_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR', None])
 @pytest.mark.asyncio
 async def test_send_and_get_schema_positive(writer_role, reader_role):
-    await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
-    writer_did, writer_vk = await did.create_and_store_my_did(wallet_handle, '{}')
-    reader_did, reader_vk = await did.create_and_store_my_did(wallet_handle, '{}')
-    trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
-        {'seed': '000000000000000000000000Trustee1'}))
+    writer_did, writer_vk = await create_and_store_did(wallet_handle)
+    reader_did, reader_vk = await create_and_store_did(wallet_handle)
+    trustee_did, trustee_vk = await create_and_store_did(wallet_handle, seed='000000000000000000000000Trustee1')
     # Trustee adds SCHEMA writer
     await send_nym(pool_handle, wallet_handle, trustee_did, writer_did, writer_vk, None, writer_role)
     # Trustee adds SCHEMA reader
@@ -167,26 +152,23 @@ async def test_send_and_get_schema_positive(writer_role, reader_role):
         get_schema, pool_handle, wallet_handle, reader_did, schema_id
     )
 
-    assert res1['op'] == 'REPLY'
-    assert res2['result']['seqNo'] is not None
+    assert res2['seqNo'] is not None
 
     print(res1)
     print(res2)
 
 
 @pytest.mark.parametrize('schema_name, schema_version, schema_attrs, schema_id, errors, readonly', [
-    (None, None, None, None, (AttributeError, AttributeError), False),
-    ('', '', '', '', (IndyError, IndyError), False),
-    (1, 2, 3, 4, (AttributeError, AttributeError), False),
+    (None, None, None, None, (CredxError, VdrError), False),
+    ('', '', '', '', (VdrError, VdrError), False),
+    (1, 2, 3, 4, (TypeError, AttributeError), False),
     (None, None, None, 'P2rRdR8q9aXiteCMJGvVkZ:2:schema:1.0', None, True)
 ])
 @pytest.mark.asyncio
 async def test_send_and_get_schema_negative(schema_name, schema_version, schema_attrs, schema_id, errors, readonly):
-    await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
-    trustee_did, trustee_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
-        {'seed': '000000000000000000000000Trustee1'}))
+    trustee_did, trustee_vk = await create_and_store_did(wallet_handle, seed='000000000000000000000000Trustee1')
     if errors:
         with pytest.raises(errors[0]):
             await send_schema(pool_handle, wallet_handle, trustee_did, schema_name, schema_version, schema_attrs)
@@ -194,18 +176,15 @@ async def test_send_and_get_schema_negative(schema_name, schema_version, schema_
             await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
     elif readonly:
         res = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
-        assert res['result']['seqNo'] is None
+        assert res['seqNo'] is None
         print(res)
-    # TODO: get reqnacks from pool
     else:
-        res1 = await send_schema(pool_handle, wallet_handle, trustee_did, schema_name, schema_version, schema_attrs)
-        res2 = await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
-
-        assert res1['op'] == 'REQNACK'
-        assert res2['op'] == 'REQNACK'
-
-        print(res1)
-        print(res2)
+        with pytest.raises(VdrError) as exp_err:
+            await send_schema(pool_handle, wallet_handle, trustee_did, schema_name, schema_version, schema_attrs)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
+        with pytest.raises(VdrError) as exp_err:
+            await get_schema(pool_handle, wallet_handle, trustee_did, schema_id)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
 
 
 @pytest.mark.parametrize('writer_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])

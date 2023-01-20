@@ -23,6 +23,7 @@ from indy import did, anoncreds, blob_storage, IndyError, payment
 import indy_vdr
 from indy_vdr import ledger, open_pool
 from aries_askar import Store, Key, KeyAlg, AskarError, AskarErrorCode
+from indy_credx import Schema
 
 import logging
 logger = logging.getLogger(__name__)
@@ -357,8 +358,8 @@ async def send_nym(
 async def send_attrib(
         pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None
 ):
-    req = await ledger.build_attrib_request(submitter_did, target_did, xhash, raw, enc)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_attrib_request(submitter_did, target_did, xhash, raw, enc)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
@@ -366,11 +367,11 @@ async def send_attrib(
 async def send_schema(
         pool_handle, wallet_handle, submitter_did, schema_name, schema_version, schema_attrs
 ):
-    schema_id, schema_json = await anoncreds.issuer_create_schema(
-        submitter_did, schema_name, schema_version, schema_attrs
-    )
-    req = await ledger.build_schema_request(submitter_did, schema_json)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    schema = Schema.create(submitter_did, schema_name, schema_version, schema_attrs)
+    schema_id = schema.id
+    schema_json = schema.to_json()
+    req = ledger.build_schema_request(submitter_did, schema_json)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return schema_id, res
 
@@ -427,15 +428,15 @@ async def get_nym(pool_handle, wallet_handle, submitter_did, target_did):
 
 
 async def get_attrib(pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None):
-    req = await ledger.build_get_attrib_request(submitter_did, target_did, raw, xhash, enc)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_attrib_request(submitter_did, target_did, raw, xhash, enc)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
 
 async def get_schema(pool_handle, wallet_handle, submitter_did, id_):
-    req = await ledger.build_get_schema_request(submitter_did, id_)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_schema_request(submitter_did, id_)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
