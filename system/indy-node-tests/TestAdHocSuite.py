@@ -16,9 +16,7 @@ class TestAdHocSuite:
     ):
         docker_client = docker.from_env()
         trustee_did, _ = get_default_trustee
-        steward_did, steward_vk = await did.create_and_store_my_did(
-            wallet_handler, json.dumps({'seed': '000000000000000000000000Steward4'})
-        )
+        steward_did, steward_vk = await create_and_store_did(wallet_handler, seed='000000000000000000000000Steward4')
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=3)
 
         for i in range(10):
@@ -28,7 +26,8 @@ class TestAdHocSuite:
             )[0].exec_run(
                 ['init_bls_keys', '--name', 'Node4'], user='indy'
             )
-            bls_key, bls_key_pop = res1.output.decode().splitlines()
+
+            bls_key, bls_key_pop = list(filter(lambda k: 'key is' in k, res1.output.decode().splitlines()))
             bls_key, bls_key_pop = bls_key.split()[-1], bls_key_pop.split()[-1]
             data = json.dumps(
                 {
@@ -41,7 +40,8 @@ class TestAdHocSuite:
             res2 = json.loads(
                 await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req)
             )
-            assert res2['op'] == 'REPLY'
+            # assert res2['op'] == 'REPLY'
+            assert res2['seqNo'] is not None
 
             # write txn
             await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did)
@@ -49,7 +49,7 @@ class TestAdHocSuite:
             # get txn
             req = await ledger.build_get_txn_request(None, 'DOMAIN', 10)
             res3 = json.loads(await ledger.submit_request(pool_handler, req))
-            assert res3['result']['seqNo'] is not None
+            assert res3['seqNo'] is not None
 
             # check that pool is ok
             await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
