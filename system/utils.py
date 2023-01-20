@@ -266,11 +266,6 @@ async def multi_sign_request(wallet_handle, trustee_did, req):
     return req
 
 
-async def submit_request(pool_handle, req):
-    request_result = await pool_handle.submit_action(req)
-    return request_result
-
-
 async def sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req):
     sreq = await sign_request(wallet_handle, trustee_did, req)
     request_result = await pool_handle.submit_action(sreq)
