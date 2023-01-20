@@ -258,6 +258,19 @@ async def sign_request(wallet_handle, trustee_did, req):
     return req
 
 
+async def multi_sign_request(wallet_handle, trustee_did, req):
+    key = await get_did_signing_key(wallet_handle, trustee_did)
+    if not key:
+        raise Exception(f"Key for DID {trustee_did} is empty")
+    req.set_multi_signature(trustee_did, key.sign_message(req.signature_input))
+    return req
+
+
+async def submit_request(pool_handle, req):
+    request_result = await pool_handle.submit_action(req)
+    return request_result
+
+
 async def sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req):
     sreq = await sign_request(wallet_handle, trustee_did, req)
     request_result = await pool_handle.submit_action(sreq)
