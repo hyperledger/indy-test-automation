@@ -2,6 +2,7 @@ import pytest
 import asyncio
 from system.utils import *
 
+from indy_vdr.error import VdrError
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
 @pytest.mark.usefixtures('check_no_failures_fixture')
@@ -14,7 +15,7 @@ class TestConsensusSuite:
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
         responses = await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=4)
-        dids = [resp['result']['txn']['data']['dest'] for resp in responses]
+        dids = [resp['txn']['data']['dest'] for resp in responses]
 
         # 7/7 online - can w+r
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did)
@@ -26,13 +27,13 @@ class TestConsensusSuite:
 
         # 4/7 online - can r only
         test_nodes[4].stop_service()
-        with pytest.raises(IndyError):
+        with pytest.raises(VdrError):
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
         await check_pool_performs_read(pool_handler, wallet_handler, trustee_did, dids[:2])
 
         # 3/7 online - can r only
         test_nodes[3].stop_service()
-        with pytest.raises(IndyError):
+        with pytest.raises(VdrError):
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
         await check_pool_performs_read(pool_handler, wallet_handler, trustee_did, dids[2:])
 
@@ -55,7 +56,7 @@ class TestConsensusSuite:
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
         responses = await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=10)
-        dids = [resp['result']['txn']['data']['dest'] for resp in responses]
+        dids = [resp['txn']['data']['dest'] for resp in responses]
 
         # Stop all except 1
         for node in test_nodes[1:]:
@@ -85,7 +86,7 @@ class TestConsensusSuite:
 
         for node in temp_test_nodes[-2:]:
             node.stop_service()
-        with pytest.raises(IndyError):
+        with pytest.raises(VdrError):
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
 
         for node in temp_test_nodes[-2:]:
@@ -100,7 +101,7 @@ class TestConsensusSuite:
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did)
 
         test_nodes[0].stop_service()
-        with pytest.raises(IndyError):
+        with pytest.raises(VdrError):
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
 
         # Start all
