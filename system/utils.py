@@ -18,11 +18,11 @@ import testinfra
 import json
 from json import JSONDecodeError
 import hashlib
-#from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError, payment
-from indy import did, anoncreds, blob_storage, IndyError, payment
+from indy import did, IndyError, payment
 import indy_vdr
 from indy_vdr import ledger, open_pool
 from aries_askar import Store, Key, KeyAlg, AskarError, AskarErrorCode
+from indy_credx import Schema, CredentialDefinition, RevocationRegistryDefinition
 
 import logging
 logger = logging.getLogger(__name__)
@@ -357,8 +357,8 @@ async def send_nym(
 async def send_attrib(
         pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None
 ):
-    req = await ledger.build_attrib_request(submitter_did, target_did, xhash, raw, enc)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_attrib_request(submitter_did, target_did, xhash, raw, enc)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
@@ -366,55 +366,91 @@ async def send_attrib(
 async def send_schema(
         pool_handle, wallet_handle, submitter_did, schema_name, schema_version, schema_attrs
 ):
-    schema_id, schema_json = await anoncreds.issuer_create_schema(
-        submitter_did, schema_name, schema_version, schema_attrs
-    )
-    req = await ledger.build_schema_request(submitter_did, schema_json)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    schema = Schema.create(submitter_did, schema_name, schema_version, schema_attrs)
+    schema_id = schema.id
+    schema_json = schema.to_json()
+    await wallet_handle.insert("schema", schema_id, schema_json)
+    req = ledger.build_schema_request(submitter_did, schema_json)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return schema_id, res
 
 
 async def send_cred_def(
-        pool_handle, wallet_handle, submitter_did, schema_json, tag, signature_type, config_json
+        pool_handle, wallet_handle, submitter_did, schema, tag, signature_type, support_revocation
 ):
-    cred_def_id, cred_def_json = await anoncreds.issuer_create_and_store_credential_def(
-        wallet_handle, submitter_did, schema_json, tag, signature_type, config_json
+    (
+        cred_def,
+        cred_def_private,
+        key_proof,
+    ) = await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: CredentialDefinition.create(
+            submitter_did,
+            schema,
+            signature_type or "CL",
+            tag or "default",
+            support_revocation=support_revocation,
+        ),
     )
-    req = await ledger.build_cred_def_request(submitter_did, cred_def_json)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    cred_def_id = cred_def.id
+    cred_def_json = cred_def.to_json()
+
+    await wallet_handle.insert("credential_def", cred_def_id, cred_def_json, tags={"schema_id": schema["id"]})
+    await wallet_handle.insert("credential_def_private", cred_def_id, cred_def_private.to_json_buffer())
+    await wallet_handle.insert("credential_def_key_proof", cred_def_id, key_proof.to_json_buffer())
+
+    req = ledger.build_cred_def_request(submitter_did, cred_def_json)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return cred_def_id, cred_def_json, res
 
 
 async def send_revoc_reg_def(
-        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json
+        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, max_cred_num=1, issuance_type=None,
 ):
-    tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
-    tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
-    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await anoncreds.issuer_create_and_store_revoc_reg(
-        wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json, tails_writer_handle
+    cred_def = await wallet_handle.fetch("credential_def", cred_def_id)
+    (
+        rev_reg_def,
+        rev_reg_def_private,
+        rev_reg,
+        _rev_reg_delta,
+    ) = await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: RevocationRegistryDefinition.create(
+            submitter_did,
+            cred_def.raw_value,
+            tag,
+            revoc_def_type,
+            max_cred_num,
+            issuance_type=issuance_type
+        ),
     )
-    req = await ledger.build_revoc_reg_def_request(submitter_did, revoc_reg_def_json)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
 
-    return revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, res
+    rev_reg_def_id = rev_reg_def.id
+    rev_reg_def_json = rev_reg_def.to_json()
+    rev_reg_json = rev_reg.to_json()
+
+    await wallet_handle.insert("revocation_reg", rev_reg_def_id, rev_reg_json)
+    await wallet_handle.insert("revocation_reg_info", rev_reg_def_id, value_json={"curr_id": 0, "used_ids": []})
+    await wallet_handle.insert("revocation_reg_def", rev_reg_def_id, rev_reg_def_json)
+    await wallet_handle.insert("revocation_reg_def_private", rev_reg_def_id, rev_reg_def_private.to_json_buffer())
+
+    req = ledger.build_revoc_reg_def_request(submitter_did, rev_reg_def_json)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
+
+    return rev_reg_def_id, rev_reg_def_json, rev_reg_json, res
 
 
 async def send_revoc_reg_entry(
-        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json
+        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, max_cred_num=1, issuance_type=None,
 ):
-    tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
-    tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
-    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await anoncreds.issuer_create_and_store_revoc_reg(
-        wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json, tails_writer_handle
+    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, _ = await send_revoc_reg_def(
+        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id,
+        max_cred_num=max_cred_num, issuance_type=issuance_type,
     )
-    req = await ledger.build_revoc_reg_def_request(submitter_did, revoc_reg_def_json)
-    await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
-    req = await ledger.build_revoc_reg_entry_request(
-        submitter_did, revoc_reg_def_id, revoc_def_type, revoc_reg_entry_json
-    )
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_revoc_reg_entry_request(submitter_did, revoc_reg_def_id, revoc_def_type, revoc_reg_entry_json)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, res
 
@@ -427,43 +463,74 @@ async def get_nym(pool_handle, wallet_handle, submitter_did, target_did):
 
 
 async def get_attrib(pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None):
-    req = await ledger.build_get_attrib_request(submitter_did, target_did, raw, xhash, enc)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_attrib_request(submitter_did, target_did, raw, xhash, enc)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
 
 async def get_schema(pool_handle, wallet_handle, submitter_did, id_):
-    req = await ledger.build_get_schema_request(submitter_did, id_)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_schema_request(submitter_did, id_)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
+
+
+def parse_get_schema_response(response):
+    schema_seqno = response.get("seqNo")
+    schema_name = response["data"]["name"]
+    schema_version = response["data"]["version"]
+    schema_id = f"{response['dest']}:2:{schema_name}:{schema_version}"
+    return schema_id, {
+        "ver": "1.0",
+        "id": schema_id,
+        "name": schema_name,
+        "version": schema_version,
+        "attrNames": response["data"]["attr_names"],
+        "seqNo": schema_seqno,
+    }
 
 
 async def get_cred_def(pool_handle, wallet_handle, submitter_did, id_):
-    req = await ledger.build_get_cred_def_request(submitter_did, id_)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_cred_def_request(submitter_did, id_)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
 
+def parse_get_cred_def_response(response):
+    schema_id = str(response["ref"])
+    signature_type = response["signature_type"]
+    tag = response.get("tag", "default")
+    origin_did = response["origin"]
+    cred_def_id = f"{origin_did}:3:{signature_type}:{schema_id}:{tag}"
+    return cred_def_id, {
+        "ver": "1.0",
+        "id": cred_def_id,
+        "schemaId": schema_id,
+        "type": signature_type,
+        "tag": tag,
+        "value": response["data"],
+    }
+
+
 async def get_revoc_reg_def(pool_handle, wallet_handle, submitter_did, id_):
-    req = await ledger.build_get_revoc_reg_def_request(submitter_did, id_)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_revoc_reg_def_request(submitter_did, id_)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
 
 async def get_revoc_reg(pool_handle, wallet_handle, submitter_did, id_, timestamp):
-    req = await ledger.build_get_revoc_reg_request(submitter_did, id_, timestamp)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_revoc_reg_request(submitter_did, id_, timestamp)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
 
 async def get_revoc_reg_delta(pool_handle, wallet_handle, submitter_did, id_, from_, to_):
-    req = await ledger.build_get_revoc_reg_delta_request(submitter_did, id_, from_, to_)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_revoc_reg_delta_request(submitter_did, id_, from_, to_)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
@@ -480,7 +547,7 @@ def run_in_event_loop(async_func):
 
 async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did=None):
     if some_did is None:
-        some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
+        some_did, _ = await create_and_store_did(wallet_handle)
     add = await write_eventually_positive(send_nym, pool_handle, wallet_handle, trustee_did, some_did)
     assert add['op'] == 'REPLY'
     get = await read_eventually_positive(get_nym, pool_handle, wallet_handle, trustee_did, some_did)
@@ -1258,14 +1325,12 @@ async def send_payments(pool_handle, wallet_handle, submitter_did, address_from,
 
 async def send_nodes(pool_handle, wallet_handle, trustee_did, count, alias=None):
     # create single STEWARD to add ALIAS node once and change it by NODE txns
-    steward_did, steward_vk = await did.create_and_store_my_did(
-        wallet_handle, json.dumps({'seed': '00000000000000000000000Steward99'})
-    )
+    steward_did, steward_vk = await create_and_store_did(wallet_handle, seed='00000000000000000000000Steward99')
     await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
 
     for i in range(1, count+1):
         if not alias:  # create new STEWARD for each NODE txn
-            steward_did, steward_vk = await did.create_and_store_my_did(wallet_handle, '{}')
+            steward_did, steward_vk = await create_and_store_did(wallet_handle)
             await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
         req = await ledger.build_node_request(
             steward_did, steward_vk, json.dumps(
