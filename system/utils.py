@@ -1036,8 +1036,8 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
             vc_status = parsed_info['result']['data']['Node_info']['View_change_status']['VC_in_progress']
             return vc_status
 
-        req = await ledger.build_get_validator_info_request(trustee_did)
-        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        req = ledger.build_get_validator_info_request(trustee_did)
+        results = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req)
         # get n
         n = len(results)
         # calculate f

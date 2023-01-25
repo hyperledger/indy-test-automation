@@ -16,9 +16,7 @@ class TestAdHocSuite:
     ):
         docker_client = docker.from_env()
         trustee_did, _ = get_default_trustee
-        steward_did, steward_vk = await did.create_and_store_my_did(
-            wallet_handler, json.dumps({'seed': '000000000000000000000000Steward4'})
-        )
+        steward_did, steward_vk = await create_and_store_did(wallet_handler, seed='000000000000000000000000Steward4')
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=3)
 
         for i in range(10):
@@ -28,7 +26,8 @@ class TestAdHocSuite:
             )[0].exec_run(
                 ['init_bls_keys', '--name', 'Node4'], user='indy'
             )
-            bls_key, bls_key_pop = res1.output.decode().splitlines()
+
+            bls_key, bls_key_pop = list(filter(lambda k: 'key is' in k, res1.output.decode().splitlines()))
             bls_key, bls_key_pop = bls_key.split()[-1], bls_key_pop.split()[-1]
             data = json.dumps(
                 {
@@ -37,19 +36,19 @@ class TestAdHocSuite:
                     'blskey_pop': bls_key_pop
                 }
             )
-            req = await ledger.build_node_request(steward_did, '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA', data)
-            res2 = json.loads(
-                await ledger.sign_and_submit_request(pool_handler, wallet_handler, steward_did, req)
-            )
-            assert res2['op'] == 'REPLY'
+            req = ledger.build_node_request(steward_did, '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA', data)
+            res2 = await sign_and_submit_request(pool_handler, wallet_handler, steward_did, req)
+            
+            # assert res2['op'] == 'REPLY'
+            assert res2['seqNo'] is not None
 
             # write txn
             await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did)
 
             # get txn
-            req = await ledger.build_get_txn_request(None, 'DOMAIN', 10)
-            res3 = json.loads(await ledger.submit_request(pool_handler, req))
-            assert res3['result']['seqNo'] is not None
+            req = ledger.build_get_txn_request(None, 'DOMAIN', 10)
+            res3 = await pool_handler.submit_request(req)
+            assert res3['seqNo'] is not None
 
             # check that pool is ok
             await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
@@ -73,7 +72,7 @@ class TestAdHocSuite:
         print(initial_fees_setting)
 
         # set auth rule for schema
-        req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
+        req = ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
                                                    json.dumps(
                                                     {
                                                        'constraint_id': 'OR',
@@ -103,26 +102,27 @@ class TestAdHocSuite:
                                                     }
                                                         )
                                                    )
-        res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         print(res1)
-        assert res1['op'] == 'REPLY'
+        # assert res1['op'] == 'REPLY'
+        assert res1['seqNo'] is not None
 
         # write schema with fees
         source1, _ = await get_payment_sources(pool_handler, wallet_handler, address)
-        schema_id, schema_json = await anoncreds.issuer_create_schema(
+        schema_id, schema_json = Schema.create(
             trustee_did, random_string(5), '1.0', json.dumps(['name', 'age'])
         )
-        req = await ledger.build_schema_request(trustee_did, schema_json)
+        req = ledger.build_schema_request(trustee_did, schema_json)
         req_with_fees_json, _ = await payment.add_request_fees(
             wallet_handler, trustee_did, req, json.dumps([source1]), json.dumps(
                 [{'recipient': address, 'amount': 750 * 100000}]
             ), None
         )
-        res2 = json.loads(
-            await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req_with_fees_json)
-        )
+        res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req_with_fees_json)
+        
         print(res2)
-        assert res2['op'] == 'REPLY'
+        # assert res2['op'] == 'REPLY'
+        assert res2['seqNo'] is not None
 
         # send payment
         source2, _ = await get_payment_sources(pool_handler, wallet_handler, address)
@@ -131,9 +131,10 @@ class TestAdHocSuite:
                 [{"recipient": address2, "amount": 500 * 100000}, {"recipient": address, "amount": 250 * 100000}]
             ), None
         )
-        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        res3 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         print(res3)
-        assert res3['op'] == 'REPLY'
+        # assert res3['op'] == 'REPLY'
+        assert res3['seqNo'] is not None
 
         # stop Node7 -> drop token state -> start Node7
         node7 = NodeHost(7)
@@ -159,8 +160,9 @@ class TestAdHocSuite:
                 [{"recipient": address2, "amount": 125 * 100000}, {"recipient": address, "amount": 125 * 100000}]
             ), None
         )
-        res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        assert res4['op'] == 'REPLY'
+        res4 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        # assert res4['op'] == 'REPLY'
+        assert res4['seqNo'] is not None
 
         # check again that pool is ok
         await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
@@ -212,7 +214,7 @@ class TestAdHocSuite:
         # make sure VC is done
         super_new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, new_primary)
         # write txn with fees
-        req = await ledger.build_attrib_request(trustee_did, trustee_did, None, None, random_string(256))
+        req = ledger.build_attrib_request(trustee_did, trustee_did, None, None, random_string(256))
         await add_fees_and_send_request(pool_handler, wallet_handler, trustee_did, address, req, fees['attrib'])
         # promote both nodes back simultaneously
         promote_tasks = []
@@ -263,7 +265,7 @@ class TestAdHocSuite:
             # make sure pool works
             await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did, nyms_count=nyms_count)
             # write txn with fees
-            req = await ledger.build_attrib_request(trustee_did, trustee_did, None, None, random_string(256))
+            req = ledger.build_attrib_request(trustee_did, trustee_did, None, None, random_string(256))
             await add_fees_and_send_request(pool_handler, wallet_handler, trustee_did, address, req, fees['attrib'])
             # promote node back
             await promote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
