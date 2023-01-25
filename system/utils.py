@@ -23,6 +23,7 @@ import indy_vdr
 from indy_vdr import ledger, open_pool
 from aries_askar import Store, Key, KeyAlg, AskarError, AskarErrorCode
 from indy_credx import Schema, CredentialDefinition, RevocationRegistryDefinition
+from indy_vdr.error import VdrError
 
 import logging
 logger = logging.getLogger(__name__)
@@ -250,30 +251,30 @@ async def get_did_signing_key(wallet_handle, did):
     return None
 
 
-async def sign_request(wallet_handle, trustee_did, req):
-    key = await get_did_signing_key(wallet_handle, trustee_did)
+async def sign_request(wallet_handle, submitter_did, req):
+    key = await get_did_signing_key(wallet_handle, submitter_did)
     if not key:
-        raise Exception(f"Key for DID {trustee_did} is empty")
+        raise Exception(f"Key for DID {submitter_did} is empty")
     req.set_signature(key.sign_message(req.signature_input))
     return req
 
 
-async def multi_sign_request(wallet_handle, trustee_did, req):
-    key = await get_did_signing_key(wallet_handle, trustee_did)
+async def multi_sign_request(wallet_handle, submitter_did, req):
+    key = await get_did_signing_key(wallet_handle, submitter_did)
     if not key:
-        raise Exception(f"Key for DID {trustee_did} is empty")
-    req.set_multi_signature(trustee_did, key.sign_message(req.signature_input))
+        raise Exception(f"Key for DID {submitter_did} is empty")
+    req.set_multi_signature(submitter_did, key.sign_message(req.signature_input))
     return req
 
 
-async def sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req):
-    sreq = await sign_request(wallet_handle, trustee_did, req)
+async def sign_and_submit_action(pool_handle, wallet_handle, submitter_did, req):
+    sreq = await sign_request(wallet_handle, submitter_did, req)
     request_result = await pool_handle.submit_action(sreq)
     return request_result
 
 
-async def sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req):
-    sreq = await sign_request(wallet_handle, trustee_did, req)
+async def sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req):
+    sreq = await sign_request(wallet_handle, submitter_did, req)
     request_result = await pool_handle.submit_request(sreq)
     return request_result
 
@@ -549,9 +550,9 @@ async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did=Non
     if some_did is None:
         some_did, _ = await create_and_store_did(wallet_handle)
     add = await write_eventually_positive(send_nym, pool_handle, wallet_handle, trustee_did, some_did)
-    assert add['op'] == 'REPLY'
+    assert add['txnMetadata']['seqNo'] is not None
     get = await read_eventually_positive(get_nym, pool_handle, wallet_handle, trustee_did, some_did)
-    assert get['result']['seqNo'] is not None
+    assert get['seqNo'] is not None
 
 
 # TODO make that async
@@ -581,7 +582,6 @@ async def check_pool_performs_read(pool_handle, wallet_handle, submitter_did, di
     res = []
     for did in dids:
         resp = await get_nym(pool_handle, wallet_handle, submitter_did, did)
-        #assert resp['result']['seqNo'] is not None
         assert resp['seqNo'] is not None
         res.append(resp)
     return res
@@ -593,7 +593,6 @@ async def check_pool_performs_write_read(
     writes = await check_pool_performs_write(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
     )
-    #dids = [resp['result']['txn']['data']['dest'] for resp in writes]
     dids = [resp['txn']['data']['dest'] for resp in writes]
     return await eventually(
         check_pool_performs_read, pool_handle, wallet_handle, trustee_did, dids, timeout=timeout
@@ -1020,34 +1019,25 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
 
     async def _get_primary():
 
-        def get_primary_from_info(info: str, name: str) -> Optional[str]:
-            parsed_info = json.loads(info)
-            if parsed_info['op'] != 'REPLY':
+        def get_primary_from_info(info, name: str) -> Optional[str]:
+            if info['op'] != 'REPLY':
                 return None
-            replica_name = parsed_info['result']['data']['Node_info']['Replicas_status'][name + ':0']['Primary']
+            replica_name = info['result']['data']['Node_info']['Replicas_status'][name + ':0']['Primary']
             if replica_name is None:
                 return None
             return replica_name[len('Node'):-len(':0')]
 
-        def get_vc_status_from_info(info: str) -> Optional[bool]:
-            parsed_info = json.loads(info)
-            if parsed_info['op'] != 'REPLY':
+        def get_vc_status_from_info(info) -> Optional[bool]:
+            if info['op'] != 'REPLY':
                 return None
-            vc_status = parsed_info['result']['data']['Node_info']['View_change_status']['VC_in_progress']
+            vc_status = info['result']['data']['Node_info']['View_change_status']['VC_in_progress']
             return vc_status
 
-        req = ledger.build_get_validator_info_request(trustee_did)
-        results = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req)
+        results = await get_validator_info(pool_handle, wallet_handle, trustee_did)
         # get n
         n = len(results)
         # calculate f
         f = (n - 1) // 3
-        # remove all timeout entries
-        try:
-            for i in range(len(results)):
-                results.pop(list(results.keys())[list(results.values()).index('timeout')])
-        except ValueError:
-            pass
         # check that VC is not in progress (status `False`)
         assert all([not get_vc_status_from_info(info) for _, info in results.items()])
         # remove all not REPLY and empty (not selected) primaries entries
@@ -1126,17 +1116,15 @@ async def eventually_positive(func, *args, cycles_limit=15, sleep=30, **kwargs):
 # TODO replace with eventually
 async def write_eventually_positive(func, *args, cycles_limit=40):
     cycles = 0
-    res = dict()
-    res['op'] = ''
-    while res['op'] != 'REPLY':
+    res = {'txnMetadata': {'seqNo': None}}
+    while res['txnMetadata']['seqNo'] is None:
         try:
             cycles += 1
             if cycles >= cycles_limit:
                 print('CYCLES LIMIT IS EXCEEDED!')
                 break
             res = await func(*args)
-            await asyncio.sleep(10)
-        except IndyError:
+        except VdrError:
             await asyncio.sleep(10)
             pass
     return res
@@ -1146,14 +1134,13 @@ async def write_eventually_positive(func, *args, cycles_limit=40):
 async def read_eventually_positive(func, *args, cycles_limit=30):
     cycles = 0
     res = await func(*args)
-    #while res['result']['seqNo'] is None:
     while res['seqNo'] is None:
+        await asyncio.sleep(5)
         cycles += 1
         if cycles >= cycles_limit:
             print('CYCLES LIMIT IS EXCEEDED!')
             break
         res = await func(*args)
-        await asyncio.sleep(5)
     return res
 
 
@@ -1170,7 +1157,7 @@ async def eventually_negative(func, *args, cycles_limit=15):
             if cycles >= cycles_limit:
                 print('CYCLES LIMIT IS EXCEEDED BUT EXCEPTION HAS NOT BEEN RAISED!')
                 break
-        except IndyError:
+        except VdrError:
             print('EXPECTED INDY ERROR HAS BEEN RAISED!')
             is_exception_raised = True
             break
