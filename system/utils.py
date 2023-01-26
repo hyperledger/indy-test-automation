@@ -1079,9 +1079,9 @@ async def demote_random_node(pool_handle, wallet_handle, trustee_did):
 
 async def demote_node(pool_handle, wallet_handle, trustee_did, alias, target_did):
     demote_data = json.dumps({'alias': alias, 'services': []})
-    demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
-    demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
-    assert demote_res['op'] == 'REPLY'
+    demote_req = ledger.build_node_request(trustee_did, target_did, demote_data)
+    demote_res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req)
+    assert demote_res['seqNo'] is not None
 
 
 async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_did):
