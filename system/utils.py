@@ -430,10 +430,6 @@ async def send_attrib(
 async def send_schema(
         pool_handle, wallet_handle, submitter_did, schema_name, schema_version, schema_attrs
 ):
-    # schema = Schema.create(submitter_did, schema_name, schema_version, schema_attrs)
-    # schema_id = schema.id
-    # schema_json = schema.to_json()
-    # await wallet_handle.insert("schema", schema_id, schema_json)
     schema_id, schema_json = await create_schema(wallet_handle, submitter_did, schema_name, schema_version,
                                                  schema_attrs)
     req = ledger.build_schema_request(submitter_did, schema_json)
