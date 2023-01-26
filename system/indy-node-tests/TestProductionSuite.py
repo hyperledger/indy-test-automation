@@ -66,17 +66,15 @@ class TestProductionSuite:
         stewards = {}
 
         for i in range(1, nodes_num+1):
-            steward_did, steward_vk = await did.create_and_store_my_did(
-                wallet_handler, json.dumps({'seed': '000000000000000000000000Steward{}'.format(i)})
-            )
+            steward_did, steward_vk = await create_and_store_did(wallet_handler, seed=f'000000000000000000000000Steward{i}')
             stewards['steward{}'.format(i)] = steward_did
 
         for i in range(nodes_num+1, EXTRA_NODES_NUM+nodes_num+1):
-            steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+            steward_did, steward_vk = await create_and_store_did(wallet_handler)
             res = await send_nym(
                 pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, 'Steward{}'.format(i), 'STEWARD'
             )
-            assert res['op'] == 'REPLY'
+            assert res['txnMetadata']['seqNo'] is not None
             stewards['steward{}'.format(i)] = steward_did
 
         print(stewards)
