@@ -26,21 +26,21 @@ async def test_case_revoc_reg_entry(
 ):
     trustee_did, _ = get_default_trustee
     # add adder to add revoc reg entry
-    adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    adder_did, adder_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
-    assert res['op'] == 'REPLY'
+    assert res['seqNo'] is not None
     schema_id, _ = await send_schema(
         pool_handler, wallet_handler, trustee_did, 'schema1', '1.0', json.dumps(['age', 'sex', 'height', 'name'])
     )
     await asyncio.sleep(1)
     res = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id)
-    schema_id, schema_json = await ledger.parse_get_schema_response(json.dumps(res))
+    schema_id, schema_json = ledger.parse_get_schema_response(json.dumps(res))
     cred_def_id, _, res = await send_cred_def(
         pool_handler, wallet_handler, trustee_did, schema_json, 'cred_def_tag', None,
         json.dumps({'support_revocation': True})
     )
     # set rule for revoc reg def adding - network monitor case
-    req = await ledger.build_auth_rule_request(trustee_did, '113', 'ADD', '*', None, '*',
+    req = ledger.build_auth_rule_request(trustee_did, '113', 'ADD', '*', None, '*',
                                                json.dumps({
                                                    'constraint_id': 'ROLE',
                                                    'role': '*',
@@ -48,11 +48,11 @@ async def test_case_revoc_reg_entry(
                                                    'need_to_be_owner': False,
                                                    'metadata': {}
                                                }))
-    res21 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    res21 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
     print(res21)
-    assert res21['op'] == 'REPLY'
+    assert res21['seqNo'] is not None
     # set rule for adding
-    req = await ledger.build_auth_rule_request(trustee_did, '114', 'ADD', '*', None, '*',
+    req = ledger.build_auth_rule_request(trustee_did, '114', 'ADD', '*', None, '*',
                                                json.dumps({
                                                    'constraint_id': 'ROLE',
                                                    'role': adder_role_num,
@@ -60,11 +60,11 @@ async def test_case_revoc_reg_entry(
                                                    'need_to_be_owner': False,
                                                    'metadata': {}
                                                }))
-    res22 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    res22 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
     print(res22)
-    assert res22['op'] == 'REPLY'
+    assert res22['seqNo'] is not None
     # set rule for editing
-    req = await ledger.build_auth_rule_request(trustee_did, '114', 'EDIT', '*', '*', '*',
+    req = ledger.build_auth_rule_request(trustee_did, '114', 'EDIT', '*', '*', '*',
                                                json.dumps({
                                                    'constraint_id': 'ROLE',
                                                    'role': editor_role_num,
@@ -72,9 +72,9 @@ async def test_case_revoc_reg_entry(
                                                    'need_to_be_owner': False,
                                                    'metadata': {}
                                                }))
-    res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    res3 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
     print(res3)
-    assert res3['op'] == 'REPLY'
+    assert res3['seqNo'] is not None
     # add revoc reg entry
     tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
     tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
@@ -82,13 +82,13 @@ async def test_case_revoc_reg_entry(
         wallet_handler, adder_did, None, 'TAG1', cred_def_id,
         json.dumps({'max_cred_num': 10, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}), tails_writer_handle
     )
-    req = await ledger.build_revoc_reg_def_request(adder_did, revoc_reg_def_json)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
-    assert res['op'] == 'REPLY'
-    request = await ledger.build_revoc_reg_entry_request(adder_did, revoc_reg_def_id, 'CL_ACCUM', revoc_reg_entry_json)
-    res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, request))
+    req = ledger.build_revoc_reg_def_request(adder_did, revoc_reg_def_json)
+    res = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, req)
+    assert res['seqNo'] is not None
+    request = ledger.build_revoc_reg_entry_request(adder_did, revoc_reg_def_id, 'CL_ACCUM', revoc_reg_entry_json)
+    res4 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, request)
     print(res4)
-    assert res4['op'] == 'REPLY'
+    assert res4['seqNo'] is not None
     if adder_role != editor_role:
         # try to edit revoc reg entry as adder - should be rejected
         _request = json.loads(request)
@@ -97,14 +97,14 @@ async def test_case_revoc_reg_entry(
         _request['operation']['value']['revoked'] = [7, 8, 9]
         _request['reqId'] += _request['reqId']
         res5 = json.loads(
-            await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, json.dumps(_request))
+            await sign_and_submit_request(pool_handler, wallet_handler, adder_did, json.dumps(_request))
         )
         print(res5)
         assert res5['op'] == 'REJECT'
         # change adder role to edit revoc reg def
         res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, None, None, editor_role)
         print(res)
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
     # edit revoc reg entry
     request = json.loads(request)
     request['operation']['value']['prevAccum'] = request['operation']['value']['accum']
@@ -112,22 +112,22 @@ async def test_case_revoc_reg_entry(
     request['operation']['value']['revoked'] = [1, 2, 3]
     request['reqId'] += request['reqId']
     res6 = json.loads(
-        await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, json.dumps(request))
+        await sign_and_submit_request(pool_handler, wallet_handler, adder_did, json.dumps(request))
     )
     print(res6)
-    assert res6['op'] == 'REPLY'
+    assert res6['seqNo'] is not None
     if adder_role != editor_role:
         # try to add another revoc reg entry as editor - should be rejected
         revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await anoncreds.issuer_create_and_store_revoc_reg(
             wallet_handler, adder_did, None, 'TAG2', cred_def_id,
             json.dumps({'max_cred_num': 20, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}), tails_writer_handle
         )
-        req = await ledger.build_revoc_reg_def_request(adder_did, revoc_reg_def_json)
-        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
-        assert res['op'] == 'REPLY'
-        request = await ledger.build_revoc_reg_entry_request(
+        req = ledger.build_revoc_reg_def_request(adder_did, revoc_reg_def_json)
+        res = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, req)
+        assert res['seqNo'] is not None
+        request = ledger.build_revoc_reg_entry_request(
             adder_did, revoc_reg_def_id, 'CL_ACCUM', revoc_reg_entry_json
         )
-        res7 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, request))
+        res7 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, request)
         print(res7)
         assert res7['op'] == 'REJECT'

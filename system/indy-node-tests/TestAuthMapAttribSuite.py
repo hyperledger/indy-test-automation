@@ -38,7 +38,7 @@ async def test_case_attrib(
     res = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
     assert res['seqNo'] is not None
     # set rule for adding
-    req = await ledger.build_auth_rule_request(trustee_did, '100', 'ADD', '*', None, '*',
+    req = ledger.build_auth_rule_request(trustee_did, '100', 'ADD', '*', None, '*',
                                                json.dumps({
                                                    'constraint_id': 'ROLE',
                                                    'role': adder_role_num,
@@ -50,7 +50,7 @@ async def test_case_attrib(
     print(res2)
     assert res2['seqNo'] is not None
     # set rule for editing
-    req = await ledger.build_auth_rule_request(trustee_did, '100', 'EDIT', '*', '*', '*',
+    req = ledger.build_auth_rule_request(trustee_did, '100', 'EDIT', '*', '*', '*',
                                                json.dumps({
                                                    'constraint_id': 'ROLE',
                                                    'role': editor_role_num,
