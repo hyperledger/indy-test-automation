@@ -9,29 +9,31 @@ SEC_PER_DAY = 24 * 60 * 60
 class TestTAASuite:
 
     @pytest.mark.parametrize(
-        'aml, version_set, context, timestamp, version_get',
+        'aml, version_set, context, version_get',
         [
-            ({random_string(10): random_string(10)}, '0', random_string(25), None, '0'),
-            ({random_string(100): random_string(100)}, random_string(5), None,
-             int(time.time()) // SEC_PER_DAY * SEC_PER_DAY, None)
+            ({random_string(10): random_string(10)}, '0', random_string(25), '0'),
+            ({random_string(100): random_string(100)}, random_string(5), None, None)
         ]
     )
     @pytest.mark.asyncio
     async def test_case_send_and_get_aml(
-            self, pool_handler, wallet_handler, get_default_trustee, aml, version_set, context, timestamp, version_get
+            self, pool_handler, wallet_handler, get_default_trustee, aml, version_set, context, version_get
     ):
         trustee_did, _ = get_default_trustee
         req = ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version_set, context)
         res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
         # aml with the same version should be rejected
         req = ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version_set, context)
         with pytest.raises(indy_vdr.error.VdrError):
             res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         # assert res2['op'] == 'REJECT'
+        timestamp = int(time.time()) if version_get is None else None
         req = ledger.build_get_acceptance_mechanisms_request(None, timestamp, version_get)
         res3 = await pool_handler.submit_request(req)
         # assert res3['op'] == 'REPLY'
+        assert res3['seqNo'] is not None
 
     @pytest.mark.skip('INDY-2316')
     @pytest.mark.parametrize(
