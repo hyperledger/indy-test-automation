@@ -86,19 +86,20 @@ class TestCatchUpSuite:
         await ensure_pool_is_in_sync(nodes_num=nodes_num)
 
         await eventually(demote_node, pool_handler, wallet_handler, trustee_did, 'Node9', pool_info['Node9'])
-        await pool.refresh_pool_ledger(pool_handler)
+        # await pool.refresh_pool_ledger(pool_handler)
+        pool_handler.refresh()
         await ensure_pool_performs_write_read(
             pool_handler, wallet_handler, trustee_did, nyms_count=main_txn_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await eventually(demote_node, pool_handler, wallet_handler, trustee_did, 'Node8', pool_info['Node8'])
-        await pool.refresh_pool_ledger(pool_handler)
+        pool_handler.refresh()
         await ensure_pool_performs_write_read(
             pool_handler, wallet_handler, trustee_did, nyms_count=main_txn_count, timeout=WRITE_READ_TIMEOUT
         )
 
         await eventually(promote_node, pool_handler, wallet_handler, trustee_did, 'Node8', pool_info['Node8'])
-        await pool.refresh_pool_ledger(pool_handler)
+        pool_handler.refresh()
         if check_reachability:
             await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         if wait_catchup_before_ordering:
@@ -108,7 +109,7 @@ class TestCatchUpSuite:
         )
 
         await eventually(promote_node, pool_handler, wallet_handler, trustee_did, 'Node9', pool_info['Node9'])
-        await pool.refresh_pool_ledger(pool_handler)
+        pool_handler.refresh()
         if check_reachability:
             await ensure_all_nodes_online(pool_handler, wallet_handler, trustee_did)
         if wait_catchup_before_ordering:
