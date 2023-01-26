@@ -198,7 +198,7 @@ class TestAdHocSuite:
             task = demote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
             demote_tasks.append(task)
         await asyncio.gather(*demote_tasks, return_exceptions=True)
-        await pool.refresh_pool_ledger(pool_handler)
+        pool_handler.refresh()
         # make sure VC is done
         new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
         new_primary_name = 'Node{}'.format(new_primary)
@@ -210,7 +210,7 @@ class TestAdHocSuite:
             )
             demote_tasks.append(task)
         await asyncio.gather(*demote_tasks, return_exceptions=True)
-        await pool.refresh_pool_ledger(pool_handler)
+        pool_handler.refresh()
         # make sure VC is done
         super_new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, new_primary)
         # write txn with fees
@@ -226,7 +226,7 @@ class TestAdHocSuite:
             )
             promote_tasks.append(task2)
         await asyncio.gather(*promote_tasks, return_exceptions=True)
-        await pool.refresh_pool_ledger(pool_handler)
+        pool_handler.refresh()
         # make sure VC is done
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, super_new_primary)
 
@@ -259,7 +259,7 @@ class TestAdHocSuite:
             node_to_demote = choice(node_list)
             # demote it
             await demote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
-            await pool.refresh_pool_ledger(pool_handler)
+            pool_handler.refresh()
             # make sure VC is done
             new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
             # make sure pool works
@@ -269,7 +269,7 @@ class TestAdHocSuite:
             await add_fees_and_send_request(pool_handler, wallet_handler, trustee_did, address, req, fees['attrib'])
             # promote node back
             await promote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
-            await pool.refresh_pool_ledger(pool_handler)
+            pool_handler.refresh()
             # make sure VC is done
             await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, new_primary)
             # make sure pool works
