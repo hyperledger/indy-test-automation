@@ -25,16 +25,16 @@ async def test_case_nym(
         adder_role, adder_role_num, editor_role, editor_role_num
 ):
     trustee_did, _ = get_default_trustee
-    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    new_did, new_vk = await create_and_store_did(wallet_handler)
     # add adder to add nym
-    adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    adder_did, adder_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
-    assert res['op'] == 'REPLY'
+    assert res['seqNo'] is not None
     # add editor to edit nym
-    editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    editor_did, editor_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
-    assert res['op'] == 'REPLY'
-    req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
+    assert res['seqNo'] is not None
+    req = ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
                                                json.dumps({
                                                    'constraint_id': 'ROLE',
                                                    'role': adder_role_num,
@@ -42,10 +42,10 @@ async def test_case_nym(
                                                    'need_to_be_owner': False,
                                                    'metadata': {}
                                                }))
-    res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
     print(res2)
-    assert res2['op'] == 'REPLY'
-    req = await ledger.build_auth_rule_request(trustee_did, '1', 'EDIT', 'verkey', '*', '*',
+    assert res2['seqNo'] is not None
+    req = ledger.build_auth_rule_request(trustee_did, '1', 'EDIT', 'verkey', '*', '*',
                                                json.dumps({
                                                    'constraint_id': 'ROLE',
                                                    'role': editor_role_num,
@@ -53,17 +53,17 @@ async def test_case_nym(
                                                    'need_to_be_owner': False,
                                                    'metadata': {}
                                                }))
-    res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+    res3 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
     print(res3)
-    assert res3['op'] == 'REPLY'
+    assert res3['seqNo'] is not None
     # add nym with verkey by adder
     res4 = await send_nym(pool_handler, wallet_handler, adder_did, new_did, adder_vk)  # push adder vk
     print(res4)
-    assert res4['op'] == 'REPLY'
+    assert res4['seqNo'] is not None
     # edit verkey by editor
     res5 = await send_nym(pool_handler, wallet_handler, editor_did, new_did, editor_vk)  # push editor vk
     print(res5)
-    assert res5['op'] == 'REPLY'
+    assert res5['seqNo'] is not None
     # negative cases
     if adder_role != editor_role:
         # try to add another nym with editor did - should be rejected

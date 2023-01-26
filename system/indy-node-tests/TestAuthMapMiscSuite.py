@@ -27,15 +27,15 @@ class TestAuthMapMiscSuite:
     ):
         trustee_did, _ = get_default_trustee
         # add adder to add node
-        adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        adder_did, adder_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
         # add editor to edit node
-        editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        editor_did, editor_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
         # set rule for adding
-        req = await ledger.build_auth_rule_request(trustee_did, '0', 'ADD', 'services', '*', str(['VALIDATOR']),
+        req = ledger.build_auth_rule_request(trustee_did, '0', 'ADD', 'services', '*', str(['VALIDATOR']),
                                                    json.dumps({
                                                        'constraint_id': 'ROLE',
                                                        'role': adder_role_num,
@@ -43,11 +43,11 @@ class TestAuthMapMiscSuite:
                                                        'need_to_be_owner': False,
                                                        'metadata': {}
                                                    }))
-        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         print(res2)
-        assert res2['op'] == 'REPLY'
+        assert res2['seqNo'] is not None
         # set rule for editing
-        req = await ledger.build_auth_rule_request(trustee_did, '0', 'EDIT', 'services', str(['VALIDATOR']), str([]),
+        req = ledger.build_auth_rule_request(trustee_did, '0', 'EDIT', 'services', str(['VALIDATOR']), str([]),
                                                    json.dumps({
                                                        'constraint_id': 'ROLE',
                                                        'role': editor_role_num,
@@ -55,16 +55,16 @@ class TestAuthMapMiscSuite:
                                                        'need_to_be_owner': False,
                                                        'metadata': {}
                                                    }))
-        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        res3 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         print(res3)
-        assert res3['op'] == 'REPLY'
+        assert res3['seqNo'] is not None
         # add node
         alias = random_string(5)
         client_ip = '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255))
         client_port = rr(1, 32767)
         node_ip = '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255))
         node_port = rr(1, 32767)
-        req = await ledger.build_node_request(adder_did, adder_vk,  # adder_vk is used as node target did here
+        req = ledger.build_node_request(adder_did, adder_vk,  # adder_vk is used as node target did here
                                               json.dumps(
                                                    {
                                                        'alias': alias,
@@ -74,19 +74,19 @@ class TestAuthMapMiscSuite:
                                                        'node_port': node_port,
                                                        'services': ['VALIDATOR']
                                                    }))
-        res4 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
+        res4 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, req)
         print(res4)
-        assert res4['op'] == 'REPLY'
+        assert res4['seqNo'] is not None
         # edit node
-        req = await ledger.build_node_request(editor_did, adder_vk,  # adder_vk is used as node target did here
+        req = ledger.build_node_request(editor_did, adder_vk,  # adder_vk is used as node target did here
                                               json.dumps(
                                                    {
                                                        'alias': alias,
                                                        'services': []
                                                    }))
-        res5 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, editor_did, req))
+        res5 = await sign_and_submit_request(pool_handler, wallet_handler, editor_did, req)
         print(res5)
-        assert res5['op'] == 'REPLY'
+        assert res5['seqNo'] is not None
 
     @pytest.mark.parametrize('adder_role, adder_role_num', [
         ('TRUSTEE', '0'),
@@ -100,12 +100,12 @@ class TestAuthMapMiscSuite:
     ):  # we can add pool restart only
         trustee_did, _ = get_default_trustee
         # add adder to restart pool
-        adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        adder_did, adder_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
         await asyncio.sleep(15)
         # set rule for adding
-        req = await ledger.build_auth_rule_request(trustee_did, '118', 'ADD', 'action', '*', '*',
+        req = ledger.build_auth_rule_request(trustee_did, '118', 'ADD', 'action', '*', '*',
                                                    json.dumps({
                                                        'constraint_id': 'ROLE',
                                                        'role': adder_role_num,
@@ -113,17 +113,17 @@ class TestAuthMapMiscSuite:
                                                        'need_to_be_owner': False,
                                                        'metadata': {}
                                                    }))
-        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         print(res2)
-        assert res2['op'] == 'REPLY'
+        assert res2['seqNo'] is not None
         # restart pool
-        req = await ledger.build_pool_restart_request\
+        req = ledger.build_pool_restart_request\
             (adder_did, 'start', datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=60),
                                                    '%Y-%m-%dT%H:%M:%S%z'))
-        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
+        res3 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, req)
         res3 = [json.loads(v) for k, v in res3.items()]
         print(res3)
-        assert all([res['op'] == 'REPLY' for res in res3])
+        assert all([res['seqNo'] is not None for res in res3])
 
     @pytest.mark.parametrize('adder_role, adder_role_num', [
         ('TRUSTEE', '0'),
@@ -137,12 +137,12 @@ class TestAuthMapMiscSuite:
     ):  # we can add validator info only
         trustee_did, _ = get_default_trustee
         # add adder to get validator info
-        adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        adder_did, adder_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
         await asyncio.sleep(15)
         # set rule for adding
-        req = await ledger.build_auth_rule_request(trustee_did, '119', 'ADD', '*', '*', '*',
+        req = ledger.build_auth_rule_request(trustee_did, '119', 'ADD', '*', '*', '*',
                                                    json.dumps({
                                                        'constraint_id': 'ROLE',
                                                        'role': adder_role_num,
@@ -150,14 +150,14 @@ class TestAuthMapMiscSuite:
                                                        'need_to_be_owner': False,
                                                        'metadata': {}
                                                    }))
-        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         print(res2)
-        assert res2['op'] == 'REPLY'
-        req = await ledger.build_get_validator_info_request(adder_did)
-        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, adder_did, req))
+        assert res2['seqNo'] is not None
+        req = ledger.build_get_validator_info_request(adder_did)
+        res3 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, req)
         res3 = [json.loads(v) for k, v in res3.items()]
         print(res3)
-        assert all([res['op'] == 'REPLY' for res in res3])
+        assert all([res['seqNo'] is not None for res in res3])
 
     @pytest.mark.parametrize('editor_role, editor_role_num', [
         ('NETWORK_MONITOR', '201'),
@@ -171,11 +171,11 @@ class TestAuthMapMiscSuite:
     ):  # we can edit pool config only
         trustee_did, _ = get_default_trustee
         # add editor to edit pool config
-        editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        editor_did, editor_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
         # set rule for editing
-        req = await ledger.build_auth_rule_request(trustee_did, '111', 'EDIT', 'action', '*', '*',
+        req = ledger.build_auth_rule_request(trustee_did, '111', 'EDIT', 'action', '*', '*',
                                                    json.dumps({
                                                        'constraint_id': 'ROLE',
                                                        'role': editor_role_num,
@@ -183,13 +183,13 @@ class TestAuthMapMiscSuite:
                                                        'need_to_be_owner': False,
                                                        'metadata': {}
                                                    }))
-        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         print(res2)
-        assert res2['op'] == 'REPLY'
-        req = await ledger.build_pool_config_request(editor_did, False, False)
-        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, editor_did, req))
+        assert res2['seqNo'] is not None
+        req = ledger.build_pool_config_request(editor_did, False, False)
+        res3 = await sign_and_submit_request(pool_handler, wallet_handler, editor_did, req)
         print(res3)
-        assert res3['op'] == 'REPLY'
+        assert res3['seqNo'] is not None
 
     @pytest.mark.parametrize('editor_role, editor_role_num', [
         ('NETWORK_MONITOR', '201'),
@@ -203,11 +203,11 @@ class TestAuthMapMiscSuite:
     ):  # we can edit auth rule only
         trustee_did, _ = get_default_trustee
         # add editor to edit auth rule
-        editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        editor_did, editor_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
         # set rule for editing
-        req = await ledger.build_auth_rule_request(trustee_did, '120', 'EDIT', '*', '*', '*',
+        req = ledger.build_auth_rule_request(trustee_did, '120', 'EDIT', '*', '*', '*',
                                                    json.dumps({
                                                        'constraint_id': 'ROLE',
                                                        'role': editor_role_num,
@@ -215,11 +215,11 @@ class TestAuthMapMiscSuite:
                                                        'need_to_be_owner': False,
                                                        'metadata': {}
                                                    }))
-        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
+        res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         print(res2)
-        assert res2['op'] == 'REPLY'
+        assert res2['seqNo'] is not None
         await asyncio.sleep(15)
-        req = await ledger.build_auth_rule_request(editor_did, '111', 'EDIT', 'action', '*', '*',
+        req = ledger.build_auth_rule_request(editor_did, '111', 'EDIT', 'action', '*', '*',
                                                    json.dumps({
                                                        'constraint_id': 'ROLE',
                                                        'role': '*',
@@ -227,9 +227,9 @@ class TestAuthMapMiscSuite:
                                                        'need_to_be_owner': True,
                                                        'metadata': {}
                                                    }))
-        res3 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, editor_did, req))
+        res3 = await sign_and_submit_request(pool_handler, wallet_handler, editor_did, req)
         print(res3)
-        assert res3['op'] == 'REPLY'
+        assert res3['seqNo'] is not None
 
     # TODO might make sense to move to separate module since other tests here
     # organized per txn type
@@ -240,28 +240,28 @@ class TestAuthMapMiscSuite:
         trustee_role, trustee_role_num = 'TRUSTEE', '0'
 
         logger.info("1 Adding new trustee to ledger")
-        new_trustee_did, new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        new_trustee_did, new_trustee_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(
             pool_handler, wallet_handler, trustee_did, new_trustee_did, new_trustee_vk, None, trustee_role
         )
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
 
         logger.info("2 Setting forbidden auth rule for adding trustees")
-        req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', trustee_role_num,
+        req = ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', trustee_role_num,
                                                    json.dumps({
                                                        'constraint_id': 'FORBIDDEN',
                                                    }))
-        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        assert res['op'] == 'REPLY'
+        res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        assert res['seqNo'] is not None
 
         logger.info("3 Getting newly set forbidden constraint")
-        req = await ledger.build_get_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', trustee_role_num)
-        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        assert res['op'] == 'REPLY'
+        req = ledger.build_get_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', trustee_role_num)
+        res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        assert res['seqNo'] is not None
         assert res['result']['data'][0]['constraint']['constraint_id'] == 'FORBIDDEN'
 
         logger.info("4 Trying to add one more trustee")
-        one_more_new_trustee_did, one_more_new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        one_more_new_trustee_did, one_more_new_trustee_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(
             pool_handler, wallet_handler, trustee_did, one_more_new_trustee_did, one_more_new_trustee_vk, None, trustee_role
         )
@@ -277,24 +277,24 @@ class TestAuthMapMiscSuite:
         steward_role, steward_role_num = 'STEWARD', '2'
 
         logger.info("1 Creating new steward")
-        steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        steward_did, steward_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, steward_role)
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
 
         logger.info("2 Creating some new trustee")
-        _new_trustee_did, _new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        _new_trustee_did, _new_trustee_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(pool_handler, wallet_handler, trustee_did, _new_trustee_did, _new_trustee_vk, None, trustee_role)
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
 
         logger.info("3 Trying to add new trustee using steward as submitter")
-        new_trustee_did, new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        new_trustee_did, new_trustee_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(
             pool_handler, wallet_handler, steward_did, new_trustee_did, new_trustee_vk, None, trustee_role
         )
         assert res['op'] == 'REJECT'
 
         logger.info("4 Trying to add new steward using steward as submitter")
-        new_steward_did, new_steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        new_steward_did, new_steward_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(
             pool_handler, wallet_handler, steward_did, new_steward_did, new_steward_vk, None, trustee_role
         )
@@ -308,7 +308,7 @@ class TestAuthMapMiscSuite:
            'need_to_be_owner': False,
            'metadata': {}
         }
-        req = await ledger.build_auth_rules_request(trustee_did, json.dumps([
+        req = ledger.build_auth_rules_request(trustee_did, json.dumps([
             {
                 'auth_type': '1',
                 'auth_action': 'ADD',
@@ -326,14 +326,14 @@ class TestAuthMapMiscSuite:
                 'constraint': one_steward_constraint
             },
         ]))
-        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        assert res['op'] == 'REPLY'
+        res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        assert res['seqNo'] is not None
 
         logger.info("6 Getting recently set auth rules")
         for role_num in (trustee_role_num, steward_role_num):
-            req = await ledger.build_get_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', role_num)
-            res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-            assert res['op'] == 'REPLY'
+            req = ledger.build_get_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', role_num)
+            res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+            assert res['seqNo'] is not None
             assert res['result']['data'][0]['constraint'] == one_steward_constraint
 
         logger.info("7 Trying to add new trustee using trustee as submitter")
@@ -349,15 +349,15 @@ class TestAuthMapMiscSuite:
         assert res['op'] == 'REJECT'
 
         logger.info("9 Adding new trustee using steward as submitter")
-        new_trustee_did, new_trustee_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        new_trustee_did, new_trustee_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(
             pool_handler, wallet_handler, steward_did, new_trustee_did, new_trustee_vk, None, trustee_role
         )
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
 
         logger.info("10 Adding new steward using steward as submitter")
-        new_steward_did, new_steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        new_steward_did, new_steward_vk = await create_and_store_did(wallet_handler)
         res = await send_nym(
             pool_handler, wallet_handler, steward_did, new_steward_did, new_steward_vk, None, trustee_role
         )
-        assert res['op'] == 'REPLY'
+        assert res['seqNo'] is not None
