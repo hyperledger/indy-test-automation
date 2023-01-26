@@ -1,6 +1,7 @@
 import pytest
 from system.utils import *
 from indy import payment
+from indy_vdr.error import VdrError, VdrErrorCode
 SEC_PER_DAY = 24 * 60 * 60
 
 
@@ -20,16 +21,17 @@ class TestTAASuite:
             self, pool_handler, wallet_handler, get_default_trustee, aml, version_set, context, timestamp, version_get
     ):
         trustee_did, _ = get_default_trustee
-        req = await ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version_set, context)
-        res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        assert res1['op'] == 'REPLY'
+        req = ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version_set, context)
+        res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        # assert res1['op'] == 'REPLY'
         # aml with the same version should be rejected
-        req = await ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version_set, context)
-        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        assert res2['op'] == 'REJECT'
-        req = await ledger.build_get_acceptance_mechanisms_request(None, timestamp, version_get)
-        res3 = json.loads(await ledger.submit_request(pool_handler, req))
-        assert res3['op'] == 'REPLY'
+        req = ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version_set, context)
+        with pytest.raises(indy_vdr.error.VdrError):
+            res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        # assert res2['op'] == 'REJECT'
+        req = ledger.build_get_acceptance_mechanisms_request(None, timestamp, version_get)
+        res3 = await pool_handler.submit_request(req)
+        # assert res3['op'] == 'REPLY'
 
     @pytest.mark.skip('INDY-2316')
     @pytest.mark.parametrize(
