@@ -16,7 +16,9 @@ class TestAdHocSuite:
     ):
         docker_client = docker.from_env()
         trustee_did, _ = get_default_trustee
-        steward_did, steward_vk = await create_and_store_did(wallet_handler, seed='000000000000000000000000Steward4')
+        steward_did, steward_vk = await create_and_store_did(
+            wallet_handler, seed='000000000000000000000000Steward4'
+        )
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=3)
 
         for i in range(10):
@@ -38,9 +40,9 @@ class TestAdHocSuite:
             )
             req = ledger.build_node_request(steward_did, '4PS3EDQ3dW1tci1Bp6543CfuuebjFrg36kLAUcskGfaA', data)
             res2 = await sign_and_submit_request(pool_handler, wallet_handler, steward_did, req)
-            
+
             # assert res2['op'] == 'REPLY'
-            assert res2['seqNo'] is not None
+            assert res2['txnMetadata']['seqNo'] is not None
 
             # write txn
             await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did)
@@ -119,7 +121,7 @@ class TestAdHocSuite:
             ), None
         )
         res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req_with_fees_json)
-        
+
         print(res2)
         # assert res2['op'] == 'REPLY'
         assert res2['seqNo'] is not None
@@ -198,7 +200,7 @@ class TestAdHocSuite:
             task = demote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
             demote_tasks.append(task)
         await asyncio.gather(*demote_tasks, return_exceptions=True)
-        pool_handler.refresh()
+        await pool_handler.refresh()
         # make sure VC is done
         new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
         new_primary_name = 'Node{}'.format(new_primary)
@@ -210,7 +212,7 @@ class TestAdHocSuite:
             )
             demote_tasks.append(task)
         await asyncio.gather(*demote_tasks, return_exceptions=True)
-        pool_handler.refresh()
+        await pool_handler.refresh()
         # make sure VC is done
         super_new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, new_primary)
         # write txn with fees
@@ -226,7 +228,7 @@ class TestAdHocSuite:
             )
             promote_tasks.append(task2)
         await asyncio.gather(*promote_tasks, return_exceptions=True)
-        pool_handler.refresh()
+        await pool_handler.refresh()
         # make sure VC is done
         await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, super_new_primary)
 
@@ -259,7 +261,7 @@ class TestAdHocSuite:
             node_to_demote = choice(node_list)
             # demote it
             await demote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
-            pool_handler.refresh()
+            await pool_handler.refresh()
             # make sure VC is done
             new_primary = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
             # make sure pool works
@@ -269,7 +271,7 @@ class TestAdHocSuite:
             await add_fees_and_send_request(pool_handler, wallet_handler, trustee_did, address, req, fees['attrib'])
             # promote node back
             await promote_node(pool_handler, wallet_handler, trustee_did, node_to_demote, pool_info[node_to_demote])
-            pool_handler.refresh()
+            await pool_handler.refresh()
             # make sure VC is done
             await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, new_primary)
             # make sure pool works
