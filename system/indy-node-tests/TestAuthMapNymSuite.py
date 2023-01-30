@@ -1,6 +1,7 @@
 import pytest
 import asyncio
 from system.utils import *
+from indy_vdr.error import VdrError, VdrErrorCode
 
 
 import logging
@@ -29,11 +30,11 @@ async def test_case_nym(
     # add adder to add nym
     adder_did, adder_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
-    assert res['seqNo'] is not None
+    assert res['txnMetadata']['seqNo'] is not None
     # add editor to edit nym
     editor_did, editor_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
-    assert res['seqNo'] is not None
+    assert res['txnMetadata']['seqNo'] is not None
     req = ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', '',
                                                json.dumps({
                                                    'constraint_id': 'ROLE',
@@ -44,7 +45,7 @@ async def test_case_nym(
                                                }))
     res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
     print(res2)
-    assert res2['seqNo'] is not None
+    assert res2['txnMetadata']['seqNo'] is not None
     req = ledger.build_auth_rule_request(trustee_did, '1', 'EDIT', 'verkey', '*', '*',
                                                json.dumps({
                                                    'constraint_id': 'ROLE',
@@ -55,22 +56,22 @@ async def test_case_nym(
                                                }))
     res3 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
     print(res3)
-    assert res3['seqNo'] is not None
+    assert res3['txnMetadata']['seqNo'] is not None
     # add nym with verkey by adder
     res4 = await send_nym(pool_handler, wallet_handler, adder_did, new_did, adder_vk)  # push adder vk
     print(res4)
-    assert res4['seqNo'] is not None
+    assert res4['txnMetadata']['seqNo'] is not None
     # edit verkey by editor
     res5 = await send_nym(pool_handler, wallet_handler, editor_did, new_did, editor_vk)  # push editor vk
     print(res5)
-    assert res5['seqNo'] is not None
+    assert res5['txnMetadata']['seqNo'] is not None
     # negative cases
     if adder_role != editor_role:
         # try to add another nym with editor did - should be rejected
-        res6 = await send_nym(pool_handler, wallet_handler, editor_did, random_did_and_json()[0])
-        print(res6)
-        assert res6['op'] == 'REJECT'
+        with pytest.raises(VdrError) as exp_err:
+            await send_nym(pool_handler, wallet_handler, editor_did, random_did_and_json()[0])
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # try to edit initial nym one more time with adder did - should be rejected
-        res7 = await send_nym(pool_handler, wallet_handler, adder_did, new_did, adder_vk)
-        print(res7)
-        assert res7['op'] == 'REJECT'
+        with pytest.raises(VdrError) as exp_err:
+            await send_nym(pool_handler, wallet_handler, adder_did, new_did, adder_vk)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED

@@ -1,6 +1,7 @@
 import pytest
 import asyncio
 from system.utils import *
+from aries_askar.error import AskarError, AskarErrorCode
 
 
 import logging
@@ -21,7 +22,7 @@ async def test_case_schema(
     # add adder to add schema
     adder_did, adder_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
-    assert res['seqNo'] is not None
+    assert res['txnMetadata']['seqNo'] is not None
     # set rule for adding
     req = ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
                                                json.dumps({
@@ -33,12 +34,12 @@ async def test_case_schema(
                                                }))
     res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
     print(res2)
-    assert res2['seqNo'] is not None
+    assert res2['txnMetadata']['seqNo'] is not None
     # add schema
     res4 = await send_schema(pool_handler, wallet_handler, adder_did, 'schema1', '1.0', json.dumps(['attr1']))
     print(res4)
-    assert res4[1]['seqNo'] is not None
+    assert res4[1]['txnMetadata']['seqNo'] is not None
     # edit schema - nobody can edit schemas - should be rejected
-    res5 = await send_schema(pool_handler, wallet_handler, adder_did, 'schema1', '1.0', json.dumps(['attr1', 'attr2']))
-    print(res5)
-    assert res5[1]['op'] == 'REJECT'
+    with pytest.raises(AskarError) as exp_err:
+        await send_schema(pool_handler, wallet_handler, adder_did, 'schema1', '1.0', json.dumps(['attr1', 'attr2']))
+    assert exp_err.value.code == AskarErrorCode.DUPLICATE
