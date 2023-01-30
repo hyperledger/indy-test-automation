@@ -2,6 +2,7 @@ import pytest
 import asyncio
 from system.utils import *
 from async_generator import async_generator, yield_
+from indy_vdr.error import VdrError
 
 
 # setup once for all cases
@@ -39,8 +40,8 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-        nym_did, nym_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
+        nym_did, nym_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
@@ -48,7 +49,8 @@ class TestLedgerSuite:
         res = await send_nym(
             pool_handler, wallet_handler, target_did, nym_did, nym_vk, alias, nym_role
         )
-        assert res['op'] == 'REPLY'
+        # assert res['op'] == 'REPLY'
+        assert res['txnMetadata']['seqNo'] is not None
 
         await ensure_get_something(get_nym, pool_handler, wallet_handler, trustee_did, nym_did)
 
@@ -84,16 +86,17 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-        nym_did, nym_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
+        nym_did, nym_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
         # --------------------------------------------------------------------------------------------------------------
-        res = await send_nym(
-            pool_handler, wallet_handler, target_did, nym_did, nym_vk, alias, nym_role
-        )
-        assert res['op'] == result
+        with pytest.raises(VdrError):
+            res = await send_nym(
+                pool_handler, wallet_handler, target_did, nym_did, nym_vk, alias, nym_role
+            )
+        # assert res['op'] == result
 
         await ensure_cant_get_something(get_nym, pool_handler, wallet_handler, trustee_did, nym_did)
 
@@ -113,13 +116,14 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
         # --------------------------------------------------------------------------------------------------------------
         res = await send_attrib(pool_handler, wallet_handler, target_did, target_did, xhash, raw, enc)
-        assert res['op'] == 'REPLY'
+        # assert res['op'] == 'REPLY'
+        assert res['txnMetadata']['seqNo'] is not None
 
         await ensure_get_something(
             get_attrib, pool_handler, wallet_handler, trustee_did, target_did, xhash, raw_key, enc
@@ -142,13 +146,14 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
         # --------------------------------------------------------------------------------------------------------------
-        res = await send_attrib(pool_handler, wallet_handler, target_did, target_did, xhash, raw, enc)
-        assert res['op'] == 'REQNACK'
+        with pytest.raises(VdrError):
+            res = await send_attrib(pool_handler, wallet_handler, target_did, target_did, xhash, raw, enc)
+        # assert res['op'] == 'REQNACK'
 
         if xhash and raw and enc:
             for _xhash, _raw, _enc in [(xhash, None, None), (None, 'key', None), (None, None, enc)]:
@@ -165,7 +170,7 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
@@ -175,13 +180,14 @@ class TestLedgerSuite:
                 [random_string(1), random_string(256)]
             )
         )
-        assert res1['op'] == 'REPLY'
+        # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
 
         res2 = await ensure_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
 
-        schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+        schema_id_ledger, schema_json = parse_get_schema_response(res2)
         assert schema_id_local == schema_id_ledger
-        assert res2['result']['seqNo'] == json.loads(schema_json)['seqNo']
+        assert res2['seqNo'] == schema_json['seqNo']
 
     @pytest.mark.parametrize(
         'target_role, name, result',
@@ -198,21 +204,22 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
         # --------------------------------------------------------------------------------------------------------------
-        schema_id_local, res1 = await send_schema(
-            pool_handler, wallet_handler, target_did, name, '1.0', json.dumps(
-                [random_string(1), random_string(256)]
-            )
-        )
-        assert res1['op'] == result
+        schema_id_local, schema_json = await create_schema(wallet_handler, target_did, name, '1.0',
+                                                           json.dumps([random_string(1), random_string(256)]))
+        req = ledger.build_schema_request(target_did, schema_json)
+        with pytest.raises(VdrError):
+            res1 = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req)
+        # assert res1['op'] == result
 
         if result == 'REQNACK':
-            res2 = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id_local)
-            assert res2['op'] == result
+            with pytest.raises(VdrError):
+                res2 = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id_local)
+            # assert res2['op'] == result
         else:
             await ensure_cant_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
 
@@ -226,7 +233,7 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
@@ -235,20 +242,20 @@ class TestLedgerSuite:
                 [random_string(1), random_string(256)]
             )
         )
-        assert res1['op'] == 'REPLY'
+        # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
         res2 = await ensure_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
-        schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+        schema_id_ledger, schema_json = parse_get_schema_response(res2)
         # --------------------------------------------------------------------------------------------------------------
         cred_def_id_local, _, res3 = await send_cred_def(
-            pool_handler, wallet_handler, target_did, schema_json, tag, None, json.dumps(
-                {'support_revocation': revocation}
-            )
+            pool_handler, wallet_handler, target_did, schema_json, tag, None, support_revocation=revocation
         )
-        assert res3['op'] == 'REPLY'
+        # assert res3['op'] == 'REPLY'
+        assert res3['txnMetadata']['seqNo'] is not None
 
         res4 = await ensure_get_something(get_cred_def, pool_handler, wallet_handler, trustee_did, cred_def_id_local)
 
-        cred_def_id_ledger, cred_def_json = await ledger.parse_get_cred_def_response(json.dumps(res4))
+        cred_def_id_ledger, cred_def_json = parse_get_cred_def_response(res4)
         assert cred_def_id_local == cred_def_id_ledger
 
     @pytest.mark.parametrize(
@@ -266,7 +273,7 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
@@ -275,20 +282,23 @@ class TestLedgerSuite:
                 [random_string(1), random_string(256)]
             )
         )
-        assert res1['op'] == 'REPLY'
+        # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
         res2 = await ensure_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
-        schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+        schema_id_ledger, schema_json = parse_get_schema_response(res2)
         # --------------------------------------------------------------------------------------------------------------
-        cred_def_id_local, _, res3 = await send_cred_def(
-            pool_handler, wallet_handler, target_did, schema_json, tag, None, json.dumps(
-                {'support_revocation': False}
-            )
-        )
-        assert res3['op'] == result
+        cred_def_id_local, cred_def_json = await create_and_store_cred_def(wallet_handler, target_did, schema_json, tag,
+                                                                           None, support_revocation=False)
+        req = ledger.build_cred_def_request(target_did, cred_def_json)
+
+        with pytest.raises(VdrError):
+            res = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req)
+        # assert res3['op'] == result
 
         if result == 'REQNACK':
-            res4 = await get_cred_def(pool_handler, wallet_handler, trustee_did, cred_def_id_local)
-            assert res4['op'] == result
+            with pytest.raises(VdrError):
+                res4 = await get_cred_def(pool_handler, wallet_handler, trustee_did, cred_def_id_local)
+            # assert res4['op'] == result
         else:
             await ensure_cant_get_something(get_cred_def, pool_handler, wallet_handler, trustee_did, cred_def_id_local)
 
@@ -303,7 +313,7 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
@@ -312,27 +322,24 @@ class TestLedgerSuite:
                 [random_string(1), random_string(256)]
             )
         )
-        assert res1['op'] == 'REPLY'
+        # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
         res2 = await ensure_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
-        schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+        schema_id_ledger, schema_json = parse_get_schema_response(res2)
         cred_def_id, _, res3 = await send_cred_def(
-            pool_handler, wallet_handler, target_did, schema_json, random_string(256), None, json.dumps(
-                {'support_revocation': True}
-            )
-        )
+            pool_handler, wallet_handler, target_did, schema_json, random_string(256), None, support_revocation=True)
         # --------------------------------------------------------------------------------------------------------------
         rev_reg_def_id_local, rev_reg_def_json, rev_reg_entry_json, res4 = await send_revoc_reg_def(
-            pool_handler, wallet_handler, target_did, None, tag, cred_def_id, json.dumps(
-                {'max_cred_num': max_cred_num, 'issuance_type': issuance_type}
-            )
-        )
-        assert res4['op'] == 'REPLY'
+            pool_handler, wallet_handler, target_did, 'CL_ACCUM', tag, cred_def_id,
+            max_cred_num=max_cred_num, issuance_type=issuance_type)
+        # assert res4['op'] == 'REPLY'
+        assert res4['txnMetadata']['seqNo'] is not None
 
         res5 = await ensure_get_something(
             get_revoc_reg_def, pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local
         )
 
-        rev_reg_def_id_ledger, rev_reg_def_json = await ledger.parse_get_revoc_reg_def_response(json.dumps(res5))
+        rev_reg_def_id_ledger, rev_reg_def_json = parse_get_revoc_reg_def_response(res5)
         assert rev_reg_def_id_local == rev_reg_def_id_ledger
 
     @pytest.mark.parametrize(
@@ -350,7 +357,7 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
@@ -359,21 +366,21 @@ class TestLedgerSuite:
                 [random_string(1), random_string(256)]
             )
         )
-        assert res1['op'] == 'REPLY'
+        # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
         res2 = await ensure_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
-        schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+        schema_id_ledger, schema_json = parse_get_schema_response(res2)
         cred_def_id, _, res3 = await send_cred_def(  # make cred def using TRUSTEE
-            pool_handler, wallet_handler, target_did, schema_json, random_string(256), None, json.dumps(
-                {'support_revocation': True}
-            )
+            pool_handler, wallet_handler, trustee_did, schema_json, random_string(256), None, support_revocation=True
         )
         # --------------------------------------------------------------------------------------------------------------
-        rev_reg_def_id_local, rev_reg_def_json, rev_reg_entry_json, res4 = await send_revoc_reg_def(
-            pool_handler, wallet_handler, target_did, None, tag, cred_def_id, json.dumps(
-                {'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}
-            )
-        )
-        assert res4['op'] == result
+        rev_reg_def_id_local, rev_reg_def_json, rev_reg_json = await create_and_store_revoc_reg(
+            wallet_handler, target_did, 'CL_ACCUM', tag, cred_def_id,
+            max_cred_num=1, issuance_type='ISSUANCE_BY_DEFAULT')
+        req = ledger.build_revoc_reg_def_request(target_did, rev_reg_def_json)
+        with pytest.raises(VdrError):
+            res4 = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req)
+        # assert res4['op'] == result
 
         await ensure_cant_get_something(
             get_revoc_reg_def, pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local
@@ -391,7 +398,7 @@ class TestLedgerSuite:
         # SETUP---------------------------------------------------------------------------------------------------------
         timestamp0 = int(time.time())
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
@@ -400,21 +407,20 @@ class TestLedgerSuite:
                 [random_string(1), random_string(256)]
             )
         )
-        assert res1['op'] == 'REPLY'
+        # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
         res2 = await ensure_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
-        schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+        schema_id_ledger, schema_json = parse_get_schema_response(res2)
         cred_def_id, _, res3 = await send_cred_def(
-            pool_handler, wallet_handler, target_did, schema_json, random_string(256), None, json.dumps(
-                {'support_revocation': True}
-            )
+            pool_handler, wallet_handler, target_did, schema_json, random_string(256), None, support_revocation=True
         )
         # --------------------------------------------------------------------------------------------------------------
         rev_reg_def_id_local, rev_reg_def_json, rev_reg_entry_json, res4 = await send_revoc_reg_entry(
-            pool_handler, wallet_handler, target_did, 'CL_ACCUM', tag, cred_def_id, json.dumps(
-                {'max_cred_num': max_cred_num, 'issuance_type': issuance_type}
-            )
+            pool_handler, wallet_handler, target_did, 'CL_ACCUM', tag, cred_def_id,
+            max_cred_num=max_cred_num, issuance_type=issuance_type
         )
-        assert res4['op'] == 'REPLY'
+        # assert res4['op'] == 'REPLY'
+        assert res4['txnMetadata']['seqNo'] is not None
 
         timestamp1 = int(time.time())
 
@@ -426,14 +432,11 @@ class TestLedgerSuite:
             get_revoc_reg_delta, pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local, timestamp0, timestamp1
         )
 
-        rev_reg_def_id_ledger, rev_reg_json, timestamp2 = await ledger.parse_get_revoc_reg_response(
-            json.dumps(res5)
-        )
+
+        rev_reg_def_id_ledger, rev_reg_json, timestamp2 = parse_get_revoc_reg_response(res5)
         assert rev_reg_def_id_local == rev_reg_def_id_ledger
 
-        rev_reg_def_id_ledger, rev_reg_delta_json, timestamp3 = await ledger.parse_get_revoc_reg_delta_response(
-            json.dumps(res6)
-        )
+        rev_reg_def_id_ledger, rev_reg_delta_json, timestamp3 = parse_get_revoc_reg_delta_response(res6)
         assert rev_reg_def_id_local == rev_reg_def_id_ledger
 
         assert rev_reg_json == rev_reg_delta_json  # is it ok?
@@ -454,7 +457,7 @@ class TestLedgerSuite:
         # SETUP---------------------------------------------------------------------------------------------------------
         timestamp0 = int(time.time())
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
@@ -463,32 +466,39 @@ class TestLedgerSuite:
                 [random_string(1), random_string(256)]
             )
         )
-        assert res1['op'] == 'REPLY'
+        # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
         res2 = await ensure_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
-        schema_id_ledger, schema_json = await ledger.parse_get_schema_response(json.dumps(res2))
+        schema_id_ledger, schema_json = parse_get_schema_response(res2)
         cred_def_id, _, res3 = await send_cred_def(  # make cred def using TRUSTEE
-            pool_handler, wallet_handler, trustee_did, schema_json, random_string(256), None, json.dumps(
-                {'support_revocation': True}
-            )
+            pool_handler, wallet_handler, trustee_did, schema_json, random_string(256), None,
+            support_revocation=True
         )
         # --------------------------------------------------------------------------------------------------------------
-        rev_reg_def_id_local, rev_reg_def_json, rev_reg_entry_json, res4 = await send_revoc_reg_entry(
-            pool_handler, wallet_handler, target_did, 'CL_ACCUM', tag, cred_def_id, json.dumps(
-                {'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}
-            )
-        )
-        assert res4['op'] == result
+        rev_reg_def_id_local, revoc_reg_entry_json, rev_reg_json = await create_and_store_revoc_reg(
+            wallet_handler, target_did, 'CL_ACCUM', tag, cred_def_id,
+            max_cred_num=1, issuance_type='ISSUANCE_BY_DEFAULT')
+        req4 = ledger.build_revoc_reg_def_request(target_did, revoc_reg_entry_json)
+
+        with pytest.raises(VdrError):
+            res4 = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req4)
+            req4 = ledger.build_revoc_reg_entry_request(target_did, rev_reg_def_id_local, 'CL_ACCUM',
+                                                       revoc_reg_entry_json)
+            res4 = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req4)
+        # assert res4['op'] == result
 
         timestamp1 = int(time.time())
 
         if result == 'REQNACK':
             res5 = await get_revoc_reg(pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local, timestamp1)
-            assert res5['op'] == result
+            # assert res5['op'] == result
+            assert res5['txnMetadata']['seqNo'] is None
 
             res6 = await get_revoc_reg_delta(
                 pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local, timestamp0, timestamp1
             )
-            assert res6['op'] == result
+            # assert res6['op'] == result
+            assert res6['txnMetadata']['seqNo'] is not None
         else:
             await ensure_cant_get_something(
                 get_revoc_reg, pool_handler, wallet_handler, trustee_did, rev_reg_def_id_local, timestamp1
@@ -516,20 +526,21 @@ class TestLedgerSuite:
         trustee_did, _ = get_default_trustee
         # --------------------------------------------------------------------------------------------------------------
         constraint = {
-                        'constraint_id': 'ROLE',
-                        'role': role,
-                        'sig_count': sig_count,
-                        'need_to_be_owner': need_to_be_owner,
-                        'metadata': {}
-                     }
+            'constraint_id': 'ROLE',
+            'role': role,
+            'sig_count': sig_count,
+            'need_to_be_owner': need_to_be_owner,
+            'metadata': {}
+        }
         req1 = await ledger.build_auth_rule_request(
             trustee_did, txn_type, action, field, old_value, new_value, json.dumps(constraint)
         )
-        res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
-        assert res1['op'] == 'REPLY'
+        res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
+        # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
 
         req2 = await ledger.build_get_auth_rule_request(trustee_did, txn_type, action, field, old_value, new_value)
-        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
+        res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2)
         assert res2['result']['data'][0]['constraint'] == constraint
 
     @pytest.mark.parametrize('ledger_type', ['DOMAIN', 'POOL', 'CONFIG', '1001'])
@@ -537,7 +548,8 @@ class TestLedgerSuite:
     @pytest.mark.asyncio
     # 						    GET_TXN
     async def test_get_txn(
-            self, payment_init, pool_handler, wallet_handler, get_default_trustee, initial_token_minting, initial_fees_setting,
+            self, payment_init, pool_handler, wallet_handler, get_default_trustee, initial_token_minting,
+            initial_fees_setting,
             ledger_type, seqno
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
@@ -545,9 +557,9 @@ class TestLedgerSuite:
         initial_token_minting
         initial_fees_setting
         # --------------------------------------------------------------------------------------------------------------
-        req = await ledger.build_get_txn_request(trustee_did, ledger_type, seqno)
-        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        assert res['result']['seqNo'] is not None
+        req = ledger.build_get_txn_request(trustee_did, ledger_type, seqno)
+        res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        assert res['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'NETWORK_MONITOR'])
     @pytest.mark.asyncio
@@ -557,14 +569,12 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
         # --------------------------------------------------------------------------------------------------------------
-        req = await ledger.build_get_validator_info_request(target_did)
-        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, req))
-        res = {k: json.loads(v) for k, v in res.items()}
+        res = await get_validator_info(pool_handler, wallet_handler, target_did)
         assert all([v['op'] == 'REPLY' for k, v in res.items()])
 
     @pytest.mark.parametrize('writes', [False, True])
@@ -578,8 +588,9 @@ class TestLedgerSuite:
         trustee_did, _ = get_default_trustee
         # --------------------------------------------------------------------------------------------------------------
         req = await ledger.build_pool_config_request(trustee_did, writes, force)
-        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        assert res['op'] == 'REPLY'
+        res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        # assert res['op'] == 'REPLY'
+        assert res['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('action', ['start', 'cancel'])
     @pytest.mark.parametrize('_datetime', ['2020-01-01T00:00:00.000000+00:00', ''])
@@ -592,8 +603,8 @@ class TestLedgerSuite:
         trustee_did, _ = get_default_trustee
         # --------------------------------------------------------------------------------------------------------------
         req = await ledger.build_pool_restart_request(trustee_did, action, _datetime)
-        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        res = {k: json.loads(v) for k, v in res.items()}
+        res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        res = {k: v for k, v in res.items()}
         assert all([v['op'] == 'REPLY' for k, v in res.items()])
 
     @pytest.mark.parametrize('timeout', [5, 3600])
@@ -640,9 +651,10 @@ class TestLedgerSuite:
             force,
             package
         )
-        res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
+        res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
         print(res1)
-        assert res1['op'] == 'REPLY'
+        # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
 
         req2 = await ledger.build_pool_upgrade_request(
             trustee_did,
@@ -657,8 +669,9 @@ class TestLedgerSuite:
             force,
             package
         )
-        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
-        assert res2['op'] == 'REPLY'
+        res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2)
+        # assert res2['op'] == 'REPLY'
+        assert res2['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('alias_length', [1, 256])
     @pytest.mark.parametrize('services', [[], ['VALIDATOR']])
@@ -669,7 +682,7 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        target_did, target_vk = await create_and_store_did(wallet_handler)
         await send_nym(
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), 'STEWARD'
         )
@@ -690,9 +703,10 @@ class TestLedgerSuite:
                 }
             )
         )
-        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, target_did, req))
+        res = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req)
         print(res)
-        assert res['op'] == 'REPLY'
+        # assert res['op'] == 'REPLY'
+        assert res['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('key', [random_string(1), random_string(1024), random_string(4096)])
     @pytest.mark.parametrize('value', [random_string(1), random_string(1024), random_string(4096)])
@@ -710,15 +724,17 @@ class TestLedgerSuite:
             key: value
         }
         version = random_string(version_length)
-        req1 = await ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version, context)
-        res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
+        req1 = ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version, context)
+        res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
         print(res1)
-        assert res1['op'] == 'REPLY'
+        # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
 
         for _timestamp, _version in [(None, None), (int(time.time()), None), (None, version)]:
-            req2 = await ledger.build_get_acceptance_mechanisms_request(trustee_did, _timestamp, _version)
-            res2 = json.loads(await ledger.submit_request(pool_handler, req2))
-            assert res2['result']['seqNo'] is not None
+            req2 = ledger.build_get_acceptance_mechanisms_request(trustee_did, _timestamp, _version)
+            res2 = await pool_handler.submit_request(req2)
+            print(res2)
+            assert res2['seqNo'] is not None
 
     @pytest.mark.parametrize('text', [random_string(1), random_string(1024), random_string(4096)])
     @pytest.mark.parametrize('version_length', [2, 256])  # must be generated inside the test and started from 2
@@ -729,17 +745,20 @@ class TestLedgerSuite:
     ):
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
-        req = await ledger.build_acceptance_mechanisms_request(
+        req = ledger.build_acceptance_mechanisms_request(
             trustee_did, json.dumps({random_string(16): random_string(128)}), random_string(256), random_string(1024)
         )
-        res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-        assert res['op'] == 'REPLY'
+        res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+        # assert res['op'] == 'REPLY'
+        assert res['txnMetadata']['seqNo'] is not None
         # --------------------------------------------------------------------------------------------------------------
-        req1 = await ledger.build_txn_author_agreement_request(trustee_did, text, random_string(version_length))
-        res1 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1))
+        req1 = ledger.build_txn_author_agreement_request(trustee_did, text, random_string(version_length),
+                                                         ratification_ts=int(time.time()))
+        res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
         print(res1)
-        assert res1['op'] == 'REPLY'
+        # assert res1['op'] == 'REPLY'
+        assert res1['txnMetadata']['seqNo'] is not None
 
-        req2 = await ledger.build_get_txn_author_agreement_request(trustee_did, None)
-        res2 = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2))
-        assert res2['result']['seqNo'] is not None
+        req2 = ledger.build_get_txn_author_agreement_request(trustee_did, None)
+        res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2)
+        assert res2['seqNo'] is not None
