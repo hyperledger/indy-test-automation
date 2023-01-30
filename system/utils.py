@@ -195,7 +195,6 @@ async def pool_destructor(pool_handle):
 
 
 async def wallet_destructor(wallet_handle, wallet_config, wallet_credentials):
-    # await wallet_handle.close(remove=True)
     await wallet_handle.close()
 
 
@@ -616,7 +615,6 @@ async def check_pool_performs_write(pool_handle, wallet_handle, submitter_did, n
     for _ in range(nyms_count):
         some_did, _ = await create_and_store_did(wallet_handle)
         resp = await send_nym(pool_handle, wallet_handle, submitter_did, some_did)
-        # assert resp['op'] == 'REPLY'
         assert resp['txnMetadata']['seqNo'] is not None
         res.append(resp)
     return res
