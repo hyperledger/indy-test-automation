@@ -26,8 +26,8 @@ from indy_credx import Schema, CredentialDefinition, RevocationRegistryDefinitio
 from indy_vdr.error import VdrError
 
 import logging
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 MODULE_PATH = os.path.abspath(os.path.dirname(__file__))
 POOL_GENESIS_PATH = os.path.join(MODULE_PATH, 'docker_genesis')
@@ -160,7 +160,7 @@ def random_string(length):
 
 
 def random_did_and_json():
-    return base58.b58encode(random_string(16)).decode(),\
+    return base58.b58encode(random_string(16)).decode(), \
         json.dumps({'did': base58.b58encode(random_string(16)).decode()})
 
 
@@ -201,7 +201,7 @@ async def wallet_destructor(wallet_handle, wallet_config, wallet_credentials):
 def key_helper(seed=None):
     alg = KeyAlg.ED25519
     if seed:
-         keypair = Key.from_secret_bytes(alg, seed)
+        keypair = Key.from_secret_bytes(alg, seed)
     else:
         keypair = Key.generate(alg)
     verkey_bytes = keypair.get_public_bytes()
@@ -282,6 +282,69 @@ async def create_and_store_did(wallet_handle, seed=None):
     keypair, did, verkey = key_helper(seed=seed)
     await key_insert_helper(wallet_handle, keypair, did, verkey)
     return did, verkey
+
+
+async def create_schema(wallet_handle, submitter_did, schema_name, schema_version, schema_attrs):
+    schema = Schema.create(submitter_did, schema_name, schema_version, schema_attrs)
+    schema_id = schema.id
+    schema_json = schema.to_json()
+    await wallet_handle.insert("schema", schema_id, schema_json)
+    return schema_id, schema_json
+
+
+async def create_and_store_cred_def(wallet_handle, submitter_did, schema, tag, signature_type, support_revocation):
+    (
+        cred_def,
+        cred_def_private,
+        key_proof,
+    ) = await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: CredentialDefinition.create(
+            submitter_did,
+            schema,
+            signature_type or "CL",
+            tag or "default",
+            support_revocation=support_revocation,
+        ),
+    )
+    cred_def_id = cred_def.id
+    cred_def_json = cred_def.to_json()
+
+    await wallet_handle.insert("credential_def", cred_def_id, cred_def_json, tags={"schema_id": schema["id"]})
+    await wallet_handle.insert("credential_def_private", cred_def_id, cred_def_private.to_json_buffer())
+    await wallet_handle.insert("credential_def_key_proof", cred_def_id, key_proof.to_json_buffer())
+    return cred_def_id, cred_def_json
+
+
+async def create_and_store_revoc_reg(wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, max_cred_num=1,
+                                     issuance_type=None):
+    cred_def = await wallet_handle.fetch("credential_def", cred_def_id)
+    (
+        rev_reg_def,
+        rev_reg_def_private,
+        rev_reg,
+        _rev_reg_delta,
+    ) = await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: RevocationRegistryDefinition.create(
+            submitter_did,
+            cred_def.raw_value,
+            tag,
+            revoc_def_type,
+            max_cred_num,
+            issuance_type=issuance_type
+        ),
+    )
+
+    rev_reg_def_id = rev_reg_def.id
+    rev_reg_def_json = rev_reg_def.to_json()
+    rev_reg_json = rev_reg.to_json()
+
+    await wallet_handle.insert("revocation_reg", rev_reg_def_id, rev_reg_json)
+    await wallet_handle.insert("revocation_reg_info", rev_reg_def_id, value_json={"curr_id": 0, "used_ids": []})
+    await wallet_handle.insert("revocation_reg_def", rev_reg_def_id, rev_reg_def_json)
+    await wallet_handle.insert("revocation_reg_def_private", rev_reg_def_id, rev_reg_def_private.to_json_buffer())
+    return rev_reg_def_id, rev_reg_def_json, rev_reg_json
 
 
 async def default_trustee(wallet_handle):
@@ -366,10 +429,8 @@ async def send_attrib(
 async def send_schema(
         pool_handle, wallet_handle, submitter_did, schema_name, schema_version, schema_attrs
 ):
-    schema = Schema.create(submitter_did, schema_name, schema_version, schema_attrs)
-    schema_id = schema.id
-    schema_json = schema.to_json()
-    await wallet_handle.insert("schema", schema_id, schema_json)
+    schema_id, schema_json = await create_schema(wallet_handle, submitter_did, schema_name, schema_version,
+                                                 schema_attrs)
     req = ledger.build_schema_request(submitter_did, schema_json)
     res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
@@ -379,27 +440,9 @@ async def send_schema(
 async def send_cred_def(
         pool_handle, wallet_handle, submitter_did, schema, tag, signature_type, support_revocation
 ):
-    (
-        cred_def,
-        cred_def_private,
-        key_proof,
-    ) = await asyncio.get_event_loop().run_in_executor(
-        None,
-        lambda: CredentialDefinition.create(
-            submitter_did,
-            schema,
-            signature_type or "CL",
-            tag or "default",
-            support_revocation=support_revocation,
-        ),
-    )
-    cred_def_id = cred_def.id
-    cred_def_json = cred_def.to_json()
-
-    await wallet_handle.insert("credential_def", cred_def_id, cred_def_json, tags={"schema_id": schema["id"]})
-    await wallet_handle.insert("credential_def_private", cred_def_id, cred_def_private.to_json_buffer())
-    await wallet_handle.insert("credential_def_key_proof", cred_def_id, key_proof.to_json_buffer())
-
+    cred_def_id, cred_def_json = await create_and_store_cred_def(wallet_handle, submitter_did, schema, tag,
+                                                                 signature_type,
+                                                                 support_revocation)
     req = ledger.build_cred_def_request(submitter_did, cred_def_json)
     res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
@@ -409,33 +452,9 @@ async def send_cred_def(
 async def send_revoc_reg_def(
         pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, max_cred_num=1, issuance_type=None,
 ):
-    cred_def = await wallet_handle.fetch("credential_def", cred_def_id)
-    (
-        rev_reg_def,
-        rev_reg_def_private,
-        rev_reg,
-        _rev_reg_delta,
-    ) = await asyncio.get_event_loop().run_in_executor(
-        None,
-        lambda: RevocationRegistryDefinition.create(
-            submitter_did,
-            cred_def.raw_value,
-            tag,
-            revoc_def_type,
-            max_cred_num,
-            issuance_type=issuance_type
-        ),
-    )
-
-    rev_reg_def_id = rev_reg_def.id
-    rev_reg_def_json = rev_reg_def.to_json()
-    rev_reg_json = rev_reg.to_json()
-
-    await wallet_handle.insert("revocation_reg", rev_reg_def_id, rev_reg_json)
-    await wallet_handle.insert("revocation_reg_info", rev_reg_def_id, value_json={"curr_id": 0, "used_ids": []})
-    await wallet_handle.insert("revocation_reg_def", rev_reg_def_id, rev_reg_def_json)
-    await wallet_handle.insert("revocation_reg_def_private", rev_reg_def_id, rev_reg_def_private.to_json_buffer())
-
+    rev_reg_def_id, rev_reg_def_json, rev_reg_json = await create_and_store_revoc_reg(wallet_handle, submitter_did,
+                                                                                      revoc_def_type, tag, cred_def_id,
+                                                                                      max_cred_num, issuance_type)
     req = ledger.build_revoc_reg_def_request(submitter_did, rev_reg_def_json)
     res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
@@ -521,11 +540,23 @@ async def get_revoc_reg_def(pool_handle, wallet_handle, submitter_did, id_):
     return res
 
 
+def parse_get_revoc_reg_def_response(response):
+    return response['id'], response['data']
+
+
 async def get_revoc_reg(pool_handle, wallet_handle, submitter_did, id_, timestamp):
     req = ledger.build_get_revoc_reg_request(submitter_did, id_, timestamp)
     res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
+
+
+def parse_get_revoc_reg_response(response):
+    revoc_reg_def_id = response['revocRegDefId']
+    return revoc_reg_def_id, {
+        'value': response['data']['value'],
+        'ver': '1.0',
+    }, response['timestamp']
 
 
 async def get_revoc_reg_delta(pool_handle, wallet_handle, submitter_did, id_, from_, to_):
@@ -535,6 +566,17 @@ async def get_revoc_reg_delta(pool_handle, wallet_handle, submitter_did, id_, fr
     return res
 
 
+def parse_get_revoc_reg_delta_response(response):
+    revoc_reg_def_id = response['revocRegDefId']
+    value = response['data']['value']
+    value['accum'] = response['data']['value']['accum_to']['value']['accum']
+    value.pop('accum_to')
+    return revoc_reg_def_id, {
+        'value': {k: v for k, v in value.items() if v != [] and v is not None},
+        'ver': '1.0',
+    }, response['to']
+
+
 def run_in_event_loop(async_func):
     @functools.wraps(async_func)
     def wrapped(operations, queue_size, add_size, get_size, event_loop):
@@ -542,6 +584,7 @@ def run_in_event_loop(async_func):
             async_func(operations, queue_size, add_size, get_size, event_loop),
             loop=event_loop,
         ))
+
     return wrapped
 
 
@@ -581,17 +624,19 @@ async def check_pool_performs_read(pool_handle, wallet_handle, submitter_did, di
     res = []
     for did in dids:
         resp = await get_nym(pool_handle, wallet_handle, submitter_did, did)
+        # assert resp['result']['seqNo'] is not None
         assert resp['seqNo'] is not None
         res.append(resp)
     return res
 
 
 async def check_pool_performs_write_read(
-    pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
+        pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     writes = await check_pool_performs_write(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
     )
+    # dids = [resp['result']['txn']['data']['dest'] for resp in writes]
     dids = [resp['txn']['data']['dest'] for resp in writes]
     return await eventually(
         check_pool_performs_read, pool_handle, wallet_handle, trustee_did, dids, timeout=timeout
@@ -599,7 +644,7 @@ async def check_pool_performs_write_read(
 
 
 async def ensure_pool_performs_write_read(
-    pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
+        pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     await eventually(
         check_pool_performs_write_read, pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count, timeout=timeout
@@ -607,7 +652,7 @@ async def ensure_pool_performs_write_read(
 
 
 async def check_pool_is_functional(
-    pool_handle, wallet_handle, trustee_did, nyms_count=3
+        pool_handle, wallet_handle, trustee_did, nyms_count=3
 ):
     await check_pool_performs_write_read(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
@@ -615,7 +660,7 @@ async def check_pool_is_functional(
 
 
 async def ensure_pool_is_functional(
-    pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
+        pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     await ensure_pool_performs_write_read(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count, timeout=timeout
@@ -748,9 +793,9 @@ async def stop_primary(pool_handle, wallet_handle, trustee_did):
                 shuffle(list(results.keys()))
                 result = json.loads(sample(results.items(), 1)[0][1])
         name_before = result['result']['data']['Node_info']['Name']
-        primary_before =\
-            result['result']['data']['Node_info']['Replicas_status'][name_before+':0']['Primary'][len('Node'):
-                                                                                                  -len(':0')]
+        primary_before = \
+            result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
+                                                                                                    -len(':0')]
     except TypeError:
         try:
             await asyncio.sleep(120)
@@ -786,7 +831,7 @@ async def stop_primary(pool_handle, wallet_handle, trustee_did):
             primary_before = \
                 result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
                                                                                                         -len(':0')]
-    host = testinfra.get_host('docker://node'+primary_before)
+    host = testinfra.get_host('docker://node' + primary_before)
     host.run('systemctl stop indy-node')
     print('\nPRIMARY NODE {} HAS BEEN STOPPED!'.format(primary_before))
 
@@ -794,7 +839,7 @@ async def stop_primary(pool_handle, wallet_handle, trustee_did):
 
 
 async def start_primary(pool_handle, wallet_handle, trustee_did, primary_before):
-    host = testinfra.get_host('docker://node'+primary_before)
+    host = testinfra.get_host('docker://node' + primary_before)
     host.run('systemctl start indy-node')
     try:
         req = ledger.build_get_validator_info_request(trustee_did)
@@ -809,8 +854,9 @@ async def start_primary(pool_handle, wallet_handle, trustee_did, primary_before)
                 shuffle(list(results.keys()))
                 result = json.loads(sample(results.items(), 1)[0][1])
         name_after = result['result']['data']['Node_info']['Name']
-        primary_after =\
-            result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
+        primary_after = \
+            result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][
+            len('Node'):-len(':0')]
     except TypeError:
         try:
             await asyncio.sleep(120)
@@ -866,9 +912,9 @@ async def demote_primary(pool_handle, wallet_handle, trustee_did):
                 shuffle(list(results.keys()))
                 result = json.loads(sample(results.items(), 1)[0][1])
         name_before = result['result']['data']['Node_info']['Name']
-        primary_before =\
-            result['result']['data']['Node_info']['Replicas_status'][name_before+':0']['Primary'][len('Node'):
-                                                                                                  -len(':0')]
+        primary_before = \
+            result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
+                                                                                                    -len(':0')]
     except TypeError:
         try:
             await asyncio.sleep(120)
@@ -904,7 +950,7 @@ async def demote_primary(pool_handle, wallet_handle, trustee_did):
             primary_before = \
                 result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
                                                                                                         -len(':0')]
-    res = json.loads(results['Node'+primary_before])
+    res = json.loads(results['Node' + primary_before])
     target_did = res['result']['data']['Node_info']['did']
     alias = res['result']['data']['Node_info']['Name']
     demote_data = json.dumps({'alias': alias, 'services': []})
@@ -926,7 +972,7 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
         promote_res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req)
     assert promote_res['txnMetadata']['seqNo'] is not None
     print(promote_res)
-    host = testinfra.get_host('docker://node'+primary_before)
+    host = testinfra.get_host('docker://node' + primary_before)
     host.run('systemctl restart indy-node')
     print('\nEX-PRIMARY NODE HAS BEEN PROMOTED AND RESTARTED!')
 
@@ -943,8 +989,9 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
                 shuffle(list(results.keys()))
                 result = json.loads(sample(results.items(), 1)[0][1])
         name_after = result['result']['data']['Node_info']['Name']
-        primary_after =\
-            result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
+        primary_after = \
+            result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][
+            len('Node'):-len(':0')]
     except TypeError:
         try:
             await asyncio.sleep(120)
@@ -1015,7 +1062,6 @@ def get_node_did(node_alias, pool_info=None, primary=None):
 
 
 async def get_primary(pool_handle, wallet_handle, trustee_did):
-
     async def _get_primary():
 
         def get_primary_from_info(info, name: str) -> Optional[str]:
@@ -1272,7 +1318,7 @@ def run_external_cmd(cmd):
 
 
 def update_config(string_to_push, nodes_num):
-    test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
+    test_nodes = [NodeHost(i) for i in range(1, nodes_num + 1)]
     path_to_config = '/etc/indy/indy_config.py'
     separator = "echo ' '"
     update_res = [
@@ -1287,7 +1333,7 @@ def update_config(string_to_push, nodes_num):
 async def send_payments(pool_handle, wallet_handle, submitter_did, address_from, count):
     payment_method = 'sov'
 
-    for i in range(1, count+1):
+    for i in range(1, count + 1):
         address_to = await payment.create_payment_address(wallet_handle, payment_method, json.dumps({}))
         source, amount = await get_payment_sources(pool_handle, wallet_handle, address_from)
         print(source, amount)
@@ -1311,7 +1357,7 @@ async def send_nodes(pool_handle, wallet_handle, trustee_did, count, alias=None)
     steward_did, steward_vk = await create_and_store_did(wallet_handle, seed='00000000000000000000000Steward99')
     await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
 
-    for i in range(1, count+1):
+    for i in range(1, count + 1):
         if not alias:  # create new STEWARD for each NODE txn
             steward_did, steward_vk = await create_and_store_did(wallet_handle)
             await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
@@ -1345,11 +1391,12 @@ async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, c
     ]
     docker_7_schedule = json.dumps(
         dict(
-            {dest: datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=999+i*5), '%Y-%m-%dT%H:%M:%S%z')
+            {dest: datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=999 + i * 5),
+                                     '%Y-%m-%dT%H:%M:%S%z')
              for dest, i in zip(dests, range(len(dests)))}
         )
     )
-    for i in range(1, count+1):
+    for i in range(1, count + 1):
         req = await ledger.build_pool_upgrade_request(
             trustee_did,
             '{}_{}'.format(random_string(10), i),
@@ -1403,16 +1450,13 @@ async def ensure_cant_get_something(func_name, *args):
 
 
 def upgrade_nodes_manually(containers, sovrin_ver, node_ver, plenum_ver, plugin_ver):
-
     for container in containers:
-
         assert container.exec_run(
             ['systemctl', 'stop', 'indy-node'],
             user='root'
         ).exit_code == 0
 
     for container in containers:
-
         assert container.exec_run(
             ['apt', 'update'],
             user='root'
@@ -1430,7 +1474,6 @@ def upgrade_nodes_manually(containers, sovrin_ver, node_ver, plenum_ver, plugin_
         ).exit_code == 0
 
     for container in containers:
-
         assert container.exec_run(
             ['systemctl', 'start', 'indy-node'],
             user='root'
