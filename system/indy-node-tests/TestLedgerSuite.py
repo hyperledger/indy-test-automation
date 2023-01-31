@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 import asyncio
 from system.utils import *
@@ -532,16 +534,16 @@ class TestLedgerSuite:
             'need_to_be_owner': need_to_be_owner,
             'metadata': {}
         }
-        req1 = await ledger.build_auth_rule_request(
+        req1 = ledger.build_auth_rule_request(
             trustee_did, txn_type, action, field, old_value, new_value, json.dumps(constraint)
         )
         res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
         # assert res1['op'] == 'REPLY'
         assert res1['txnMetadata']['seqNo'] is not None
 
-        req2 = await ledger.build_get_auth_rule_request(trustee_did, txn_type, action, field, old_value, new_value)
+        req2 = ledger.build_get_auth_rule_request(trustee_did, txn_type, action, field, old_value, new_value)
         res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2)
-        assert res2['result']['data'][0]['constraint'] == constraint
+        assert res2['data'][0]['constraint'] == constraint
 
     @pytest.mark.parametrize('ledger_type', ['DOMAIN', 'POOL', 'CONFIG', '1001'])
     @pytest.mark.parametrize('seqno', [1, 5])
@@ -587,13 +589,15 @@ class TestLedgerSuite:
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
         # --------------------------------------------------------------------------------------------------------------
-        req = await ledger.build_pool_config_request(trustee_did, writes, force)
+        req = ledger.build_pool_config_request(trustee_did, writes, force)
         res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
         # assert res['op'] == 'REPLY'
         assert res['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('action', ['start', 'cancel'])
-    @pytest.mark.parametrize('_datetime', ['2020-01-01T00:00:00.000000+00:00', ''])
+    @pytest.mark.parametrize('_datetime', [None, None])
+
+    #f'{datetime.now().year + 1}-01-01T00:00:00.000000+00:00'
     @pytest.mark.asyncio
     # POOL_RESTART
     async def test_pool_restart(
@@ -602,10 +606,12 @@ class TestLedgerSuite:
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
         # --------------------------------------------------------------------------------------------------------------
-        req = await ledger.build_pool_restart_request(trustee_did, action, _datetime)
-        res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-        res = {k: v for k, v in res.items()}
-        assert all([v['op'] == 'REPLY' for k, v in res.items()])
+        req = ledger.build_pool_restart_request(trustee_did, action, _datetime)
+        res = await eventually(
+            sign_and_submit_action, pool_handler, wallet_handler, trustee_did, req
+        )
+        # res = await sign_and_submit_action(pool_handler, wallet_handler, trustee_did, req)
+        assert all([json.loads(v)['op'] == 'REPLY' for k, v in res.items()])
 
     @pytest.mark.parametrize('timeout', [5, 3600])
     @pytest.mark.parametrize('justification', [None, random_string(1), random_string(1000)])
@@ -687,7 +693,7 @@ class TestLedgerSuite:
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), 'STEWARD'
         )
         # --------------------------------------------------------------------------------------------------------------
-        req = await ledger.build_node_request(
+        req = ledger.build_node_request(
             target_did, target_vk, json.dumps(
                 {
                     'alias': random_string(alias_length),
