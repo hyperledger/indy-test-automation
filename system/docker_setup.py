@@ -12,8 +12,8 @@ from .utils import (
 import logging
 logger = logging.getLogger(__name__)
 # >>>>> set logging here <<<<<
-logging.basicConfig(level=logging.NOTSET, format='%(asctime)s %(message)s')
-# logging.basicConfig(level=logging.CRITICAL)
+# logging.basicConfig(level=logging.NOTSET, format='%(asctime)s %(message)s')
+logging.basicConfig(level=logging.CRITICAL)
 
 DOCKER_BUILD_CTX_PATH = os.path.join(
     os.path.abspath(os.path.dirname(__file__)), 'docker', 'node'
