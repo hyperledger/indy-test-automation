@@ -595,9 +595,7 @@ class TestLedgerSuite:
         assert res['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('action', ['start', 'cancel'])
-    @pytest.mark.parametrize('_datetime', [None, None])
-
-    #f'{datetime.now().year + 1}-01-01T00:00:00.000000+00:00'
+    @pytest.mark.parametrize('_datetime', [f'{datetime.now().year + 1}-01-01T00:00:00.000000+00:00', None])
     @pytest.mark.asyncio
     # POOL_RESTART
     async def test_pool_restart(
