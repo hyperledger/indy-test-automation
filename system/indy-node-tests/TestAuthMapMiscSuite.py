@@ -46,7 +46,6 @@ class TestAuthMapMiscSuite:
                                                        'metadata': {}
                                                    }))
         res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-        print(res2)
         assert res2['txnMetadata']['seqNo'] is not None
         # set rule for editing
         req = ledger.build_auth_rule_request(trustee_did, '0', 'EDIT', 'services', str(['VALIDATOR']), str([]),
@@ -58,7 +57,6 @@ class TestAuthMapMiscSuite:
                                                        'metadata': {}
                                                    }))
         res3 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-        print(res3)
         assert res3['txnMetadata']['seqNo'] is not None
         # add node
         alias = random_string(5)
@@ -77,7 +75,6 @@ class TestAuthMapMiscSuite:
                                                        'services': ['VALIDATOR']
                                                    }))
         res4 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, req)
-        print(res4)
         assert res4['txnMetadata']['seqNo'] is not None
         # edit node
         req = ledger.build_node_request(editor_did, adder_vk,  # adder_vk is used as node target did here
@@ -87,7 +84,6 @@ class TestAuthMapMiscSuite:
                                                        'services': []
                                                    }))
         res5 = await sign_and_submit_request(pool_handler, wallet_handler, editor_did, req)
-        print(res5)
         assert res5['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('adder_role, adder_role_num', [
@@ -116,16 +112,14 @@ class TestAuthMapMiscSuite:
                                                        'metadata': {}
                                                    }))
         res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-        print(res2)
         assert res2['txnMetadata']['seqNo'] is not None
         # restart pool
         req = ledger.build_pool_restart_request\
             (adder_did, 'start', datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=60),
                                                    '%Y-%m-%dT%H:%M:%S%z'))
-        res3 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, req)
+        res3 = await sign_and_submit_action(pool_handler, wallet_handler, adder_did, req)
         res3 = [json.loads(v) for k, v in res3.items()]
-        print(res3)
-        assert all([res['txnMetadata']['seqNo'] is not None for res in res3])
+        assert all([res['op'] == 'REPLY' for res in res3])
 
     @pytest.mark.parametrize('adder_role, adder_role_num', [
         ('TRUSTEE', '0'),
@@ -153,13 +147,11 @@ class TestAuthMapMiscSuite:
                                                        'metadata': {}
                                                    }))
         res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-        print(res2)
         assert res2['txnMetadata']['seqNo'] is not None
         req = ledger.build_get_validator_info_request(adder_did)
-        res3 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, req)
+        res3 = await sign_and_submit_action(pool_handler, wallet_handler, adder_did, req)
         res3 = [json.loads(v) for k, v in res3.items()]
-        print(res3)
-        assert all([res['txnMetadata']['seqNo'] is not None for res in res3])
+        assert all([res['op'] == 'REPLY' for res in res3])
 
     @pytest.mark.parametrize('editor_role, editor_role_num', [
         ('NETWORK_MONITOR', '201'),
@@ -186,11 +178,9 @@ class TestAuthMapMiscSuite:
                                                        'metadata': {}
                                                    }))
         res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-        print(res2)
         assert res2['txnMetadata']['seqNo'] is not None
         req = ledger.build_pool_config_request(editor_did, False, False)
         res3 = await sign_and_submit_request(pool_handler, wallet_handler, editor_did, req)
-        print(res3)
         assert res3['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('editor_role, editor_role_num', [
@@ -218,7 +208,6 @@ class TestAuthMapMiscSuite:
                                                        'metadata': {}
                                                    }))
         res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-        print(res2)
         assert res2['txnMetadata']['seqNo'] is not None
         await asyncio.sleep(15)
         req = ledger.build_auth_rule_request(editor_did, '111', 'EDIT', 'action', '*', '*',
@@ -230,7 +219,6 @@ class TestAuthMapMiscSuite:
                                                        'metadata': {}
                                                    }))
         res3 = await sign_and_submit_request(pool_handler, wallet_handler, editor_did, req)
-        print(res3)
         assert res3['txnMetadata']['seqNo'] is not None
 
     # TODO might make sense to move to separate module since other tests here
@@ -258,9 +246,7 @@ class TestAuthMapMiscSuite:
 
         logger.info("3 Getting newly set forbidden constraint")
         req = ledger.build_get_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', trustee_role_num)
-        # print (req.body)
         res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-        # print (res)
 
         # FIXME ['seqNo'] is None in response
         # assert res['seqNo'] is not None
