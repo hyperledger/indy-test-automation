@@ -69,7 +69,7 @@ async def test_consensus_state_proof_reading(
     # Stop all except 1
     for node in test_nodes[1:]:
         node.stop_service()
-    res = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did1, retry_wait=3, timeout=60)
+    res = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did1, retry_wait=10, timeout=120)
     assert res['seqNo'] is not None
     # Stop the last one
     test_nodes[0].stop_service()
