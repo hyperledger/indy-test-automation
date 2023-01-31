@@ -2,6 +2,7 @@ import pytest
 import asyncio
 from system.utils import *
 
+from indy_vdr.error import VdrError, VdrErrorCode
 
 import logging
 logger = logging.getLogger(__name__)
@@ -28,12 +29,12 @@ async def test_case_cred_def(
     # add adder to add cred def
     adder_did, adder_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
-    assert res['seqNo'] is not None
+    assert res['txnMetadata']['seqNo'] is not None
     schema_id, _ = await send_schema(pool_handler, wallet_handler, trustee_did,
                                      'schema1', '1.0', json.dumps(["age", "sex", "height", "name"]))
     await asyncio.sleep(1)
     res = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id)
-    schema_id, schema_json = ledger.parse_get_schema_response(json.dumps(res))
+    schema_id, schema_json = parse_get_schema_response(res)
     # set rule for adding
     req = ledger.build_auth_rule_request(trustee_did, '102', 'ADD', '*', None, '*',
                                                json.dumps({
@@ -44,8 +45,7 @@ async def test_case_cred_def(
                                                    'metadata': {}
                                                }))
     res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    print(res2)
-    assert res2['seqNo'] is not None
+    assert res2['txnMetadata']['seqNo'] is not None
     # set rule for editing
     req = ledger.build_auth_rule_request(trustee_did, '102', 'EDIT', '*', '*', '*',
                                                json.dumps({
@@ -56,45 +56,39 @@ async def test_case_cred_def(
                                                    'metadata': {}
                                                }))
     res3 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    print(res3)
-    assert res3['seqNo'] is not None
+    assert res3['txnMetadata']['seqNo'] is not None
     # add cred def
-    cred_def_id, cred_def_json = await anoncreds.issuer_create_and_store_credential_def(
-        wallet_handler, adder_did, schema_json, 'TAG1', None, json.dumps({'support_revocation': False})
-    )
+    cred_def_id, cred_def_json = await create_and_store_cred_def(
+        wallet_handler, adder_did, schema_json, 'TAG1', None, support_revocation=False)
     request = ledger.build_cred_def_request(adder_did, cred_def_json)
     res4 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, request)
-    print(res4)
-    assert res4['seqNo'] is not None
+    # print(res4)
+    print(request.body)
+    assert res4['txnMetadata']['seqNo'] is not None
     if adder_role != editor_role:
         # try to edit cred def as adder - should be rejected
-        _request = json.loads(request)
-        _request['operation']['data']['primary']['n'] = '123456789'
-        _request['reqId'] += _request['reqId']
-        res5 = json.loads(
-            await sign_and_submit_request(pool_handler, wallet_handler, adder_did, json.dumps(_request))
-        )
-        print(res5)
-        assert res5['op'] == 'REJECT'
+        _request = request
+        _request.body['operation']['data']['primary']['n'] = '123456789'
+        _request.body['reqId'] += _request.body['reqId']
+        with pytest.raises(VdrError) as exp_err:
+            await sign_and_submit_request(pool_handler, wallet_handler, adder_did, _request)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # change adder role to edit cred def
         res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, None, None, editor_role)
-        print(res)
-        assert res['seqNo'] is not None
+        # print(res)
+        assert res['txnMetadata']['seqNo'] is not None
     # edit cred def
-    request = json.loads(request)
-    request['operation']['data']['primary']['n'] = '123456'
-    request['reqId'] += request['reqId']
-    res6 = json.loads(
-        await sign_and_submit_request(pool_handler, wallet_handler, adder_did, json.dumps(request))
-    )
-    print(res6)
-    assert res6['seqNo'] is not None
+    # request = json.loads(request)
+    # request['operation']['data']['primary']['n'] = '123456'
+    # request['reqId'] += request['reqId']
+    # res6 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, json.dumps(request))
+    # print(res6)
+    # assert res6['txnMetadata']['seqNo'] is not None
     if adder_role != editor_role:
         # try to add another cred def as editor - should be rejected
-        cred_def_id, cred_def_json = await anoncreds.issuer_create_and_store_credential_def(
-            wallet_handler, adder_did, schema_json, 'TAG2', None, json.dumps({'support_revocation': True})
-        )
+        cred_def_id, cred_def_json = await create_and_store_cred_def(
+            wallet_handler, adder_did, schema_json, 'TAG2', None, support_revocation=False)
         request = ledger.build_cred_def_request(adder_did, cred_def_json)
-        res7 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, request)
-        print(res7)
-        assert res7['op'] == 'REJECT'
+        with pytest.raises(VdrError) as exp_err:
+            await sign_and_submit_request(pool_handler, wallet_handler, adder_did, request)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED

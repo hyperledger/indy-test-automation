@@ -26,7 +26,7 @@ async def test_case_revoc_reg_def(
         adder_role, adder_role_num, editor_role, editor_role_num):
     trustee_did, _ = get_default_trustee
     # add adder to add revoc reg def
-    adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    adder_did, adder_vk = await did.create_and_store_my_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
     assert res['seqNo'] is not None
     schema_id, _ = await send_schema(
@@ -66,7 +66,7 @@ async def test_case_revoc_reg_def(
     # add revoc reg def
     tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
     tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
-    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await anoncreds.issuer_create_and_store_revoc_reg(
+    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await create_and_store_revoc_reg(
         wallet_handler, adder_did, None, 'TAG1', cred_def_id,
         json.dumps({'max_cred_num': 1, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}), tails_writer_handle
     )
@@ -79,9 +79,7 @@ async def test_case_revoc_reg_def(
         _request = json.loads(request)
         _request['operation']['value']['tailsHash'] = random_string(30)
         _request['reqId'] += _request['reqId']
-        res5 = json.loads(
-            await sign_and_submit_request(pool_handler, wallet_handler, adder_did, json.dumps(_request))
-        )
+        res5 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, json.dumps(_request))
         print(res5)
         assert res5['op'] == 'REJECT'
         # change adder role to edit revoc reg def
@@ -99,7 +97,7 @@ async def test_case_revoc_reg_def(
     assert res6['seqNo'] is not None
     if adder_role != editor_role:
         # try to add another revoc reg def as editor - should be rejected
-        revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await anoncreds.issuer_create_and_store_revoc_reg(
+        revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await create_and_store_revoc_reg(
             wallet_handler, adder_did, None, 'TAG2', cred_def_id,
             json.dumps({'max_cred_num': 2, 'issuance_type': 'ISSUANCE_BY_DEFAULT'}), tails_writer_handle
         )
