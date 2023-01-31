@@ -164,7 +164,7 @@ class TestViewChangeSuite:
                 demote_node, pool_handler, wallet_handler, trustee_did, 'Node{}'.format(primary),
                 pool_info['Node{}'.format(primary)], timeout=60
             )
-            await pool.refresh_pool_ledger(pool_handler)
+            await pool_handler.refresh()
             # check VC status
             await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary)
             # send extra node txns
