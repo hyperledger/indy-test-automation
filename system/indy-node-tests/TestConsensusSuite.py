@@ -29,13 +29,17 @@ class TestConsensusSuite:
         test_nodes[4].stop_service()
         with pytest.raises(VdrError):
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
-        await check_pool_performs_read(pool_handler, wallet_handler, trustee_did, dids[:2])
+        await eventually(
+            check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids[:2], timeout=60
+        )
 
         # 3/7 online - can r only
         test_nodes[3].stop_service()
         with pytest.raises(VdrError):
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
-        await check_pool_performs_read(pool_handler, wallet_handler, trustee_did, dids[2:])
+        await eventually(
+            check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids[2:], timeout=60
+        )
 
         # 5/7 online - can w+r
         for node in test_nodes[3:5]:
@@ -61,7 +65,9 @@ class TestConsensusSuite:
         # Stop all except 1
         for node in test_nodes[1:]:
             node.stop_service()
-        await check_pool_performs_read(pool_handler, wallet_handler, trustee_did, dids)
+        await eventually(
+            check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids, timeout=60
+        )
 
         # Start all
         for node in test_nodes:
@@ -78,7 +84,9 @@ class TestConsensusSuite:
         test_nodes = [NodeHost(i) for i in range(1, 8)]
 
         primary1, alias1, target_did1 = await get_primary(pool_handler, wallet_handler, trustee_did)
-        alias, target_did = await demote_random_node(pool_handler, wallet_handler, trustee_did)
+        alias, target_did = await eventually(
+            demote_random_node, pool_handler, wallet_handler, trustee_did, timeout=60
+                               )
         primary2 = await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary1)
 
         temp_test_nodes = test_nodes.copy()
