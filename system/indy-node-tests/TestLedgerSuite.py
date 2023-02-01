@@ -604,12 +604,9 @@ class TestLedgerSuite:
         # SETUP---------------------------------------------------------------------------------------------------------
         trustee_did, _ = get_default_trustee
         # --------------------------------------------------------------------------------------------------------------
-        req = ledger.build_pool_restart_request(trustee_did, action, _datetime)
-        # res = await eventually(
-        #     sign_and_submit_action, pool_handler, wallet_handler, trustee_did, req
-        # )
-        res = await sign_and_submit_action(pool_handler, wallet_handler, trustee_did, req)
-        await asyncio.sleep(30) # FIXME
+        res = await eventually(
+            send_pool_restart, pool_handler, wallet_handler, trustee_did, action, _datetime
+        )
         assert all([json.loads(v)['op'] == 'REPLY' for k, v in res.items()])
 
     @pytest.mark.parametrize('timeout', [5, 3600])
