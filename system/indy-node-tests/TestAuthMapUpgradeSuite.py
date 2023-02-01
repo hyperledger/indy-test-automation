@@ -29,11 +29,11 @@ async def test_case_pool_upgrade(
     # add adder to start pool upgrade
     adder_did, adder_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
-    assert res['seqNo'] is not None
+    assert res['txnMetadata']['seqNo'] is not None
     # add editor to cancel pool upgrade
     editor_did, editor_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk, None, editor_role)
-    assert res['seqNo'] is not None
+    assert res['txnMetadata']['seqNo'] is not None
     # set rule for adding
     req = ledger.build_auth_rule_request(trustee_did, '109', 'ADD', 'action', '*', 'start',
                                                json.dumps({
@@ -44,8 +44,7 @@ async def test_case_pool_upgrade(
                                                    'metadata': {}
                                                }))
     res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    print(res2)
-    assert res2['seqNo'] is not None
+    assert res2['txnMetadata']['seqNo'] is not None
     # set rule for editing
     req = ledger.build_auth_rule_request(trustee_did, '109', 'EDIT', 'action', 'start', 'cancel',
                                                json.dumps({
@@ -56,8 +55,7 @@ async def test_case_pool_upgrade(
                                                    'metadata': {}
                                                }))
     res3 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    print(res3)
-    assert res3['seqNo'] is not None
+    assert res3['txnMetadata']['seqNo'] is not None
     # start pool upgrade
     init_time = 30
     version = '1.99.999'
@@ -80,12 +78,10 @@ async def test_case_pool_upgrade(
         adder_did, name, version, 'start', _sha256, _timeout, docker_7_schedule, None, reinstall, force, package
     )
     res4 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, req)
-    print(res4)
-    assert res4['seqNo'] is not None
+    assert res4['txnMetadata']['seqNo'] is not None
     # cancel pool upgrade
     req = ledger.build_pool_upgrade_request(
         editor_did, name, version, 'cancel', _sha256, _timeout, docker_7_schedule, None, reinstall, force, package
     )
     res5 = await sign_and_submit_request(pool_handler, wallet_handler, editor_did, req)
-    print(res5)
-    assert res5['seqNo'] is not None
+    assert res5['txnMetadata']['seqNo'] is not None
