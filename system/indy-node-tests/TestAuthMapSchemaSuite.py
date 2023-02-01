@@ -33,11 +33,9 @@ async def test_case_schema(
                                                    'metadata': {}
                                                }))
     res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    print(res2)
     assert res2['txnMetadata']['seqNo'] is not None
     # add schema
     res4 = await send_schema(pool_handler, wallet_handler, adder_did, 'schema1', '1.0', json.dumps(['attr1']))
-    print(res4)
     assert res4[1]['txnMetadata']['seqNo'] is not None
     # edit schema - nobody can edit schemas - should be rejected
     with pytest.raises(AskarError) as exp_err:
