@@ -474,6 +474,13 @@ async def send_revoc_reg_entry(
     return revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, res
 
 
+async def send_pool_restart(pool_handle, wallet_handle, submitter_did, action, datetime):
+    req = ledger.build_pool_restart_request(submitter_did, action, datetime)
+    res = await sign_and_submit_action(pool_handle, wallet_handle, submitter_did, req)
+
+    return res
+
+
 async def get_nym(pool_handle, wallet_handle, submitter_did, target_did):
     req = ledger.build_get_nym_request(submitter_did, target_did)
     res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
