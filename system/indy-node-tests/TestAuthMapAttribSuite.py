@@ -33,7 +33,6 @@ async def test_case_attrib(
     # add adder to add attrib
     adder_did, adder_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, adder_vk, None, adder_role)
-    print (res)
     assert res['txnMetadata']['seqNo'] is not None
     # add editor to edit attrib
     editor_did, editor_vk = await create_and_store_did(wallet_handler)
@@ -49,7 +48,6 @@ async def test_case_attrib(
                                                    'metadata': {}
                                                }))
     res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    print(res2)
     assert res2['txnMetadata']['seqNo'] is not None
     # set rule for editing
     req = ledger.build_auth_rule_request(trustee_did, '100', 'EDIT', '*', '*', '*',
@@ -61,19 +59,16 @@ async def test_case_attrib(
                                                    'metadata': {}
                                                }))
     res3 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    print(res3)
     assert res3['txnMetadata']['seqNo'] is not None
     # add attrib for target did by non-owner adder
     res4 = await send_attrib(
         pool_handler, wallet_handler, adder_did, target_did, None, json.dumps({'key1': 'value1'}), None
     )
-    print(res4)
     assert res4['txnMetadata']['seqNo'] is not None
     # edit attrib for target did by non-owner editor
     res5 = await send_attrib(
         pool_handler, wallet_handler, editor_did, target_did, None, json.dumps({'key1': 'value2'}), None
     )
-    print(res5)
     assert res5['txnMetadata']['seqNo'] is not None
     # negative cases
     if adder_role != editor_role:
