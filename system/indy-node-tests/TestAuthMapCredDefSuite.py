@@ -60,30 +60,28 @@ async def test_case_cred_def(
     # add cred def
     cred_def_id, cred_def_json = await create_and_store_cred_def(
         wallet_handler, adder_did, schema_json, 'TAG1', None, support_revocation=False)
-    request = ledger.build_cred_def_request(adder_did, cred_def_json)
-    res4 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, request)
-    # print(res4)
-    print(request.body)
+    request1 = ledger.build_cred_def_request(adder_did, cred_def_json)
+    res4 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, request1)
     assert res4['txnMetadata']['seqNo'] is not None
     if adder_role != editor_role:
         # try to edit cred def as adder - should be rejected
-        _request = request
-        _request.body['operation']['data']['primary']['n'] = '123456789'
-        _request.body['reqId'] += _request.body['reqId']
+        cred_def_json = json.loads(cred_def_json)
+        cred_def_json['value']['primary']['n'] = '123456789'
+        cred_def_json = json.dumps(cred_def_json)
+        request2 = ledger.build_cred_def_request(adder_did, cred_def_json)
         with pytest.raises(VdrError) as exp_err:
-            await sign_and_submit_request(pool_handler, wallet_handler, adder_did, _request)
+            await sign_and_submit_request(pool_handler, wallet_handler, adder_did, request2)
         assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # change adder role to edit cred def
         res = await send_nym(pool_handler, wallet_handler, trustee_did, adder_did, None, None, editor_role)
-        # print(res)
         assert res['txnMetadata']['seqNo'] is not None
     # edit cred def
-    # request = json.loads(request)
-    # request['operation']['data']['primary']['n'] = '123456'
-    # request['reqId'] += request['reqId']
-    # res6 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, json.dumps(request))
-    # print(res6)
-    # assert res6['txnMetadata']['seqNo'] is not None
+    cred_def_json = json.loads(cred_def_json)
+    cred_def_json['value']['primary']['n'] = '123456'
+    cred_def_json = json.dumps(cred_def_json)
+    request3 = ledger.build_cred_def_request(adder_did, cred_def_json)
+    res6 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, request3)
+    assert res6['txnMetadata']['seqNo'] is not None
     if adder_role != editor_role:
         # try to add another cred def as editor - should be rejected
         cred_def_id, cred_def_json = await create_and_store_cred_def(
