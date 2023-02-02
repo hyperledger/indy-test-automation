@@ -481,6 +481,13 @@ async def send_pool_restart(pool_handle, wallet_handle, submitter_did, action, d
     return res
 
 
+async def get_acceptance_mechanisms(pool_handle, submitter_did, timestamp, version):
+    req = ledger.build_get_acceptance_mechanisms_request(submitter_did, timestamp, version)
+    res = await pool_handle.submit_request(req)
+
+    return res
+
+
 async def get_nym(pool_handle, wallet_handle, submitter_did, target_did):
     req = ledger.build_get_nym_request(submitter_did, target_did)
     res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
@@ -1109,7 +1116,7 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
 
 async def demote_random_node(pool_handle, wallet_handle, trustee_did):
     req = ledger.build_get_validator_info_request(trustee_did)
-    results = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req)
+    results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
     try:
         result = json.loads(sample(results.items(), 1)[0][1])
     except JSONDecodeError:
@@ -1123,7 +1130,7 @@ async def demote_random_node(pool_handle, wallet_handle, trustee_did):
     target_did = result['result']['data']['Node_info']['did']
     demote_data = {'alias': alias, 'services': []}
     demote_req = ledger.build_node_request(trustee_did, target_did, demote_data)
-    demote_res = await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req)
+    demote_res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req)
     assert demote_res['txnMetadata']['seqNo'] is not None
 
     return alias, target_did
@@ -1141,7 +1148,7 @@ async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_di
     promote_req = ledger.build_node_request(trustee_did, target_did, promote_data)
     promote_res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req)
     assert promote_res['txnMetadata']['seqNo'] is not None
-    host = testinfra.get_host('ssh://node'+alias[4:])
+    host = testinfra.get_host('ssh://node' + alias[4:])
     host.run('systemctl restart indy-node')
 
 
@@ -1378,7 +1385,7 @@ async def send_nodes(pool_handle, wallet_handle, trustee_did, count, alias=None)
                 'node_port': randrange(1, 32767),
                 'services': []
             }
-            )
+        )
         res = await sign_and_submit_request(pool_handle, wallet_handle, steward_did, req)
         assert res['txnMetadata']['seqNo'] is not None
 

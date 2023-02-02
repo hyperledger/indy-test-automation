@@ -733,8 +733,9 @@ class TestLedgerSuite:
         assert res1['txnMetadata']['seqNo'] is not None
 
         for _timestamp, _version in [(None, None), (int(time.time()), None), (None, version)]:
-            req2 = ledger.build_get_acceptance_mechanisms_request(trustee_did, _timestamp, _version)
-            res2 = await pool_handler.submit_request(req2)
+            res2 = await eventually(
+                get_acceptance_mechanisms, pool_handler, trustee_did, _timestamp, _version
+            )
             print(res2)
             assert res2['seqNo'] is not None
 
