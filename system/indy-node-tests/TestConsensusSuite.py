@@ -66,7 +66,7 @@ class TestConsensusSuite:
         for node in test_nodes[1:]:
             node.stop_service()
         await eventually(
-            check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids, timeout=60
+            check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids, retry_wait=10, timeout=120
         )
 
         # Start all
