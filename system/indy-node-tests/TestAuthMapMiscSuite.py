@@ -77,13 +77,7 @@ class TestAuthMapMiscSuite:
         res4 = await sign_and_submit_request(pool_handler, wallet_handler, adder_did, req)
         assert res4['txnMetadata']['seqNo'] is not None
         # edit node
-        req = ledger.build_node_request(editor_did, adder_vk,  # adder_vk is used as node target did here
-                                              json.dumps(
-                                                   {
-                                                       'alias': alias,
-                                                       'services': []
-                                                   }))
-        res5 = await sign_and_submit_request(pool_handler, wallet_handler, editor_did, req)
+        res5 = await eventually(send_node, pool_handler, wallet_handler, [], editor_did, adder_vk, alias)
         assert res5['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('adder_role, adder_role_num', [
