@@ -1362,7 +1362,10 @@ async def send_payments(pool_handle, wallet_handle, submitter_did, address_from,
 async def send_nodes(pool_handle, wallet_handle, trustee_did, count, alias=None):
     # create single STEWARD to add ALIAS node once and change it by NODE txns
     steward_did, steward_vk = await create_and_store_did(wallet_handle, seed='00000000000000000000000Steward99')
-    await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+    try:
+        await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+    except VdrError:
+        logger.info('Steward has been already created!')
 
     for i in range(1, count + 1):
         if not alias:  # create new STEWARD for each NODE txn
