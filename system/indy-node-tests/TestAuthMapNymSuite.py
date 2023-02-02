@@ -44,7 +44,6 @@ async def test_case_nym(
                                                    'metadata': {}
                                                }))
     res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    print(res2)
     assert res2['txnMetadata']['seqNo'] is not None
     req = ledger.build_auth_rule_request(trustee_did, '1', 'EDIT', 'verkey', '*', '*',
                                                json.dumps({
@@ -55,15 +54,12 @@ async def test_case_nym(
                                                    'metadata': {}
                                                }))
     res3 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    print(res3)
     assert res3['txnMetadata']['seqNo'] is not None
     # add nym with verkey by adder
     res4 = await send_nym(pool_handler, wallet_handler, adder_did, new_did, adder_vk)  # push adder vk
-    print(res4)
     assert res4['txnMetadata']['seqNo'] is not None
     # edit verkey by editor
     res5 = await send_nym(pool_handler, wallet_handler, editor_did, new_did, editor_vk)  # push editor vk
-    print(res5)
     assert res5['txnMetadata']['seqNo'] is not None
     # negative cases
     if adder_role != editor_role:
