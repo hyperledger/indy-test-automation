@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     ssh \
     vim \
+    pkg-config\
     && rm -rf /var/lib/apt/lists/*
 
 # python
@@ -25,7 +26,6 @@ RUN apt-get update && apt-get install -y \
 # https://github.com/pypa/pip/issues/5240
 # https://github.com/pypa/pip/issues/5221
 RUN python3 -m pip install -U \
-    pip==22.3.1 \
     setuptools==50.3.2 \
     virtualenv \
     pipenv \
