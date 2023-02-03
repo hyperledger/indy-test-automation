@@ -2,6 +2,191 @@ import pytest
 import asyncio
 from random import randrange as rr
 from system.utils import *
+from indy_vdr import ledger
+
+
+@pytest.mark.parametrize('wait_time', [0, 660])  # 0 - common proof reading, 660 - freshness proof reading
+@pytest.mark.asyncio
+async def test_misc_state_proof_vdr(
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
+        nodes_num, wait_time, check_no_failures_fixture
+):
+    trustee_did, _ = get_default_trustee
+    steward_did, steward_vk = await create_and_store_did(wallet_handler)
+    random_did = random_did_and_json()[0]
+
+    # write all txn types to the ledger
+    await send_nym(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+    req = ledger.build_node_request(
+        steward_did, steward_vk, json.dumps(
+            {
+                'alias': random_string(5),
+                'client_ip': '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
+                'client_port': rr(1, 32767),
+                'node_ip': '{}.{}.{}.{}'.format(rr(1, 255), 0, 0, rr(1, 255)),
+                'node_port': rr(1, 32767),
+                'services': []
+            }
+        )
+    )
+    res_node = await sign_and_submit_request(pool_handler, wallet_handler, steward_did, req)
+    assert res_node['txnMetadata']['seqNo'] is not None
+
+    req = ledger.build_auth_rule_request(
+        trustee_did, '118', 'ADD', 'action', '*', '*', json.dumps(
+            {
+               'constraint_id': 'ROLE',
+               'role': '*',
+               'sig_count': 10,
+               'need_to_be_owner': False,
+               'metadata': {}
+            }
+        )
+    )
+    res_auth = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    assert res_auth['txnMetadata']['seqNo'] is not None
+
+    res_nym = await send_nym(pool_handler, wallet_handler, trustee_did, random_did)
+    assert res_nym['txnMetadata']['seqNo'] is not None
+
+    res_attr = await send_attrib(
+        pool_handler, wallet_handler, trustee_did, random_did, None, json.dumps({'key': 'value'}), None
+    )
+    assert res_attr['txnMetadata']['seqNo'] is not None
+
+    schema_id, res_sch = await send_schema(
+        pool_handler, wallet_handler, trustee_did, random_string(10), '1.0', json.dumps(
+            [random_string(1), random_string(2), random_string(3)]
+        )
+    )
+    assert res_sch['txnMetadata']['seqNo'] is not None
+
+    await asyncio.sleep(5)
+
+    res = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id)
+    schema_id, schema_json = parse_get_schema_response(res)
+    cred_def_id, _, res_cred_def = await send_cred_def(
+        pool_handler, wallet_handler, trustee_did, schema_json, random_string(3), None, support_revocation=True)
+    assert res_cred_def['txnMetadata']['seqNo'] is not None
+
+    timestamp0 = int(time.time())
+
+    revoc_reg_def_id, _, _, res_entry = await send_revoc_reg_entry(
+        pool_handler, wallet_handler, trustee_did, 'CL_ACCUM', random_string(3), cred_def_id,
+        max_cred_num=1, issuance_type='ISSUANCE_BY_DEFAULT'
+    )
+    assert res_entry['txnMetadata']['seqNo'] is not None
+
+    req = ledger.build_acceptance_mechanisms_request(
+        trustee_did, json.dumps({'aml_key': 'AML text'}), 'AML version', None
+    )
+    res3 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    assert res3['txnMetadata']['seqNo'] is not None
+    req = ledger.build_txn_author_agreement_request(
+        trustee_did, 'TAA text', 'TAA version', ratification_ts=int(time.time())
+    )
+    res4 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
+    assert res4['txnMetadata']['seqNo'] is not None
+
+    # txns must be written at ALL nodes before they will be stopped
+    await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
+
+    await asyncio.sleep(wait_time)
+
+    # stop all nodes except one
+    hosts = [NodeHost(i) for i in range(1, nodes_num+1)]
+    print([host.stop_service() for host in hosts[:-1]])
+
+    # read all txns written from the single node
+    timestamp1 = int(time.time())
+
+    async def get_nym_test():
+        req1 = ledger.build_get_nym_request(None, random_did)
+        return await pool_handler.submit_request(req1)
+
+    res1 = await eventually(get_nym_test, retry_wait=20, timeout=120)
+    assert res1['seqNo'] is not None
+
+    async def get_attrib_test():
+        req2 = ledger.build_get_attrib_request(None, random_did, 'key', None, None)
+        return await pool_handler.submit_request(req2)
+
+    res1 = await eventually(get_attrib_test, retry_wait=20, timeout=240)
+    assert res1['seqNo'] is not None
+
+    async def get_schema_test():
+        req3 = ledger.build_get_schema_request(None, schema_id)
+        return await pool_handler.submit_request(req3)
+
+    res1 = await eventually(get_schema_test, retry_wait=20, timeout=240)
+    assert res1['seqNo'] is not None
+
+    async def get_cred_def_test():
+        req4 = ledger.build_get_cred_def_request(None, cred_def_id)
+        return await pool_handler.submit_request(req4)
+
+    res1 = await eventually(get_cred_def_test, retry_wait=20, timeout=120)
+    assert res1['seqNo'] is not None
+
+    async def get_revoc_reg_def_test():
+        req5 = ledger.build_get_revoc_reg_def_request(None, revoc_reg_def_id)
+        return await pool_handler.submit_request(req5)
+
+    res1 = await eventually(get_revoc_reg_def_test, retry_wait=20, timeout=240)
+    assert res1['seqNo'] is not None
+
+    # consensus is impossible with timestamp0 here! IS-1263
+    async def get_get_revoc_reg_test():
+        req6 = ledger.build_get_revoc_reg_request(None, revoc_reg_def_id, timestamp1)
+        return await pool_handler.submit_request(req6)
+
+    res1 = await eventually(get_get_revoc_reg_test, retry_wait=20, timeout=120)
+    assert res1['seqNo'] is not None
+
+    async def get_get_revoc_reg_t0_test():
+        req66 = ledger.build_get_revoc_reg_request(None, revoc_reg_def_id, timestamp0)
+        return await pool_handler.submit_request(req66)
+
+    res1 = await eventually(get_get_revoc_reg_t0_test, retry_wait=20, timeout=120)
+    assert res1['seqNo'] is None
+
+    # consensus is impossible with (timestamp0, timestamp1) here! IS-1264
+    async def get_get_revoc_reg_delta_test():
+        req7 = ledger.build_get_revoc_reg_delta_request(None, revoc_reg_def_id, timestamp0, timestamp1)
+        return await pool_handler.submit_request(req7)
+
+    res1 = await eventually(get_get_revoc_reg_delta_test, retry_wait=20, timeout=120)
+    assert res1['seqNo'] is not None
+
+    for ledger_type, seqno in [('DOMAIN', 16), ('POOL', 8), ('CONFIG', 1)]:
+        async def get_get_txn_test():
+            req8 = ledger.build_get_txn_request(None, ledger_type, seqno)
+            return await pool_handler.submit_request(req8)
+
+        res1 = await eventually(get_get_txn_test, retry_wait=20, timeout=120)
+        assert res1['seqNo'] is not None
+
+    # no seqno returned for this txn type
+    async def get_get_auth_rule_test():
+        req11 = ledger.build_get_auth_rule_request(None, '101', 'ADD', '*', None, '*')
+        return await pool_handler.submit_request(req11)
+
+    res1 = await eventually(get_get_auth_rule_test, retry_wait=10, timeout=120)
+    assert res1['seqNo'] is not None
+
+    async def get_get_acceptance_mechanisms_test():
+        req13 = ledger.build_get_acceptance_mechanisms_request(None, None, 'AML version')
+        return await pool_handler.submit_request(req13)
+
+    res1 = await eventually(get_get_acceptance_mechanisms_test, retry_wait=10, timeout=120)
+    assert res1['seqNo'] is not None
+
+    async def get_get_txn_author_agreement_test():
+        req14 = ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': 'TAA version'}))
+        return await pool_handler.submit_request(req14)
+
+    res1 = await eventually(get_get_txn_author_agreement_test, retry_wait=10, timeout=120)
+    assert res1['seqNo'] is not None
 
 
 @pytest.mark.parametrize('wait_time', [0, 660])  # 0 - common proof reading, 660 - freshness proof reading
