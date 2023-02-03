@@ -131,7 +131,7 @@ env:
 
   INPUT_LIBINDYVERSION: "1.15.0~1625-bionic"
 
-  TEST_AUTOMATION_BRANCH: "vdr-askar-migration"
+  TEST_AUTOMATION_BRANCH: "vdr-askar-migration-copy"
 
   NETWORK_NAME: "indy-test-automation-network"
   NETWORK_SUBNET: "10.0.0.0/24"
