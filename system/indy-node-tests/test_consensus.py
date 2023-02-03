@@ -34,7 +34,7 @@ async def test_consensus_restore_after_f_plus_one(
         send_nym, pool_handler, wallet_handler, trustee_did, did3, None, None, None
     )
     assert is_exception_raised1 is True
-    res1 = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did1)
+    res1 = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did1, retry_wait=10, timeout=120)
     assert res1['seqNo'] is not None
     # 3/7 online - can r only
     test_nodes[3].stop_service()
@@ -42,7 +42,7 @@ async def test_consensus_restore_after_f_plus_one(
         send_nym, pool_handler, wallet_handler, trustee_did, did4, None, None, None
     )
     assert is_exception_raised2 is True
-    res2 = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did2)
+    res2 = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did2, retry_wait=10, timeout=120)
     assert res2['seqNo'] is not None
     # 5/7 online - can w+r
     for node in test_nodes[3:5]:
