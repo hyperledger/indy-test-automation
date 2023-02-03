@@ -62,7 +62,6 @@ async def test_consensus_state_proof_reading(
 ):
     trustee_did, _ = get_default_trustee
     did1, _ = await create_and_store_did(wallet_handler)
-    did2, _ = await create_and_store_did(wallet_handler)
     test_nodes = [NodeHost(i) for i in range(1, 8)]
 
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)

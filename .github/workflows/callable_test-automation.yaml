@@ -1,7 +1,7 @@
 name: indy-test-automation
 on:
   push:
-    branches: [vdr-askar-migration]
+    branches: [vdr-askar-migration-copy]
   workflow_call:
     inputs:
       ubuntuVersion:
