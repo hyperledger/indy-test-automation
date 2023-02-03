@@ -35,7 +35,7 @@ class TestConsensusSuite:
         with pytest.raises(VdrError):
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
         await eventually(
-            check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids[:2], timeout=120
+            check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids[:2], retry_wait=10, timeout=120
         )
 
         # 3/7 online - can r only
@@ -43,7 +43,7 @@ class TestConsensusSuite:
         with pytest.raises(VdrError):
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
         await eventually(
-            check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids[2:], timeout=120
+            check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids[2:], retry_wait=10, timeout=120
         )
 
         # 5/7 online - can w+r
