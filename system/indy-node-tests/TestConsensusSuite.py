@@ -62,7 +62,6 @@ class TestConsensusSuite:
     ):
         trustee_did, _ = get_default_trustee
         test_nodes = [NodeHost(i) for i in range(1, 8)]
-        # responses = await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=1)
         responses = await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=1)
         dids = [resp['txn']['data']['dest'] for resp in responses]
 
