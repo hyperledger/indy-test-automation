@@ -163,7 +163,7 @@ jobs:
           if [[ "${{ env.INPUT_UBUNTUVERSION }}" == "ubuntu-2004" ]]; then
             echo "DIND_BUILD_ARG=20.04" >> $GITHUB_OUTPUT
             echo "distribution=focal" >> $GITHUB_OUTPUT
-          fi       
+          fi
 
   dind-image:
     name: Create DinD Image
@@ -233,10 +233,10 @@ jobs:
     env:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
     steps:
-      - name: Git checkout hyperledger/indy-test-automation
+      - name: Git checkout pschlarb/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: hyperledger/indy-test-automation
+          repository: pschlarb/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Prepare image labels and tags
@@ -273,22 +273,13 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./system/docker/node
-          file: ./system/docker/node/Dockerfile.${{ env.INPUT_UBUNTUVERSION }}
+          file: ./system/docker/node/Dockerfile.sovrin
           push: false
           tags: ${{ steps.prep.outputs.tags }}
           labels: |
             org.opencontainers.image.source=${{ github.event.repository.html_url }}
             org.opencontainers.image.created=${{ steps.prep.outputs.created }}
             org.opencontainers.image.revision=${{ github.sha }}
-          build-args: |
-            INDY_NODE_VERSION=${{ env.INPUT_NODEVERSION }}
-            INDY_PLENUM_VERSION=${{ env.INPUT_PLENUMVERSION }}
-            TOKEN_PLUGINS_INSTALL=${{ env.INPUT_TOKEN_PLUGINS_INSTALL }}
-            SOVRIN_INSTALL=${{ env.INPUT_SOVRIN_INSTALL }}
-            SOVTOKEN_VERSION=${{ env.INPUT_SOVTOKEN_VERSION }}
-            SOVTOKENFEES_VERSION=${{ env.INPUT_SOVTOKENFEES_VERSION }}
-            URSA_VERSION=${{ env.INPUT_URSAVERSION }}
-            PYTHON3_PYZMQ_VERSION=${{ env.INPUT_PYZMQVERSION }}
           outputs: type=docker,dest=/tmp/node_image_${{ env.INPUT_UBUNTUVERSION }}.tar
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
@@ -314,10 +305,10 @@ jobs:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
       DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
     steps:
-      - name: Git checkout hyperledger/indy-test-automation
+      - name: Git checkout pschlarb/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: hyperledger/indy-test-automation
+          repository: pschlarb/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Prepare image labels and tags
@@ -379,10 +370,10 @@ jobs:
     outputs:
       modules: ${{ steps.get-module-list.outputs.file_names }}
     steps:
-      - name: Git checkout hyperledger/indy-test-automation
+      - name: Git checkout pschlarb/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: hyperledger/indy-test-automation
+          repository: pschlarb/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Get Module List
@@ -420,10 +411,10 @@ jobs:
         module: ${{ fromJson(needs.get-test-modules.outputs.modules) }}
       fail-fast: false
     steps:
-      - name: Git checkout hyperledger/indy-test-automation
+      - name: Git checkout pschlarb/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: hyperledger/indy-test-automation
+          repository: pschlarb/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Create docker network
