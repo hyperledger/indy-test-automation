@@ -9,8 +9,6 @@ from indy_vdr.error import VdrError
 async def docker_setup_and_teardown(docker_setup_and_teardown_function):
     await yield_()
 
-# @pytest.mark.usefixtures('docker_setup_and_teardown')
-# @pytest.mark.usefixtures('check_no_failures_fixture')
 class TestConsensusSuite:
 
     @pytest.mark.asyncio
