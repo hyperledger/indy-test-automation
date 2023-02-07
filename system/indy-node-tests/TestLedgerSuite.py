@@ -640,7 +640,7 @@ class TestLedgerSuite:
         )
         name = random_string(name_length)  # should be the same for start and cancel
         # --------------------------------------------------------------------------------------------------------------
-        req1 = await ledger.build_pool_upgrade_request(
+        req1 = ledger.build_pool_upgrade_request(
             trustee_did,
             name,
             '9.9.999',
@@ -654,11 +654,9 @@ class TestLedgerSuite:
             package
         )
         res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
-        print(res1)
-        # assert res1['op'] == 'REPLY'
         assert res1['txnMetadata']['seqNo'] is not None
 
-        req2 = await ledger.build_pool_upgrade_request(
+        req2 = ledger.build_pool_upgrade_request(
             trustee_did,
             name,
             '9.9.999',
@@ -672,7 +670,6 @@ class TestLedgerSuite:
             package
         )
         res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2)
-        # assert res2['op'] == 'REPLY'
         assert res2['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('alias_length', [1, 256])

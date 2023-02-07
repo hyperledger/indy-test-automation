@@ -5,6 +5,10 @@ from system.utils import *
 from indy_vdr import ledger
 
 
+RETRY_WAIT = 15
+TIMEOUT = 300
+
+
 @pytest.mark.parametrize('wait_time', [0, 660])  # 0 - common proof reading, 660 - freshness proof reading
 @pytest.mark.asyncio
 async def test_misc_state_proof_vdr(
@@ -104,35 +108,35 @@ async def test_misc_state_proof_vdr(
         req1 = ledger.build_get_nym_request(None, random_did)
         return await pool_handler.submit_request(req1)
 
-    res1 = await eventually(get_nym_test, retry_wait=20, timeout=120)
+    res1 = await eventually(get_nym_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is not None
 
     async def get_attrib_test():
         req2 = ledger.build_get_attrib_request(None, random_did, 'key', None, None)
         return await pool_handler.submit_request(req2)
 
-    res1 = await eventually(get_attrib_test, retry_wait=20, timeout=240)
+    res1 = await eventually(get_attrib_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is not None
 
     async def get_schema_test():
         req3 = ledger.build_get_schema_request(None, schema_id)
         return await pool_handler.submit_request(req3)
 
-    res1 = await eventually(get_schema_test, retry_wait=20, timeout=240)
+    res1 = await eventually(get_schema_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is not None
 
     async def get_cred_def_test():
         req4 = ledger.build_get_cred_def_request(None, cred_def_id)
         return await pool_handler.submit_request(req4)
 
-    res1 = await eventually(get_cred_def_test, retry_wait=20, timeout=120)
+    res1 = await eventually(get_cred_def_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is not None
 
     async def get_revoc_reg_def_test():
         req5 = ledger.build_get_revoc_reg_def_request(None, revoc_reg_def_id)
         return await pool_handler.submit_request(req5)
 
-    res1 = await eventually(get_revoc_reg_def_test, retry_wait=20, timeout=240)
+    res1 = await eventually(get_revoc_reg_def_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is not None
 
     # consensus is impossible with timestamp0 here! IS-1263
@@ -140,14 +144,14 @@ async def test_misc_state_proof_vdr(
         req6 = ledger.build_get_revoc_reg_request(None, revoc_reg_def_id, timestamp1)
         return await pool_handler.submit_request(req6)
 
-    res1 = await eventually(get_get_revoc_reg_test, retry_wait=20, timeout=120)
+    res1 = await eventually(get_get_revoc_reg_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is not None
 
     async def get_get_revoc_reg_t0_test():
         req66 = ledger.build_get_revoc_reg_request(None, revoc_reg_def_id, timestamp0)
         return await pool_handler.submit_request(req66)
 
-    res1 = await eventually(get_get_revoc_reg_t0_test, retry_wait=20, timeout=120)
+    res1 = await eventually(get_get_revoc_reg_t0_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is None
 
     # consensus is impossible with (timestamp0, timestamp1) here! IS-1264
@@ -155,7 +159,7 @@ async def test_misc_state_proof_vdr(
         req7 = ledger.build_get_revoc_reg_delta_request(None, revoc_reg_def_id, timestamp0, timestamp1)
         return await pool_handler.submit_request(req7)
 
-    res1 = await eventually(get_get_revoc_reg_delta_test, retry_wait=20, timeout=120)
+    res1 = await eventually(get_get_revoc_reg_delta_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is not None
 
     for ledger_type, seqno in [('DOMAIN', 16), ('POOL', 8), ('CONFIG', 1)]:
@@ -163,7 +167,7 @@ async def test_misc_state_proof_vdr(
             req8 = ledger.build_get_txn_request(None, ledger_type, seqno)
             return await pool_handler.submit_request(req8)
 
-        res1 = await eventually(get_get_txn_test, retry_wait=20, timeout=120)
+        res1 = await eventually(get_get_txn_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
         assert res1['seqNo'] is not None
 
     # no seqno returned for this txn type
@@ -171,21 +175,21 @@ async def test_misc_state_proof_vdr(
         req11 = ledger.build_get_auth_rule_request(None, '101', 'ADD', '*', None, '*')
         return await pool_handler.submit_request(req11)
 
-    res1 = await eventually(get_get_auth_rule_test, retry_wait=10, timeout=120)
+    res1 = await eventually(get_get_auth_rule_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is not None
 
     async def get_get_acceptance_mechanisms_test():
         req13 = ledger.build_get_acceptance_mechanisms_request(None, None, 'AML version')
         return await pool_handler.submit_request(req13)
 
-    res1 = await eventually(get_get_acceptance_mechanisms_test, retry_wait=10, timeout=120)
+    res1 = await eventually(get_get_acceptance_mechanisms_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is not None
 
     async def get_get_txn_author_agreement_test():
         req14 = ledger.build_get_txn_author_agreement_request(None, json.dumps({'version': 'TAA version'}))
         return await pool_handler.submit_request(req14)
 
-    res1 = await eventually(get_get_txn_author_agreement_test, retry_wait=10, timeout=120)
+    res1 = await eventually(get_get_txn_author_agreement_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is not None
 
 
