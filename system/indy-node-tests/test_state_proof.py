@@ -101,6 +101,8 @@ async def test_misc_state_proof_vdr(
     hosts = [NodeHost(i) for i in range(1, nodes_num+1)]
     print([host.stop_service() for host in hosts[:-1]])
 
+    # await pool_handler.refresh() # doesn't help: no consensus from verifiers
+
     # read all txns written from the single node
     timestamp1 = int(time.time())
 
