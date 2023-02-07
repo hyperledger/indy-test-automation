@@ -1414,7 +1414,7 @@ async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, c
         )
     )
     for i in range(1, count + 1):
-        req = await ledger.build_pool_upgrade_request(
+        req = ledger.build_pool_upgrade_request(
             trustee_did,
             '{}_{}'.format(random_string(10), i),
             version,
@@ -1427,8 +1427,8 @@ async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, c
             True,
             package_name
         )
-        res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-        assert res['op'] == 'REPLY'
+        res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req)
+        assert res['txnMetadata']['seqNo'] is not None
 
 
 async def check_get_something(func_name, *args):
