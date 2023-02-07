@@ -6,4 +6,3 @@ python3-indy==1.16.0
 docker==3.7.0
 more-itertools==8.10.0
 async_generator
-pycairo>=1.11.1

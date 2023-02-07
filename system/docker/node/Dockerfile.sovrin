@@ -5,6 +5,9 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG uid=1000
 ARG user=indy
 
+ARG URSA_VERSION
+ENV URSA_VERSION=${URSA_VERSION:-0.3.2-1}
+
 RUN apt-get update -y && apt-get install -y \
     apt-utils\
     git\
@@ -19,28 +22,43 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32 \
 
 # sovrin repo
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
-    && echo "deb https://repo.sovrin.org/deb bionic master" >> /etc/apt/sources.list 
+    && echo "deb https://repo.sovrin.org/deb bionic master" >> /etc/apt/sources.list
 
 # Hyperledger Artifactory
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9692C00E657DDE61 \
     && echo "deb https://hyperledger.jfrog.io/artifactory/indy focal dev rc master" >> /etc/apt/sources.list \
-    && printf '%s\n%s\n%s\n' 'Package: *' 'Pin: origin hyperledger.jfrog.io' 'Pin-Priority: 1001' >> /etc/apt/preferences 
+    && printf '%s\n%s\n%s\n' 'Package: *' 'Pin: origin hyperledger.jfrog.io' 'Pin-Priority: 1001' >> /etc/apt/preferences
 
 # Sovrin Artifactory
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3BC8C2DD662F1C45 \
-    && echo "deb https://sovrin.jfrog.io/artifactory/deb focal dev rc master" >> /etc/apt/sources.list 
-
-#rocksdb needed before python-rocksdb
-RUN apt-get update -y && apt-get install -y \
-    rocksdb=5.8.8 
+    && echo "deb https://sovrin.jfrog.io/artifactory/deb focal dev rc master" >> /etc/apt/sources.list
 
 COPY . .
 
-RUN bash ./getDeps.sh
-RUN aptStr=$(cat /tmp/aptStr); echo $aptStr; apt install $aptStr -y
+RUN apt-get update -y && \
+    bash ./getDeps.sh && \
+    aptStr=$(cat /tmp/aptStr) && \
+    echo "Installing dependancies:" && \
+    echo ${aptStr} && \
+    echo && \
+    apt-get update -y && apt-get install -y \
+    # Install rocksdb and its dependencies
+    rocksdb=5.8.8 \
+    libgflags-dev \
+    libsnappy-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    liblz4-dev \
+    libgflags-dev \
+    ${aptStr} \
+    # Install Ursa
+    ursa=${URSA_VERSION} \
+    # fix missing path to libursa
+    && ln -s /usr/lib/ursa/libursa.so /usr/lib/libursa.so
 
-# RUN deps=$(dpkg-deb -I sovrin_*.deb | grep -P "Depends: " | sed 's~ Depends: ~~g;'); echo ${deps};apt-get satisfy "${deps}"
-RUN dpkg -i sovrin_*.deb
+RUN sovrin_package=$(find ./ -name "sovrin_*.deb" | head -n 1); \
+    echo "Installing ${sovrin_package} ..."; \
+    dpkg -i "${sovrin_package}";
 
 # network config
 RUN echo " " >> /etc/indy/indy_config.py \
