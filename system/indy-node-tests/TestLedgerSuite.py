@@ -613,7 +613,8 @@ class TestLedgerSuite:
     @pytest.mark.parametrize('justification', [None, random_string(1), random_string(1000)])
     @pytest.mark.parametrize('reinstall', [False, True])
     @pytest.mark.parametrize('force', [False, True])
-    @pytest.mark.parametrize('package', ['indy-node', 'sovrin'])
+    # @pytest.mark.parametrize('package', ['indy-node', 'sovrin'])
+    @pytest.mark.parametrize('package', ['indy-node']) # unable to install sovrin package, it is installed via dpkg -i in Dockerfile
     @pytest.mark.parametrize('name_length', [2, 256])
     @pytest.mark.asyncio
     # POOL_UPGRADE
