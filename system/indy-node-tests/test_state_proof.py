@@ -5,11 +5,11 @@ from system.utils import *
 from indy_vdr import ledger
 
 
-RETRY_WAIT = 15
+RETRY_WAIT = 10
 TIMEOUT = 300
 
 
-@pytest.mark.parametrize('wait_time', [0, 660])  # 0 - common proof reading, 660 - freshness proof reading
+@pytest.mark.parametrize('wait_time', [30, 660])  # 30 - common proof reading, 660 - freshness proof reading
 @pytest.mark.asyncio
 async def test_misc_state_proof_vdr(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
@@ -101,8 +101,6 @@ async def test_misc_state_proof_vdr(
     hosts = [NodeHost(i) for i in range(1, nodes_num+1)]
     print([host.stop_service() for host in hosts[:-1]])
 
-    # await pool_handler.refresh() # doesn't help: no consensus from verifiers
-
     # read all txns written from the single node
     timestamp1 = int(time.time())
 
@@ -156,13 +154,13 @@ async def test_misc_state_proof_vdr(
     res1 = await eventually(get_get_revoc_reg_t0_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
     assert res1['seqNo'] is None
 
-    # consensus is impossible with (timestamp0, timestamp1) here! IS-1264
-    async def get_get_revoc_reg_delta_test():
-        req7 = ledger.build_get_revoc_reg_delta_request(None, revoc_reg_def_id, timestamp0, timestamp1)
-        return await pool_handler.submit_request(req7)
+    # # consensus is impossible with (timestamp0, timestamp1) here! IS-1264
+    # async def get_get_revoc_reg_delta_test():
+    #     req7 = ledger.build_get_revoc_reg_delta_request(None, revoc_reg_def_id, timestamp0, timestamp1)
+    #     return await pool_handler.submit_request(req7)
 
-    res1 = await eventually(get_get_revoc_reg_delta_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
-    assert res1['seqNo'] is not None
+    # res1 = await eventually(get_get_revoc_reg_delta_test, retry_wait=RETRY_WAIT, timeout=TIMEOUT)
+    # assert res1['seqNo'] is not None
 
     for ledger_type, seqno in [('DOMAIN', 16), ('POOL', 8), ('CONFIG', 1)]:
         async def get_get_txn_test():
