@@ -654,7 +654,7 @@ class TestLedgerSuite:
             force,
             package
         )
-        res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
+        res1 = await eventually(sign_and_submit_request, pool_handler, wallet_handler, trustee_did, req1, retry_wait=10, timeout=120)
         assert res1['txnMetadata']['seqNo'] is not None
 
         req2 = ledger.build_pool_upgrade_request(
@@ -670,7 +670,7 @@ class TestLedgerSuite:
             force,
             package
         )
-        res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2)
+        res2 = await eventually(sign_and_submit_request, pool_handler, wallet_handler, trustee_did, req2, retry_wait=10, timeout=120)
         assert res2['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('alias_length', [1, 256])
@@ -705,7 +705,6 @@ class TestLedgerSuite:
         )
         res = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req)
         print(res)
-        # assert res['op'] == 'REPLY'
         assert res['txnMetadata']['seqNo'] is not None
 
     @pytest.mark.parametrize('key', [random_string(1), random_string(1024), random_string(4096)])
@@ -727,12 +726,11 @@ class TestLedgerSuite:
         req1 = ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version, context)
         res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
         print(res1)
-        # assert res1['op'] == 'REPLY'
         assert res1['txnMetadata']['seqNo'] is not None
 
         for _timestamp, _version in [(None, None), (int(time.time()), None), (None, version)]:
             res2 = await eventually(
-                get_acceptance_mechanisms, pool_handler, trustee_did, _timestamp, _version
+                get_acceptance_mechanisms, pool_handler, trustee_did, _timestamp, _version, retry_wait=10, timeout=120
             )
             print(res2)
             assert res2['seqNo'] is not None
@@ -750,16 +748,12 @@ class TestLedgerSuite:
             trustee_did, json.dumps({random_string(16): random_string(128)}), random_string(256), random_string(1024)
         )
         res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-        # assert res['op'] == 'REPLY'
         assert res['txnMetadata']['seqNo'] is not None
         # --------------------------------------------------------------------------------------------------------------
-        req1 = ledger.build_txn_author_agreement_request(trustee_did, text, random_string(version_length),
-                                                         ratification_ts=int(time.time()))
-        res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
-        print(res1)
-        # assert res1['op'] == 'REPLY'
+        req1 = ledger.build_txn_author_agreement_request(trustee_did, text, random_string(version_length), ratification_ts=int(time.time()))
+        res1 = await eventually(sign_and_submit_request, pool_handler, wallet_handler, trustee_did, req1, retry_wait=10, timeout=120)
         assert res1['txnMetadata']['seqNo'] is not None
 
         req2 = ledger.build_get_txn_author_agreement_request(trustee_did, None)
-        res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2)
+        res2 = await eventually(sign_and_submit_request, pool_handler, wallet_handler, trustee_did, req2, retry_wait=10, timeout=120)
         assert res2['seqNo'] is not None
