@@ -725,14 +725,14 @@ class TestLedgerSuite:
         version = random_string(version_length)
         req1 = ledger.build_acceptance_mechanisms_request(trustee_did, json.dumps(aml), version, context)
         res1 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req1)
-        print(res1)
         assert res1['txnMetadata']['seqNo'] is not None
+
+        await ensure_pool_is_functional(pool_handler, wallet_handler, trustee_did)
 
         for _timestamp, _version in [(None, None), (int(time.time()), None), (None, version)]:
             res2 = await eventually(
                 get_acceptance_mechanisms, pool_handler, trustee_did, _timestamp, _version, retry_wait=10, timeout=120
             )
-            print(res2)
             assert res2['seqNo'] is not None
 
     @pytest.mark.parametrize('text', [random_string(1), random_string(1024), random_string(4096)])
