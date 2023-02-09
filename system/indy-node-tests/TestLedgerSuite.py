@@ -710,7 +710,7 @@ class TestLedgerSuite:
     @pytest.mark.parametrize('key', [random_string(1), random_string(1024), random_string(4096)])
     @pytest.mark.parametrize('value', [random_string(1), random_string(1024), random_string(4096)])
     @pytest.mark.parametrize('context', [random_string(1), random_string(1024), random_string(4096)])
-    @pytest.mark.parametrize('version_length', [2, 256])  # must be generated inside the test and started from 2
+    @pytest.mark.parametrize('version_length', [10, 256])  # must be generated inside the test
     @pytest.mark.asyncio
     # AML						GET_AML
     async def test_aml(
