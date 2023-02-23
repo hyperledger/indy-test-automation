@@ -5,8 +5,6 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG uid=1000
 ARG user=indy
 
-ARG URSA_VERSION
-ENV URSA_VERSION=${URSA_VERSION:-0.3.2-1}
 
 RUN apt-get update -y && apt-get install -y \
     apt-utils\
@@ -33,7 +31,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9692C00E657DDE61 \
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3BC8C2DD662F1C45 \
     && echo "deb https://sovrin.jfrog.io/artifactory/deb focal dev rc master" >> /etc/apt/sources.list
 
-COPY . .
+COPY * /
 
 RUN apt-get update -y && \
     bash ./getDeps.sh && \
@@ -42,17 +40,13 @@ RUN apt-get update -y && \
     echo ${aptStr} && \
     echo && \
     apt-get update -y && apt-get install -y \
-    # Install rocksdb and its dependencies
-    rocksdb=5.8.8 \
-    libgflags-dev \
-    libsnappy-dev \
-    zlib1g-dev \
-    libbz2-dev \
-    liblz4-dev \
-    libgflags-dev \
+    # libgflags-dev \
+    # libsnappy-dev \
+    # zlib1g-dev \
+    # libbz2-dev \
+    # liblz4-dev \
+    # libgflags-dev \
     ${aptStr} \
-    # Install Ursa
-    ursa=${URSA_VERSION} \
     # fix missing path to libursa
     && ln -s /usr/lib/ursa/libursa.so /usr/lib/libursa.so
 
