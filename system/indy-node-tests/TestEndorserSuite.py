@@ -36,8 +36,9 @@ class TestEndorserSuite:
         req0.set_endorser(none_did)
         req0 = await multi_sign_request(wallet_handler, e_did, req0)
         req0 = await multi_sign_request(wallet_handler, none_did, req0)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res0 = await pool_handler.submit_request(req0)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res0['op'] == 'REJECT'
 
         # positive case - build txn with any role did, append endorser as endorser, multisign with both
@@ -80,8 +81,9 @@ class TestEndorserSuite:
         req = await multi_sign_request(wallet_handler, some_role_did, req)
         req = await multi_sign_request(wallet_handler, e_did, req)
         if result == "REJECT":
-            with pytest.raises(VdrError):
+            with pytest.raises(VdrError) as exp_err:
                 res = await pool_handler.submit_request(req)
+            assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == result
 
         # build attrib and DO NOT append endorser
@@ -90,8 +92,9 @@ class TestEndorserSuite:
         req = await multi_sign_request(wallet_handler, some_role_did, req)
         req = await multi_sign_request(wallet_handler, e_did, req)
         if result == "REJECT":
-            with pytest.raises(VdrError):
+            with pytest.raises(VdrError) as exp_err:
                 res = await pool_handler.submit_request(req)
+            assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == result
 
         # build schema and DO NOT append endorser
@@ -103,8 +106,9 @@ class TestEndorserSuite:
         req = await multi_sign_request(wallet_handler, some_role_did, req)
         req = await multi_sign_request(wallet_handler, e_did, req)
         if result == "REJECT":
-            with pytest.raises(VdrError):
+            with pytest.raises(VdrError) as exp_err:
                 res = await pool_handler.submit_request(req)
+            assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == result
 
     @pytest.mark.asyncio
@@ -127,15 +131,17 @@ class TestEndorserSuite:
         # req = await ledger.append_request_endorser(req, e_did)
         req.set_endorser(e_did)
         req = await multi_sign_request(wallet_handler, off_did, req)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await pool_handler.submit_request(req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == 'REQNACK'
         # sign nym  by endorser only
         req = ledger.build_nym_request(off_did, test_did, test_vk, 'Alias 2', None)
         req.set_endorser(e_did)
         req = await multi_sign_request(wallet_handler, e_did, req)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await pool_handler.submit_request(req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == 'REQNACK'
         # add new did using none role did as author and endorser did as endorser
         req0 = ledger.build_nym_request(off_did, test_did, test_vk, 'Alias 3', None)
@@ -153,15 +159,17 @@ class TestEndorserSuite:
         req = ledger.build_schema_request(off_did, schema_json)
         req.set_endorser(e_did)
         req = await multi_sign_request(wallet_handler, off_did, req)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await pool_handler.submit_request(req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == 'REQNACK'
         # sign schema by endorser only
         req = ledger.build_schema_request(off_did, schema_json)
         req.set_endorser(e_did)
         req = await multi_sign_request(wallet_handler, e_did, req)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await pool_handler.submit_request(req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == 'REQNACK'
         # add new schema using none role did as builder and endorser did as endorser
         req1 = ledger.build_schema_request(off_did, schema_json)
@@ -183,15 +191,17 @@ class TestEndorserSuite:
         req = ledger.build_cred_def_request(off_did, cred_def_json)
         req.set_endorser(e_did)
         req = await multi_sign_request(wallet_handler, off_did, req)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await pool_handler.submit_request(req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == 'REQNACK'
         # sign cred def by endorser only
         req = ledger.build_cred_def_request(off_did, cred_def_json)
         req.set_endorser(e_did)
         req = await multi_sign_request(wallet_handler, e_did, req)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await pool_handler.submit_request(req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == 'REQNACK'
         # add new cred def using none role did as builder and endorser did as endorser
         req2 = ledger.build_cred_def_request(off_did, cred_def_json)
@@ -213,15 +223,17 @@ class TestEndorserSuite:
         req = ledger.build_revoc_reg_def_request(off_did, revoc_reg_def_json)
         req.set_endorser(e_did)
         req = await multi_sign_request(wallet_handler, off_did, req)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await pool_handler.submit_request(req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == 'REQNACK'
         # sign revoc reg def by endorser only
         req = ledger.build_revoc_reg_def_request(off_did, revoc_reg_def_json)
         req.set_endorser(e_did)
         req = await multi_sign_request(wallet_handler, e_did, req)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await pool_handler.submit_request(req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == 'REQNACK'
         # add new revoc reg def using none role did as builder and endorser did as endorser
         req3 = ledger.build_revoc_reg_def_request(off_did, revoc_reg_def_json)
@@ -237,15 +249,17 @@ class TestEndorserSuite:
         req = ledger.build_revoc_reg_entry_request(off_did, revoc_reg_id, 'CL_ACCUM', revoc_reg_entry_json)
         req.set_endorser(e_did)
         req = await multi_sign_request(wallet_handler, off_did, req)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await pool_handler.submit_request(req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == 'REQNACK'
         # sign revoc reg entry by endorser only
         req = ledger.build_revoc_reg_entry_request(off_did, revoc_reg_id, 'CL_ACCUM', revoc_reg_entry_json)
         req.set_endorser(e_did)
         req = await multi_sign_request(wallet_handler, e_did, req)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await pool_handler.submit_request(req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == 'REQNACK'
         # add new revoc reg entry using none role did as builder and endorser did as endorser
         req4 = ledger.build_revoc_reg_entry_request(off_did, revoc_reg_id, 'CL_ACCUM', revoc_reg_entry_json)

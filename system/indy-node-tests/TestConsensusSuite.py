@@ -2,7 +2,8 @@ import pytest
 import asyncio
 from system.utils import *
 from async_generator import async_generator, yield_
-from indy_vdr.error import VdrError
+from indy_vdr.error import VdrError, VdrErrorCode
+
 
 @pytest.fixture(scope='function', autouse=True)
 @async_generator
@@ -30,16 +31,18 @@ class TestConsensusSuite:
 
         # 4/7 online - can r only
         test_nodes[4].stop_service()
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         await eventually(
             check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids[:2], retry_wait=10, timeout=120
         )
 
         # 3/7 online - can r only
         test_nodes[3].stop_service()
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         await eventually(
             check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids[2:], retry_wait=10, timeout=120
         )
@@ -97,9 +100,9 @@ class TestConsensusSuite:
 
         for node in temp_test_nodes[-2:]:
             node.stop_service()
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
-
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         for node in temp_test_nodes[-2:]:
             node.start_service()
         await eventually(
@@ -112,9 +115,9 @@ class TestConsensusSuite:
         await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, timeout=120)
 
         test_nodes[0].stop_service()
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
-
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # Start all
         for node in test_nodes:
             node.start_service()

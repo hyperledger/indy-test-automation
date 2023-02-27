@@ -245,8 +245,9 @@ class TestProductionSuite:
         await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
         # demote 11th node by owner
-        with pytest.raises(VdrError):  # negative case - steward demotes node that he doesn't own
+        with pytest.raises(VdrError) as exp_err:  # negative case - steward demotes node that he doesn't own
             await demote_node(pool_handler, wallet_handler, stewards['steward5'], 'Node11', pool_info['Node11'])
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
 
         await eventually(
             demote_node, pool_handler, wallet_handler, stewards['steward11'], 'Node11', pool_info['Node11']
@@ -259,8 +260,9 @@ class TestProductionSuite:
         await ensure_ledgers_are_in_sync(pool_handler, wallet_handler, trustee_did)
 
         # promote 11th node by trustee
-        with pytest.raises(VdrError):  # negative case - steward promotes node that he doesn't own
+        with pytest.raises(VdrError) as exp_err:  # negative case - steward promotes node that he doesn't own
             await promote_node(pool_handler, wallet_handler, stewards['steward6'], 'Node11', pool_info['Node11'])
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
 
         await eventually(
             promote_node, pool_handler, wallet_handler, trustee_did, 'Node11', pool_info['Node11']

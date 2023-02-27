@@ -238,10 +238,12 @@ async def test_send_and_get_cred_def_negative(schema_json, tag, signature_type, 
         assert res['seqNo'] is None
         print(res)
     else:
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             await send_cred_def(pool_handle, wallet_handle, trustee_did, schema_json, tag, signature_type, config_json)
-        with pytest.raises(VdrError):
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
+        with pytest.raises(VdrError) as exp_err:
             await get_cred_def(pool_handle, wallet_handle, trustee_did, cred_def_id)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
 
 
 @pytest.mark.parametrize('writer_role', ['TRUSTEE', 'STEWARD', 'TRUST_ANCHOR'])

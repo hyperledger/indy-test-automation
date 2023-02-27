@@ -4,7 +4,7 @@ import pytest
 import asyncio
 from system.utils import *
 from async_generator import async_generator, yield_
-from indy_vdr.error import VdrError
+from indy_vdr.error import VdrError, VdrErrorCode
 
 
 # setup once for all cases
@@ -94,10 +94,11 @@ class TestLedgerSuite:
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
         # --------------------------------------------------------------------------------------------------------------
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await send_nym(
                 pool_handler, wallet_handler, target_did, nym_did, nym_vk, alias, nym_role
             )
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == result
 
         await ensure_cant_get_something(get_nym, pool_handler, wallet_handler, trustee_did, nym_did)
@@ -153,8 +154,9 @@ class TestLedgerSuite:
             pool_handler, wallet_handler, trustee_did, target_did, target_vk, random_string(256), target_role
         )
         # --------------------------------------------------------------------------------------------------------------
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await send_attrib(pool_handler, wallet_handler, target_did, target_did, xhash, raw, enc)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res['op'] == 'REQNACK'
 
         if xhash and raw and enc:
@@ -214,13 +216,15 @@ class TestLedgerSuite:
         schema_id_local, schema_json = await create_schema(wallet_handler, target_did, name, '1.0',
                                                            json.dumps([random_string(1), random_string(256)]))
         req = ledger.build_schema_request(target_did, schema_json)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res1 = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res1['op'] == result
 
         if result == 'REQNACK':
-            with pytest.raises(VdrError):
+            with pytest.raises(VdrError) as exp_err:
                 res2 = await get_schema(pool_handler, wallet_handler, trustee_did, schema_id_local)
+            assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
             # assert res2['op'] == result
         else:
             await ensure_cant_get_something(get_schema, pool_handler, wallet_handler, trustee_did, schema_id_local)
@@ -293,13 +297,15 @@ class TestLedgerSuite:
                                                                            None, support_revocation=False)
         req = ledger.build_cred_def_request(target_did, cred_def_json)
 
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res3['op'] == result
 
         if result == 'REQNACK':
-            with pytest.raises(VdrError):
+            with pytest.raises(VdrError) as exp_err:
                 res4 = await get_cred_def(pool_handler, wallet_handler, trustee_did, cred_def_id_local)
+            assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
             # assert res4['op'] == result
         else:
             await ensure_cant_get_something(get_cred_def, pool_handler, wallet_handler, trustee_did, cred_def_id_local)
@@ -380,8 +386,9 @@ class TestLedgerSuite:
             wallet_handler, target_did, 'CL_ACCUM', tag, cred_def_id,
             max_cred_num=1, issuance_type='ISSUANCE_BY_DEFAULT')
         req = ledger.build_revoc_reg_def_request(target_did, rev_reg_def_json)
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res4 = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res4['op'] == result
 
         await ensure_cant_get_something(
@@ -482,11 +489,12 @@ class TestLedgerSuite:
             max_cred_num=1, issuance_type='ISSUANCE_BY_DEFAULT')
         req4 = ledger.build_revoc_reg_def_request(target_did, revoc_reg_entry_json)
 
-        with pytest.raises(VdrError):
+        with pytest.raises(VdrError) as exp_err:
             res4 = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req4)
             req4 = ledger.build_revoc_reg_entry_request(target_did, rev_reg_def_id_local, 'CL_ACCUM',
                                                        revoc_reg_entry_json)
             res4 = await sign_and_submit_request(pool_handler, wallet_handler, target_did, req4)
+        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
         # assert res4['op'] == result
 
         timestamp1 = int(time.time())
