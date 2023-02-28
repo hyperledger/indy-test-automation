@@ -33,7 +33,7 @@ class TestConsensusSuite:
         test_nodes[4].stop_service()
         with pytest.raises(VdrError) as exp_err:
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
-        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
+        assert exp_err.value.code == VdrErrorCode.POOL_TIMEOUT
         await eventually(
             check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids[:2], retry_wait=10, timeout=120
         )
@@ -42,7 +42,7 @@ class TestConsensusSuite:
         test_nodes[3].stop_service()
         with pytest.raises(VdrError) as exp_err:
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
-        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
+        assert exp_err.value.code == VdrErrorCode.POOL_TIMEOUT
         await eventually(
             check_pool_performs_read, pool_handler, wallet_handler, trustee_did, dids[2:], retry_wait=10, timeout=120
         )
@@ -102,7 +102,7 @@ class TestConsensusSuite:
             node.stop_service()
         with pytest.raises(VdrError) as exp_err:
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
-        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
+        assert exp_err.value.code == VdrErrorCode.POOL_TIMEOUT
         for node in temp_test_nodes[-2:]:
             node.start_service()
         await eventually(
@@ -117,7 +117,7 @@ class TestConsensusSuite:
         test_nodes[0].stop_service()
         with pytest.raises(VdrError) as exp_err:
             await check_pool_performs_write(pool_handler, wallet_handler, trustee_did, nyms_count=5)
-        assert exp_err.value.code == VdrErrorCode.POOL_REQUEST_FAILED
+        assert exp_err.value.code == VdrErrorCode.POOL_TIMEOUT
         # Start all
         for node in test_nodes:
             node.start_service()
