@@ -1,0 +1,128 @@
+#FROM jrei/systemd-ubuntu:20.04
+#
+# FROM systemd-ubuntu-20.04:latest
+FROM fauust/docker-systemd:ubuntu-20.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+ARG uid=1000
+ARG user=indy
+
+# Install environment
+RUN apt-get update -y && apt-get install -y \
+    git \
+    wget \
+    python3-pip \
+    python3-nacl \
+    python-setuptools \
+    python3-nacl \
+    apt-transport-https \
+    ca-certificates \
+    ssh \
+    vim \
+    mc \
+    stress \
+    dbus \
+    ## ToDo remove unused packages
+    libgflags-dev \
+    libsnappy-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    liblz4-dev \
+    libgflags-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# pip<10.0.0 is important. pip==10.0.0 doesn't work.
+RUN pip3 install -U \
+    # 'pip<10.0.0' \
+    pip \
+    setuptools
+
+# Bionic-security-main for libssl1.0.0
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32 \
+    && echo "deb http://security.ubuntu.com/ubuntu bionic-security main"  >> /etc/apt/sources.list
+
+
+# sovrin repo
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
+    && echo "deb https://repo.sovrin.org/deb bionic master" >> /etc/apt/sources.list \
+    && apt-get update -y
+
+# Hyperledger Artifactory
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9692C00E657DDE61 \
+    && echo "deb https://hyperledger.jfrog.io/artifactory/indy focal dev rc master" >> /etc/apt/sources.list \
+    && printf '%s\n%s\n%s\n' 'Package: *' 'Pin: origin hyperledger.jfrog.io' 'Pin-Priority: 1001' >> /etc/apt/preferences \
+    && apt-get update -y
+
+# indy depedencies
+ARG URSA_VERSION
+RUN : ${URSA_VERSION:?"URSA_VERSION must be provided"}
+ENV URSA_VERSION=${URSA_VERSION}
+
+ARG PYTHON3_PYZMQ_VERSION
+RUN : ${PYTHON3_PYZMQ_VERSION:?"PYTHON3_PYZMQ_VERSION must be provided"}
+ENV PYTHON3_PYZMQ_VERSION=${PYTHON3_PYZMQ_VERSION}
+
+ARG INDY_PLENUM_VERSION
+RUN : ${INDY_PLENUM_VERSION:?"INDY_PLENUM_VERSION must be provided"}
+ENV INDY_PLENUM_VERSION=${INDY_PLENUM_VERSION}
+
+ARG INDY_NODE_VERSION
+RUN : ${INDY_NODE_VERSION:?"INDY_NODE_VERSION must be provided"}
+ENV INDY_NODE_VERSION=${INDY_NODE_VERSION}
+
+RUN apt-get install -y \
+    ursa=${URSA_VERSION} \
+    python3-pyzmq=${PYTHON3_PYZMQ_VERSION} \
+    indy-plenum=${INDY_PLENUM_VERSION} \
+    indy-node=${INDY_NODE_VERSION} \
+    rocksdb=5.8.8 \
+    && rm -rf /var/lib/apt/lists/* \
+    # fix missing path to libursa
+    && ln -s /usr/lib/ursa/libursa.so /usr/lib/libursa.so
+
+ARG TOKEN_PLUGINS_INSTALL
+ENV TOKEN_PLUGINS_INSTALL=${TOKEN_PLUGINS_INSTALL}
+ARG SOVTOKEN_VERSION
+ENV SOVTOKEN_VERSION=${SOVTOKEN_VERSION:-1.2.0-dev1663181681}
+ARG SOVTOKENFEES_VERSION
+ENV SOVTOKENFEES_VERSION=${SOVTOKENFEES_VERSION:-${SOVTOKEN_VERSION}}
+RUN echo "TOKEN_PLUGINS_INSTALL: ${TOKEN_PLUGINS_INSTALL}"
+RUN if [ "${TOKEN_PLUGINS_INSTALL}" = "yes" ]; then \
+        apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3BC8C2DD662F1C45 \
+        # && rm /etc/apt/sources.list.d/sovrin* \
+        # && add-apt-repository "deb https://sovrin.jfrog.io/artifactory/deb focal ${SOVTOKEN_REPO_COMPONENT}" \
+        && echo "deb https://sovrin.jfrog.io/artifactory/deb focal dev rc master" >> /etc/apt/sources.list \
+        && apt-get update && apt-get install -y \
+                # ToDo:
+                #   - Need an Ubuntu 20.04 SOVRIN Build.
+                #    sovrin=${SOVRIN_VERSION} \
+                   sovtoken=${SOVTOKEN_VERSION} \
+                   sovtokenfees=${SOVTOKENFEES_VERSION} \
+        && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+ARG SOVRIN_INSTALL
+ENV SOVRIN_INSTALL=$SOVRIN_INSTALL
+COPY . .
+
+RUN echo "SOVRIN_INSTALL: ${SOVRIN_INSTALL}"
+RUN if [ "${SOVRIN_INSTALL}" = "yes" ]; then \
+        sovrin_package=$(find ./ -name "sovrin_*.deb" | head -n 1); \
+        echo "Installing ${sovrin_package} ..."; \
+        dpkg -i "${sovrin_package}"; \
+    fi
+
+# network config
+RUN echo " " >> /etc/indy/indy_config.py \
+    && echo "NETWORK_NAME = 'sandbox'" >> /etc/indy/indy_config.py \
+    && echo " " >> /etc/indy/indy_config.py \
+    && echo "logLevel = 0" >> /etc/indy/indy_config.py \
+    && echo " " >> /etc/indy/indy_config.py
+
+# Server side ssh configuration
+RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+COPY test_key.pub /root/.ssh/authorized_keys
+RUN chmod 700 /root/.ssh && \
+    chmod 600 /root/.ssh/authorized_keys
+

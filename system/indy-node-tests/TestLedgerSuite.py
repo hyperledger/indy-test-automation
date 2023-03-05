@@ -553,24 +553,6 @@ class TestLedgerSuite:
         res2 = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req2)
         assert res2['data'][0]['constraint'] == constraint
 
-    @pytest.mark.parametrize('ledger_type', ['DOMAIN', 'POOL', 'CONFIG', '1001'])
-    @pytest.mark.parametrize('seqno', [1, 5])
-    @pytest.mark.asyncio
-    # 						    GET_TXN
-    async def test_get_txn(
-            self, payment_init, pool_handler, wallet_handler, get_default_trustee, initial_token_minting,
-            initial_fees_setting,
-            ledger_type, seqno
-    ):
-        # SETUP---------------------------------------------------------------------------------------------------------
-        trustee_did, _ = get_default_trustee
-        initial_token_minting
-        initial_fees_setting
-        # --------------------------------------------------------------------------------------------------------------
-        req = ledger.build_get_txn_request(trustee_did, ledger_type, seqno)
-        res = await sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-        assert res['txnMetadata']['seqNo'] is not None
-
     @pytest.mark.parametrize('target_role', ['TRUSTEE', 'STEWARD', 'NETWORK_MONITOR'])
     @pytest.mark.asyncio
     # 						    GET_VALIDATOR_INFO

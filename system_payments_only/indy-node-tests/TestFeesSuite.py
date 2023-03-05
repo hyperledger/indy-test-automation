@@ -1,10 +1,9 @@
 import pytest
-from system.utils import *
+from system_payments_only.utils import *
 from indy import payment
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
-@pytest.mark.usefixtures('payment_init')
 class TestFeesSuite:
 
     @pytest.mark.asyncio

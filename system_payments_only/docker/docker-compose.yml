@@ -1,0 +1,37 @@
+version: "3.4"
+
+services:
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.${UBUNTU_VERSION}
+      args:
+        - PYTHON3_VERSION
+        - CLIENT_SOVRIN_REPO_COMPONENT
+        - LIBINDY_VERSION
+        - LIBSOVTOKEN_INSTALL
+        - LIBSOVTOKEN_REPO_COMPONENT
+        - LIBSOVTOKEN_VERSION
+        - u_id
+        - DIND_CONTAINER_REGISTRY
+        - DIND_IMAGE_NAME
+    image: ${IMAGE_REPOSITORY}:client-${UBUNTU_VERSION}
+
+  node:
+    build:
+      context: ./node
+      dockerfile: Dockerfile.${UBUNTU_VERSION}
+      args:
+        - NODE_REPO_COMPONENT
+        - INDY_NODE_VERSION
+        - INDY_PLENUM_VERSION
+        - URSA_VERSION
+        - PYTHON3_PYZMQ_VERSION
+        - NODE_SOVRIN_REPO_COMPONENT
+        - SOVRIN_INSTALL
+        - SOVRIN_VERSION
+        - TOKEN_PLUGINS_INSTALL
+        - SOVTOKEN_REPO_COMPONENT
+        - SOVTOKEN_VERSION
+        - SOVTOKENFEES_VERSION
+    image: ${IMAGE_REPOSITORY}:node-${UBUNTU_VERSION}

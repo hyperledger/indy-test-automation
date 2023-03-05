@@ -1,7 +1,7 @@
 import pytest
 import asyncio
 from random import randrange as rr
-from system.utils import *
+from system_payments_only.utils import *
 
 
 @pytest.mark.parametrize('wait_time', [0, 660])  # 0 - common proof reading, 660 - freshness proof reading

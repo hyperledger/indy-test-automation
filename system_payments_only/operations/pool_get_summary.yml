@@ -1,0 +1,79 @@
+- hosts: pool
+  gather_facts: no
+
+  vars:
+    pool_prefix: persistent_node
+
+  tasks:
+    - name: Filter journalctl
+      shell: "journalctl | sed -n '/Traceback/,/Error/p' > /tmp/jctl_exceptions.txt"
+      ignore_errors: yes
+
+    - name: Fetch journalctl exceptions
+      fetch:
+        src: "/tmp/jctl_exceptions.txt"
+        dest: "/tmp/summary/jctl/{{ inventory_hostname }}.jctl_exceptions.txt"
+        flat: yes
+      ignore_errors: yes
+
+    - name: Filter logs for errors
+      shell: "xzgrep -n ERROR /var/log/indy/sandbox/* > /tmp/log_errors.txt"
+      ignore_errors: yes
+
+    - name: Fetch log errors
+      fetch:
+        src: "/tmp/log_errors.txt"
+        dest: "/tmp/summary/logs/{{ inventory_hostname }}.log_errors.txt"
+        flat: yes
+      ignore_errors: yes
+
+    - name: Filter logs for patterns
+      shell: "xzgrep -n 'blacklisting\\|invalid BLS signature\\|request digest is incorrect\\|has incorrect digest\\|time not acceptable\\|incorrect state trie root\\|incorrect transaction tree root' /var/log/indy/sandbox/* > /tmp/log_patterns.txt"
+      ignore_errors: yes
+
+    - name: Fetch log patterns
+      fetch:
+        src: "/tmp/log_patterns.txt"
+        dest: "/tmp/summary/logs/{{ inventory_hostname }}.log_patterns.txt"
+        flat: yes
+      ignore_errors: yes
+
+    - name: Fetch node info
+      synchronize:
+        src: /var/lib/indy/sandbox/node*.json
+        dest: /tmp/summary/node_info
+        mode: pull
+
+    - name: Stop service
+      service: name=indy-node state=stopped
+      become: yes
+
+    - name: Process metrics
+      shell: "cd /usr/local/bin && python3 get_metrics --data_dir /var/lib/indy/sandbox/data/{{ inventory_hostname|replace(pool_prefix,'Node') }}/metrics_db --output /tmp/metrics{{ inventory_hostname|replace(pool_prefix,'') }}.csv > /tmp/metrics_summary{{ inventory_hostname|replace(pool_prefix,'') }}.txt"
+      become: yes
+
+    - name: Plot metrics
+      shell: "cd /tmp && python3 build_graph_from_csv --output /tmp/figure{{ inventory_hostname|replace(pool_prefix,'') }}.png /tmp/metrics{{ inventory_hostname|replace(pool_prefix,'') }}.csv"
+      become: yes
+
+    - name: Fetch metrics
+      fetch:
+        src: "/tmp/metrics{{ inventory_hostname|replace(pool_prefix,'') }}.csv"
+        dest: "/tmp/summary/metrics/metrics{{ inventory_hostname|replace(pool_prefix,'') }}.csv"
+        flat: yes
+
+    - name: Fetch metrics summary
+      fetch:
+        src: "/tmp/metrics_summary{{ inventory_hostname|replace(pool_prefix,'') }}.txt"
+        dest: "/tmp/summary/metrics/metrics_summary{{ inventory_hostname|replace(pool_prefix,'') }}.txt"
+        flat: yes
+
+    - name: Fetch figure
+      fetch:
+        src: "/tmp/figure{{ inventory_hostname|replace(pool_prefix,'') }}.png"
+        dest: "/tmp/summary/metrics/figure{{ inventory_hostname|replace(pool_prefix,'') }}.png"
+        flat: yes
+
+    - name: Start service
+      service: name=indy-node state=started
+      become: yes

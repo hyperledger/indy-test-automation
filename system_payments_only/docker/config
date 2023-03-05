@@ -1,0 +1,55 @@
+Host node1
+	    HostName 10.0.0.2
+	    User root
+	    IdentityFile /home/indy/.ssh/test_key
+	    StrictHostKeyChecking no
+Host node2
+        HostName 10.0.0.3
+        User root
+	    IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no
+Host node3
+        HostName 10.0.0.4
+        User root
+	    IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no
+Host node4
+        HostName 10.0.0.5
+        User root
+	    IdentityFile /home/indy/.ssh/test_key
+	    StrictHostKeyChecking no
+Host node5
+        HostName 10.0.0.6
+        User root
+	    IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no
+Host node6
+        HostName 10.0.0.7
+        User root
+	    IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no
+Host node7
+        HostName 10.0.0.8
+        User root
+	    IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no
+Host node8
+        HostName 10.0.0.9
+        User root
+        IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no
+Host node9
+        HostName 10.0.0.10
+        User root
+        IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no
+Host node10
+        HostName 10.0.0.11
+        User root
+        IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no
+Host node11
+        HostName 10.0.0.12
+        User root
+        IdentityFile /home/indy/.ssh/test_key
+        StrictHostKeyChecking no

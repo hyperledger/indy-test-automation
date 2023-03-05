@@ -1,0 +1,10 @@
+
+pytest==4.6.2
+pytest-asyncio==0.10.0
+base58==1.0.0
+testinfra==1.14.1
+python3-indy==1.9.0-dev-1130
+docker==3.7.0
+certifi==2021.10.8
+more-itertools==8.10.0
+async_generator
