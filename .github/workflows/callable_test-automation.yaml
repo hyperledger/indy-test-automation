@@ -1,7 +1,5 @@
 name: indy-test-automation
 on:
-  push:
-    branches: [main]
   workflow_call:
     inputs:
       ubuntuVersion:
@@ -230,10 +228,10 @@ jobs:
     env:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
     steps:
-      - name: Git checkout indy/indy-test-automation
+      - name: Git checkout VladimirWork/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: hyperledger/indy-test-automation
+          repository: VladimirWork/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Prepare image labels and tags
@@ -257,11 +255,11 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx
-     - name: Download Pipeline sovrin-deb artifact
-       uses: actions/download-artifact@v3
-       with:
-         name: sovrin-deb
-         path: ./system/docker/node/
+      - name: Download Pipeline sovrin-deb artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: sovrin-deb
+          path: ./system/docker/node/
       - name: LS DEBUG
         run: ls ./system/docker/node/
       - name: Build and cache image
@@ -309,10 +307,10 @@ jobs:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
       DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
     steps:
-      - name: Git checkout indy/indy-test-automation
+      - name: Git checkout VladimirWork/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: indy/indy-test-automation
+          repository: VladimirWork/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Prepare image labels and tags
@@ -372,10 +370,10 @@ jobs:
       modules: ${{ steps.get-module-list.outputs.file_names }}
       payment-modules: ${{ steps.get-payment-module-list.outputs.file_names }}
     steps:
-      - name: Git checkout indy/indy-test-automation
+      - name: Git checkout VladimirWork/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: indy/indy-test-automation
+          repository: VladimirWork/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Get Module List
@@ -422,10 +420,10 @@ jobs:
         module: ${{ fromJson(needs.get-test-modules.outputs.modules) }}
       fail-fast: false
     steps:
-      - name: Git checkout indy/indy-test-automation
+      - name: Git checkout VladimirWork/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: indy/indy-test-automation
+          repository: VladimirWork/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Create docker network
@@ -489,10 +487,10 @@ jobs:
         module: ${{ fromJson(needs.get-test-modules.outputs.payment-modules) }}
       fail-fast: false
     steps:
-      - name: Git checkout indy/indy-test-automation
+      - name: Git checkout VladimirWork/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: indy/indy-test-automation
+          repository: VladimirWork/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Create docker network
