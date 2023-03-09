@@ -1,7 +1,5 @@
 name: indy-test-automation
 on:
-  # push:
-  #   branches: [sovrin]
   workflow_call:
     inputs:
       ubuntuVersion:
@@ -155,10 +153,10 @@ jobs:
     env:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
     steps:
-      - name: Git checkout pschlarb/indy-test-automation
+      - name: Git checkout hyperledger/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: pschlarb/indy-test-automation
+          repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Prepare image labels and tags
@@ -227,10 +225,10 @@ jobs:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
       DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
     steps:
-      - name: Git checkout pschlarb/indy-test-automation
+      - name: Git checkout hyperledger/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: pschlarb/indy-test-automation
+          repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Prepare image labels and tags
@@ -292,10 +290,10 @@ jobs:
     outputs:
       modules: ${{ steps.get-module-list.outputs.file_names }}
     steps:
-      - name: Git checkout pschlarb/indy-test-automation
+      - name: Git checkout hyperledger/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: pschlarb/indy-test-automation
+          repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Get Module List
@@ -333,10 +331,10 @@ jobs:
         module: ${{ fromJson(needs.get-test-modules.outputs.modules) }}
       fail-fast: false
     steps:
-      - name: Git checkout pschlarb/indy-test-automation
+      - name: Git checkout hyperledger/indy-test-automation
         uses: actions/checkout@v3
         with:
-          repository: pschlarb/indy-test-automation
+          repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
 
       - name: Create docker network
