@@ -33,8 +33,11 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3BC8C2DD662F1C45 \
 
 COPY * /
 
+ARG EXTENTION_DEB
+RUN : ${EXTENTION_DEB:?"EXTENTION_DEB must be provided"}
+ENV EXTENTION_DEB=${EXTENTION_DEB}
 RUN apt-get update -y && \
-    bash ./getDeps.sh && \
+    bash ./getDeps.sh ${EXTENTION_DEB} && \
     aptStr=$(cat /tmp/aptStr) && \
     echo "Installing dependancies:" && \
     echo ${aptStr} && \
@@ -43,9 +46,9 @@ RUN apt-get update -y && \
     # fix missing path to libursa
     && ln -s /usr/lib/ursa/libursa.so /usr/lib/libursa.so
 
-RUN sovrin_package=$(find ./ -name "sovrin_*.deb" | head -n 1); \
-    echo "Installing ${sovrin_package} ..."; \
-    dpkg -i "${sovrin_package}";
+RUN extention_package=$(find ./ -name "$EXTENTION_DEB" | head -n 1); \
+    echo "Installing Extension ${extention_package} ..."; \
+    dpkg -i "${extention_package}";
 
 # network config
 RUN echo " " >> /etc/indy/indy_config.py \

@@ -42,6 +42,14 @@ on:
         required: false
         type: string
         default: "skip-,TestEndorserSuite,TestLedgerSuite,TestCatchUpSuite"
+      debName:
+        description: "The name of the deb package of the extention to install"
+        required: true
+        type: string
+      packageName:
+        description: "The name of the GHA package of the extention to download"
+        required: true
+        type: string
 
 env:
   INPUT_UBUNTUVERSION: ${{ inputs.ubuntuVersion }}
@@ -57,6 +65,8 @@ env:
   NETWORK_SUBNET: ${{ fromJSON(inputs.networkJSON).networkSubnet }}
   TEST_DIRECTORY: ${{ inputs.testDirectory }}
   INCLUDE_PAYMENT_TESTS: ${{ inputs.includePaymentTests }}
+
+  INPUT_DEBNAME: ${{ inputs.debName }}
 
 jobs:
   workflow-setup:
@@ -184,7 +194,7 @@ jobs:
       - name: Download Pipeline sovrin-deb artifact
         uses: actions/download-artifact@v3
         with:
-          name: sovrin-deb
+          name: ${{ inputs.packageName }}
           path: ./system/docker/node/
       - name: LS DEBUG
         run: ls ./system/docker/node/
@@ -200,6 +210,8 @@ jobs:
             org.opencontainers.image.source=${{ github.event.repository.html_url }}
             org.opencontainers.image.created=${{ steps.prep.outputs.created }}
             org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            EXTENTION_DEB=${{ env.INPUT_DEBNAME }}
           outputs: type=docker,dest=/tmp/node_image_${{ env.INPUT_UBUNTUVERSION }}.tar
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
