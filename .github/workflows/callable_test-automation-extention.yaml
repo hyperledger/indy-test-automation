@@ -36,7 +36,7 @@ on:
         description: "Branch of Indy-Test-Automation to use"
         required: false
         type: string
-        default: "sovrin"
+        default: "main"
       ignoreTests:
         description: "Ignores tests starting with ..."
         required: false
@@ -203,7 +203,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./system/docker/node
-          file: ./system/docker/node/Dockerfile.sovrin
+          file: ./system/docker/node/Dockerfile.extention
           push: false
           tags: ${{ steps.prep.outputs.tags }}
           labels: |
