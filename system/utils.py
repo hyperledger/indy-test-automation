@@ -18,12 +18,16 @@ import testinfra
 import json
 from json import JSONDecodeError
 import hashlib
-from indy import pool, wallet, did, ledger, anoncreds, blob_storage, IndyError, payment
-
+from indy import did, payment
+import indy_vdr
+from indy_vdr import ledger, open_pool
+from aries_askar import Store, Key, KeyAlg, AskarError, AskarErrorCode
+from indy_credx import Schema, CredentialDefinition, RevocationRegistryDefinition
+from indy_vdr.error import VdrError
 
 import logging
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 MODULE_PATH = os.path.abspath(os.path.dirname(__file__))
 POOL_GENESIS_PATH = os.path.join(MODULE_PATH, 'docker_genesis')
@@ -156,7 +160,7 @@ def random_string(length):
 
 
 def random_did_and_json():
-    return base58.b58encode(random_string(16)).decode(),\
+    return base58.b58encode(random_string(16)).decode(), \
         json.dumps({'did': base58.b58encode(random_string(16)).decode()})
 
 
@@ -170,47 +174,181 @@ async def ensure_pool_helper():
     )
 
 
-async def pool_helper(pool_name=None, path_to_genesis=POOL_GENESIS_PATH, node_list=None):
-    REQ_TIMEOUT = 5
-    if not pool_name:
-        pool_name = random_string(25)
-    if node_list:
-        pool_config = json.dumps(
-            {"genesis_txn": path_to_genesis, "preordered_nodes": node_list, "timeout": REQ_TIMEOUT}
-        )
-    else:
-        pool_config = json.dumps({"genesis_txn": path_to_genesis, "timeout": REQ_TIMEOUT})
-    await pool.create_pool_ledger_config(pool_name, pool_config)
-    pool_handle = await pool.open_pool_ledger(pool_name, pool_config)
-
-    return pool_handle, pool_name
+async def pool_helper(path_to_genesis=POOL_GENESIS_PATH):
+    indy_vdr.set_protocol_version(2)
+    pool_handle = await open_pool(transactions_path=path_to_genesis)
+    return pool_handle, "default_pool_name"
 
 
-async def wallet_helper(wallet_id=None, wallet_key='', wallet_key_derivation_method='ARGON2I_INT'):
-    if not wallet_id:
-        wallet_id = random_string(25)
-    wallet_config = json.dumps({"id": wallet_id})
+async def wallet_helper(wallet_key='', wallet_key_derivation_method='kdf:argon2i:mod'):
+    wuri = "sqlite://:memory:"
+    wallet_h = await Store.provision(wuri, wallet_key_derivation_method, wallet_key, recreate=False)
+    session_handle = await wallet_h.session()
+    wallet_config = json.dumps({"id": wuri})
     wallet_credentials = json.dumps({"key": wallet_key, "key_derivation_method": wallet_key_derivation_method})
-    await wallet.create_wallet(wallet_config, wallet_credentials)
-    wallet_handle = await wallet.open_wallet(wallet_config, wallet_credentials)
 
-    return wallet_handle, wallet_config, wallet_credentials
+    return session_handle, wallet_config, wallet_credentials
 
 
-async def pool_destructor(pool_handle, pool_name):
-    await pool.close_pool_ledger(pool_handle)
-    await pool.delete_pool_ledger_config(pool_name)
+async def pool_destructor(pool_handle):
+    await pool_handle.close()
 
 
 async def wallet_destructor(wallet_handle, wallet_config, wallet_credentials):
-    await wallet.close_wallet(wallet_handle)
-    await wallet.delete_wallet(wallet_config, wallet_credentials)
+    await wallet_handle.close()
+
+
+def key_helper(seed=None):
+    alg = KeyAlg.ED25519
+    if seed:
+        keypair = Key.from_secret_bytes(alg, seed)
+    else:
+        keypair = Key.generate(alg)
+    verkey_bytes = keypair.get_public_bytes()
+    verkey = base58.b58encode(verkey_bytes).decode("ascii")
+    did = base58.b58encode(verkey_bytes[:16]).decode("ascii")
+    return keypair, did, verkey
+
+
+async def key_insert_helper(wallet_handle, keypair, did, verkey):
+    try:
+        await wallet_handle.insert_key(verkey, keypair, metadata=json.dumps({}))
+    except AskarError as err:
+        if err.code == AskarErrorCode.DUPLICATE:
+            pass
+        else:
+            raise err
+    item = await wallet_handle.fetch("did", did, for_update=True)
+    if item:
+        did_info = item.value_json
+        if did_info.get("verkey") != verkey:
+            raise Exception("DID already present in wallet")
+        did_info["metadata"] = {}
+        await wallet_handle.replace("did", did, value_json=did_info, tags=item.tags)
+    else:
+        await wallet_handle.insert("did", did,
+                                   value_json={
+                                       "did": did,
+                                       "method": "sov",
+                                       "verkey": verkey,
+                                       "verkey_type": "ed25519",
+                                       "metadata": {},
+                                   },
+                                   tags={
+                                       "method": "sov",
+                                       "verkey": verkey,
+                                       "verkey_type": "ed25519",
+                                   },
+                                   )
+
+
+async def get_did_signing_key(wallet_handle, did):
+    item = await wallet_handle.fetch("did", did, for_update=False)
+    if item:
+        kp = await wallet_handle.fetch_key(item.value_json.get("verkey"))
+        return kp.key
+    return None
+
+
+async def sign_request(wallet_handle, submitter_did, req):
+    key = await get_did_signing_key(wallet_handle, submitter_did)
+    if not key:
+        raise Exception(f"Key for DID {submitter_did} is empty")
+    req.set_signature(key.sign_message(req.signature_input))
+    return req
+
+
+async def multi_sign_request(wallet_handle, submitter_did, req):
+    key = await get_did_signing_key(wallet_handle, submitter_did)
+    if not key:
+        raise Exception(f"Key for DID {submitter_did} is empty")
+    req.set_multi_signature(submitter_did, key.sign_message(req.signature_input))
+    return req
+
+
+async def sign_and_submit_action(pool_handle, wallet_handle, submitter_did, req):
+    sreq = await sign_request(wallet_handle, submitter_did, req)
+    request_result = await pool_handle.submit_action(sreq)
+    return request_result
+
+
+async def sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req):
+    sreq = await sign_request(wallet_handle, submitter_did, req)
+    request_result = await pool_handle.submit_request(sreq)
+    return request_result
+
+
+async def create_and_store_did(wallet_handle, seed=None):
+    keypair, did, verkey = key_helper(seed=seed)
+    await key_insert_helper(wallet_handle, keypair, did, verkey)
+    return did, verkey
+
+
+async def create_schema(wallet_handle, submitter_did, schema_name, schema_version, schema_attrs):
+    schema = Schema.create(submitter_did, schema_name, schema_version, schema_attrs)
+    schema_id = schema.id
+    schema_json = schema.to_json()
+    await wallet_handle.insert("schema", schema_id, schema_json)
+    return schema_id, schema_json
+
+
+async def create_and_store_cred_def(wallet_handle, submitter_did, schema, tag, signature_type, support_revocation):
+    (
+        cred_def,
+        cred_def_private,
+        key_proof,
+    ) = await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: CredentialDefinition.create(
+            submitter_did,
+            schema,
+            signature_type or "CL",
+            tag or "default",
+            support_revocation=support_revocation,
+        ),
+    )
+    cred_def_id = cred_def.id
+    cred_def_json = cred_def.to_json()
+
+    await wallet_handle.insert("credential_def", cred_def_id, cred_def_json, tags={"schema_id": schema["id"]})
+    await wallet_handle.insert("credential_def_private", cred_def_id, cred_def_private.to_json_buffer())
+    await wallet_handle.insert("credential_def_key_proof", cred_def_id, key_proof.to_json_buffer())
+    return cred_def_id, cred_def_json
+
+
+async def create_and_store_revoc_reg(wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, max_cred_num=1,
+                                     issuance_type=None):
+    cred_def = await wallet_handle.fetch("credential_def", cred_def_id)
+    (
+        rev_reg_def,
+        rev_reg_def_private,
+        rev_reg,
+        _rev_reg_delta,
+    ) = await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: RevocationRegistryDefinition.create(
+            submitter_did,
+            cred_def.raw_value,
+            tag,
+            revoc_def_type,
+            max_cred_num,
+            issuance_type=issuance_type
+        ),
+    )
+
+    rev_reg_def_id = rev_reg_def.id
+    rev_reg_def_json = rev_reg_def.to_json()
+    rev_reg_json = rev_reg.to_json()
+
+    await wallet_handle.insert("revocation_reg", rev_reg_def_id, rev_reg_json)
+    await wallet_handle.insert("revocation_reg_info", rev_reg_def_id, value_json={"curr_id": 0, "used_ids": []})
+    await wallet_handle.insert("revocation_reg_def", rev_reg_def_id, rev_reg_def_json)
+    await wallet_handle.insert("revocation_reg_def_private", rev_reg_def_id, rev_reg_def_private.to_json_buffer())
+    return rev_reg_def_id, rev_reg_def_json, rev_reg_json
 
 
 async def default_trustee(wallet_handle):
-    trustee_did, trustee_vk = await did.create_and_store_my_did(
-        wallet_handle, json.dumps({'seed': '000000000000000000000000Trustee1'}))
-    return trustee_did, trustee_vk
+    return await create_and_store_did(wallet_handle, seed='000000000000000000000000Trustee1')
 
 
 # TODO why we need that async ???
@@ -273,8 +411,8 @@ async def eventually(awaited_func,
 async def send_nym(
         pool_handle, wallet_handle, submitter_did, target_did, target_vk=None, target_alias=None, target_role=None
 ):
-    req = await ledger.build_nym_request(submitter_did, target_did, target_vk, target_alias, target_role)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_nym_request(submitter_did, target_did, target_vk, target_alias, target_role)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
@@ -282,8 +420,8 @@ async def send_nym(
 async def send_attrib(
         pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None
 ):
-    req = await ledger.build_attrib_request(submitter_did, target_did, xhash, raw, enc)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_attrib_request(submitter_did, target_did, xhash, raw, enc)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
@@ -291,106 +429,166 @@ async def send_attrib(
 async def send_schema(
         pool_handle, wallet_handle, submitter_did, schema_name, schema_version, schema_attrs
 ):
-    schema_id, schema_json = await anoncreds.issuer_create_schema(
-        submitter_did, schema_name, schema_version, schema_attrs
-    )
-    req = await ledger.build_schema_request(submitter_did, schema_json)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    schema_id, schema_json = await create_schema(wallet_handle, submitter_did, schema_name, schema_version,
+                                                 schema_attrs)
+    req = ledger.build_schema_request(submitter_did, schema_json)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return schema_id, res
 
 
 async def send_cred_def(
-        pool_handle, wallet_handle, submitter_did, schema_json, tag, signature_type, config_json
+        pool_handle, wallet_handle, submitter_did, schema, tag, signature_type, support_revocation
 ):
-    cred_def_id, cred_def_json = await anoncreds.issuer_create_and_store_credential_def(
-        wallet_handle, submitter_did, schema_json, tag, signature_type, config_json
-    )
-    req = await ledger.build_cred_def_request(submitter_did, cred_def_json)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    cred_def_id, cred_def_json = await create_and_store_cred_def(wallet_handle, submitter_did, schema, tag,
+                                                                 signature_type,
+                                                                 support_revocation)
+    req = ledger.build_cred_def_request(submitter_did, cred_def_json)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return cred_def_id, cred_def_json, res
 
 
 async def send_revoc_reg_def(
-        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json
+        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, max_cred_num=1, issuance_type=None,
 ):
-    tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
-    tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
-    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await anoncreds.issuer_create_and_store_revoc_reg(
-        wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json, tails_writer_handle
-    )
-    req = await ledger.build_revoc_reg_def_request(submitter_did, revoc_reg_def_json)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    rev_reg_def_id, rev_reg_def_json, rev_reg_json = await create_and_store_revoc_reg(wallet_handle, submitter_did,
+                                                                                      revoc_def_type, tag, cred_def_id,
+                                                                                      max_cred_num, issuance_type)
+    req = ledger.build_revoc_reg_def_request(submitter_did, rev_reg_def_json)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
-    return revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, res
+    return rev_reg_def_id, rev_reg_def_json, rev_reg_json, res
 
 
 async def send_revoc_reg_entry(
-        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json
+        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, max_cred_num=1, issuance_type=None,
 ):
-    tails_writer_config = json.dumps({'base_dir': 'tails', 'uri_pattern': ''})
-    tails_writer_handle = await blob_storage.open_writer('default', tails_writer_config)
-    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json = await anoncreds.issuer_create_and_store_revoc_reg(
-        wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id, config_json, tails_writer_handle
+    revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, _ = await send_revoc_reg_def(
+        pool_handle, wallet_handle, submitter_did, revoc_def_type, tag, cred_def_id,
+        max_cred_num=max_cred_num, issuance_type=issuance_type,
     )
-    req = await ledger.build_revoc_reg_def_request(submitter_did, revoc_reg_def_json)
-    await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
-    req = await ledger.build_revoc_reg_entry_request(
-        submitter_did, revoc_reg_def_id, revoc_def_type, revoc_reg_entry_json
-    )
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_revoc_reg_entry_request(submitter_did, revoc_reg_def_id, revoc_def_type, revoc_reg_entry_json)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return revoc_reg_def_id, revoc_reg_def_json, revoc_reg_entry_json, res
 
 
+async def send_pool_restart(pool_handle, wallet_handle, submitter_did, action, datetime):
+    req = ledger.build_pool_restart_request(submitter_did, action, datetime)
+    res = await sign_and_submit_action(pool_handle, wallet_handle, submitter_did, req)
+
+    return res
+
+
+async def get_acceptance_mechanisms(pool_handle, submitter_did, timestamp, version):
+    req = ledger.build_get_acceptance_mechanisms_request(submitter_did, timestamp, version)
+    res = await pool_handle.submit_request(req)
+
+    return res
+
+
 async def get_nym(pool_handle, wallet_handle, submitter_did, target_did):
-    req = await ledger.build_get_nym_request(submitter_did, target_did)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_nym_request(submitter_did, target_did)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
 
 async def get_attrib(pool_handle, wallet_handle, submitter_did, target_did, xhash=None, raw=None, enc=None):
-    req = await ledger.build_get_attrib_request(submitter_did, target_did, raw, xhash, enc)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_attrib_request(submitter_did, target_did, raw, xhash, enc)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
 
 
 async def get_schema(pool_handle, wallet_handle, submitter_did, id_):
-    req = await ledger.build_get_schema_request(submitter_did, id_)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_schema_request(submitter_did, id_)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
+
+
+def parse_get_schema_response(response):
+    schema_seqno = response.get("seqNo")
+    schema_name = response["data"]["name"]
+    schema_version = response["data"]["version"]
+    schema_id = f"{response['dest']}:2:{schema_name}:{schema_version}"
+    return schema_id, {
+        "ver": "1.0",
+        "id": schema_id,
+        "name": schema_name,
+        "version": schema_version,
+        "attrNames": response["data"]["attr_names"],
+        "seqNo": schema_seqno,
+    }
 
 
 async def get_cred_def(pool_handle, wallet_handle, submitter_did, id_):
-    req = await ledger.build_get_cred_def_request(submitter_did, id_)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_cred_def_request(submitter_did, id_)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
+
+
+def parse_get_cred_def_response(response):
+    schema_id = str(response["ref"])
+    signature_type = response["signature_type"]
+    tag = response.get("tag", "default")
+    origin_did = response["origin"]
+    cred_def_id = f"{origin_did}:3:{signature_type}:{schema_id}:{tag}"
+    return cred_def_id, {
+        "ver": "1.0",
+        "id": cred_def_id,
+        "schemaId": schema_id,
+        "type": signature_type,
+        "tag": tag,
+        "value": response["data"],
+    }
 
 
 async def get_revoc_reg_def(pool_handle, wallet_handle, submitter_did, id_):
-    req = await ledger.build_get_revoc_reg_def_request(submitter_did, id_)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_revoc_reg_def_request(submitter_did, id_)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
+
+
+def parse_get_revoc_reg_def_response(response):
+    return response['id'], response['data']
 
 
 async def get_revoc_reg(pool_handle, wallet_handle, submitter_did, id_, timestamp):
-    req = await ledger.build_get_revoc_reg_request(submitter_did, id_, timestamp)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_revoc_reg_request(submitter_did, id_, timestamp)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
+
+
+def parse_get_revoc_reg_response(response):
+    revoc_reg_def_id = response['revocRegDefId']
+    return revoc_reg_def_id, {
+        'value': response['data']['value'],
+        'ver': '1.0',
+    }, response['timestamp']
 
 
 async def get_revoc_reg_delta(pool_handle, wallet_handle, submitter_did, id_, from_, to_):
-    req = await ledger.build_get_revoc_reg_delta_request(submitter_did, id_, from_, to_)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
+    req = ledger.build_get_revoc_reg_delta_request(submitter_did, id_, from_, to_)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req)
 
     return res
+
+
+def parse_get_revoc_reg_delta_response(response):
+    revoc_reg_def_id = response['revocRegDefId']
+    value = response['data']['value']
+    value['accum'] = response['data']['value']['accum_to']['value']['accum']
+    value.pop('accum_to')
+    return revoc_reg_def_id, {
+        'value': {k: v for k, v in value.items() if v != [] and v is not None},
+        'ver': '1.0',
+    }, response['to']
 
 
 def run_in_event_loop(async_func):
@@ -400,16 +598,17 @@ def run_in_event_loop(async_func):
             async_func(operations, queue_size, add_size, get_size, event_loop),
             loop=event_loop,
         ))
+
     return wrapped
 
 
 async def send_and_get_nym(pool_handle, wallet_handle, trustee_did, some_did=None):
     if some_did is None:
-        some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
+        some_did, _ = await create_and_store_did(wallet_handle)
     add = await write_eventually_positive(send_nym, pool_handle, wallet_handle, trustee_did, some_did)
-    assert add['op'] == 'REPLY'
+    assert add['txnMetadata']['seqNo'] is not None
     get = await read_eventually_positive(get_nym, pool_handle, wallet_handle, trustee_did, some_did)
-    assert get['result']['seqNo'] is not None
+    assert get['seqNo'] is not None
 
 
 # TODO make that async
@@ -428,9 +627,9 @@ def check_no_failures(hosts):
 async def check_pool_performs_write(pool_handle, wallet_handle, submitter_did, nyms_count=1):
     res = []
     for _ in range(nyms_count):
-        some_did, _ = await did.create_and_store_my_did(wallet_handle, '{}')
+        some_did, _ = await create_and_store_did(wallet_handle)
         resp = await send_nym(pool_handle, wallet_handle, submitter_did, some_did)
-        assert resp['op'] == 'REPLY'
+        assert resp['txnMetadata']['seqNo'] is not None
         res.append(resp)
     return res
 
@@ -439,25 +638,27 @@ async def check_pool_performs_read(pool_handle, wallet_handle, submitter_did, di
     res = []
     for did in dids:
         resp = await get_nym(pool_handle, wallet_handle, submitter_did, did)
-        assert resp['result']['seqNo'] is not None
+        # assert resp['result']['seqNo'] is not None
+        assert resp['seqNo'] is not None
         res.append(resp)
     return res
 
 
 async def check_pool_performs_write_read(
-    pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
+        pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     writes = await check_pool_performs_write(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
     )
-    dids = [resp['result']['txn']['data']['dest'] for resp in writes]
+    # dids = [resp['result']['txn']['data']['dest'] for resp in writes]
+    dids = [resp['txn']['data']['dest'] for resp in writes]
     return await eventually(
         check_pool_performs_read, pool_handle, wallet_handle, trustee_did, dids, timeout=timeout
     )
 
 
 async def ensure_pool_performs_write_read(
-    pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
+        pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     await eventually(
         check_pool_performs_write_read, pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count, timeout=timeout
@@ -465,7 +666,7 @@ async def ensure_pool_performs_write_read(
 
 
 async def check_pool_is_functional(
-    pool_handle, wallet_handle, trustee_did, nyms_count=3
+        pool_handle, wallet_handle, trustee_did, nyms_count=3
 ):
     await check_pool_performs_write_read(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count
@@ -473,7 +674,7 @@ async def check_pool_is_functional(
 
 
 async def ensure_pool_is_functional(
-    pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
+        pool_handle, wallet_handle, trustee_did, nyms_count=1, timeout=30
 ):
     await ensure_pool_performs_write_read(
         pool_handle, wallet_handle, trustee_did, nyms_count=nyms_count, timeout=timeout
@@ -569,8 +770,8 @@ async def ensure_pool_is_okay(pool_handle, wallet_handle, trustee_did):
 
 
 async def get_validator_info(pool_handle, wallet_handle, trustee_did):
-    req = await ledger.build_get_validator_info_request(trustee_did)
-    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+    req = ledger.build_get_validator_info_request(trustee_did)
+    results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
     # remove all timeout entries
     try:
         for i in range(len(results)):
@@ -594,8 +795,8 @@ def restart_pool(hosts):
 
 async def stop_primary(pool_handle, wallet_handle, trustee_did):
     try:
-        req = await ledger.build_get_validator_info_request(trustee_did)
-        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        req = ledger.build_get_validator_info_request(trustee_did)
+        results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
         try:
             result = json.loads(sample(results.items(), 1)[0][1])
         except JSONDecodeError:
@@ -606,14 +807,14 @@ async def stop_primary(pool_handle, wallet_handle, trustee_did):
                 shuffle(list(results.keys()))
                 result = json.loads(sample(results.items(), 1)[0][1])
         name_before = result['result']['data']['Node_info']['Name']
-        primary_before =\
-            result['result']['data']['Node_info']['Replicas_status'][name_before+':0']['Primary'][len('Node'):
-                                                                                                  -len(':0')]
+        primary_before = \
+            result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
+                                                                                                    -len(':0')]
     except TypeError:
         try:
             await asyncio.sleep(120)
-            req = await ledger.build_get_validator_info_request(trustee_did)
-            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            req = ledger.build_get_validator_info_request(trustee_did)
+            results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
             try:
                 result = json.loads(sample(results.items(), 1)[0][1])
             except JSONDecodeError:
@@ -629,8 +830,8 @@ async def stop_primary(pool_handle, wallet_handle, trustee_did):
                                                                                                         -len(':0')]
         except TypeError:
             await asyncio.sleep(240)
-            req = await ledger.build_get_validator_info_request(trustee_did)
-            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            req = ledger.build_get_validator_info_request(trustee_did)
+            results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
             try:
                 result = json.loads(sample(results.items(), 1)[0][1])
             except JSONDecodeError:
@@ -644,7 +845,7 @@ async def stop_primary(pool_handle, wallet_handle, trustee_did):
             primary_before = \
                 result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
                                                                                                         -len(':0')]
-    host = testinfra.get_host('docker://node'+primary_before)
+    host = testinfra.get_host('docker://node' + primary_before)
     host.run('systemctl stop indy-node')
     print('\nPRIMARY NODE {} HAS BEEN STOPPED!'.format(primary_before))
 
@@ -652,11 +853,11 @@ async def stop_primary(pool_handle, wallet_handle, trustee_did):
 
 
 async def start_primary(pool_handle, wallet_handle, trustee_did, primary_before):
-    host = testinfra.get_host('docker://node'+primary_before)
+    host = testinfra.get_host('docker://node' + primary_before)
     host.run('systemctl start indy-node')
     try:
-        req = await ledger.build_get_validator_info_request(trustee_did)
-        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        req = ledger.build_get_validator_info_request(trustee_did)
+        results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
         try:
             result = json.loads(sample(results.items(), 1)[0][1])
         except JSONDecodeError:
@@ -667,13 +868,14 @@ async def start_primary(pool_handle, wallet_handle, trustee_did, primary_before)
                 shuffle(list(results.keys()))
                 result = json.loads(sample(results.items(), 1)[0][1])
         name_after = result['result']['data']['Node_info']['Name']
-        primary_after =\
-            result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
+        primary_after = \
+            result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][
+            len('Node'):-len(':0')]
     except TypeError:
         try:
             await asyncio.sleep(120)
-            req = await ledger.build_get_validator_info_request(trustee_did)
-            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            req = ledger.build_get_validator_info_request(trustee_did)
+            results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
             try:
                 result = json.loads(sample(results.items(), 1)[0][1])
             except JSONDecodeError:
@@ -689,8 +891,8 @@ async def start_primary(pool_handle, wallet_handle, trustee_did, primary_before)
                                                                                                        -len(':0')]
         except TypeError:
             await asyncio.sleep(240)
-            req = await ledger.build_get_validator_info_request(trustee_did)
-            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            req = ledger.build_get_validator_info_request(trustee_did)
+            results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
             try:
                 result = json.loads(sample(results.items(), 1)[0][1])
             except JSONDecodeError:
@@ -712,8 +914,8 @@ async def start_primary(pool_handle, wallet_handle, trustee_did, primary_before)
 
 async def demote_primary(pool_handle, wallet_handle, trustee_did):
     try:
-        req = await ledger.build_get_validator_info_request(trustee_did)
-        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        req = ledger.build_get_validator_info_request(trustee_did)
+        results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
         try:
             result = json.loads(sample(results.items(), 1)[0][1])
         except JSONDecodeError:
@@ -724,14 +926,14 @@ async def demote_primary(pool_handle, wallet_handle, trustee_did):
                 shuffle(list(results.keys()))
                 result = json.loads(sample(results.items(), 1)[0][1])
         name_before = result['result']['data']['Node_info']['Name']
-        primary_before =\
-            result['result']['data']['Node_info']['Replicas_status'][name_before+':0']['Primary'][len('Node'):
-                                                                                                  -len(':0')]
+        primary_before = \
+            result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
+                                                                                                    -len(':0')]
     except TypeError:
         try:
             await asyncio.sleep(120)
-            req = await ledger.build_get_validator_info_request(trustee_did)
-            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            req = ledger.build_get_validator_info_request(trustee_did)
+            results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
             try:
                 result = json.loads(sample(results.items(), 1)[0][1])
             except JSONDecodeError:
@@ -747,8 +949,8 @@ async def demote_primary(pool_handle, wallet_handle, trustee_did):
                                                                                                         -len(':0')]
         except TypeError:
             await asyncio.sleep(240)
-            req = await ledger.build_get_validator_info_request(trustee_did)
-            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            req = ledger.build_get_validator_info_request(trustee_did)
+            results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
             try:
                 result = json.loads(sample(results.items(), 1)[0][1])
             except JSONDecodeError:
@@ -762,35 +964,35 @@ async def demote_primary(pool_handle, wallet_handle, trustee_did):
             primary_before = \
                 result['result']['data']['Node_info']['Replicas_status'][name_before + ':0']['Primary'][len('Node'):
                                                                                                         -len(':0')]
-    res = json.loads(results['Node'+primary_before])
+    res = json.loads(results['Node' + primary_before])
     target_did = res['result']['data']['Node_info']['did']
     alias = res['result']['data']['Node_info']['Name']
     demote_data = json.dumps({'alias': alias, 'services': []})
-    demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
-    demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
-    assert demote_res['op'] == 'REPLY'
+    demote_req = ledger.build_node_request(trustee_did, target_did, demote_data)
+    demote_res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req)
+    assert demote_res['txnMetadata']['seqNo'] is not None
     print('\nPRIMARY NODE {} HAS BEEN DEMOTED!'.format(primary_before))
 
     return primary_before, target_did, alias
 
 
 async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_before, alias, target_did):
-    promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
-    promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
-    promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
-    if promote_res['op'] != 'REPLY':
+    promote_data = {'alias': alias, 'services': ['VALIDATOR']}
+    promote_req = ledger.build_node_request(trustee_did, target_did, promote_data)
+    try:
+        promote_res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req)
+    except VdrError:
         await asyncio.sleep(60)
-        promote_res = json.loads(
-            await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
+        promote_res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req)
+    assert promote_res['txnMetadata']['seqNo'] is not None
     print(promote_res)
-    host = testinfra.get_host('docker://node'+primary_before)
+    host = testinfra.get_host('docker://node' + primary_before)
     host.run('systemctl restart indy-node')
-    assert promote_res['op'] == 'REPLY'
     print('\nEX-PRIMARY NODE HAS BEEN PROMOTED AND RESTARTED!')
 
     try:
-        req = await ledger.build_get_validator_info_request(trustee_did)
-        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        req = ledger.build_get_validator_info_request(trustee_did)
+        results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
         try:
             result = json.loads(sample(results.items(), 1)[0][1])
         except JSONDecodeError:
@@ -801,13 +1003,14 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
                 shuffle(list(results.keys()))
                 result = json.loads(sample(results.items(), 1)[0][1])
         name_after = result['result']['data']['Node_info']['Name']
-        primary_after =\
-            result['result']['data']['Node_info']['Replicas_status'][name_after+':0']['Primary'][len('Node'):-len(':0')]
+        primary_after = \
+            result['result']['data']['Node_info']['Replicas_status'][name_after + ':0']['Primary'][
+            len('Node'):-len(':0')]
     except TypeError:
         try:
             await asyncio.sleep(120)
-            req = await ledger.build_get_validator_info_request(trustee_did)
-            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            req = ledger.build_get_validator_info_request(trustee_did)
+            results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
             try:
                 result = json.loads(sample(results.items(), 1)[0][1])
             except JSONDecodeError:
@@ -823,8 +1026,8 @@ async def promote_primary(pool_handle, wallet_handle, trustee_did, primary_befor
                                                                                                        -len(':0')]
         except TypeError:
             await asyncio.sleep(240)
-            req = await ledger.build_get_validator_info_request(trustee_did)
-            results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+            req = ledger.build_get_validator_info_request(trustee_did)
+            results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
             try:
                 result = json.loads(sample(results.items(), 1)[0][1])
             except JSONDecodeError:
@@ -873,37 +1076,27 @@ def get_node_did(node_alias, pool_info=None, primary=None):
 
 
 async def get_primary(pool_handle, wallet_handle, trustee_did):
-
     async def _get_primary():
 
-        def get_primary_from_info(info: str, name: str) -> Optional[str]:
-            parsed_info = json.loads(info)
-            if parsed_info['op'] != 'REPLY':
+        def get_primary_from_info(info, name: str) -> Optional[str]:
+            if info['op'] != 'REPLY':
                 return None
-            replica_name = parsed_info['result']['data']['Node_info']['Replicas_status'][name + ':0']['Primary']
+            replica_name = info['result']['data']['Node_info']['Replicas_status'][name + ':0']['Primary']
             if replica_name is None:
                 return None
             return replica_name[len('Node'):-len(':0')]
 
-        def get_vc_status_from_info(info: str) -> Optional[bool]:
-            parsed_info = json.loads(info)
-            if parsed_info['op'] != 'REPLY':
+        def get_vc_status_from_info(info) -> Optional[bool]:
+            if info['op'] != 'REPLY':
                 return None
-            vc_status = parsed_info['result']['data']['Node_info']['View_change_status']['VC_in_progress']
+            vc_status = info['result']['data']['Node_info']['View_change_status']['VC_in_progress']
             return vc_status
 
-        req = await ledger.build_get_validator_info_request(trustee_did)
-        results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+        results = await get_validator_info(pool_handle, wallet_handle, trustee_did)
         # get n
         n = len(results)
         # calculate f
         f = (n - 1) // 3
-        # remove all timeout entries
-        try:
-            for i in range(len(results)):
-                results.pop(list(results.keys())[list(results.values()).index('timeout')])
-        except ValueError:
-            pass
         # check that VC is not in progress (status `False`)
         assert all([not get_vc_status_from_info(info) for _, info in results.items()])
         # remove all not REPLY and empty (not selected) primaries entries
@@ -922,8 +1115,8 @@ async def get_primary(pool_handle, wallet_handle, trustee_did):
 
 
 async def demote_random_node(pool_handle, wallet_handle, trustee_did):
-    req = await ledger.build_get_validator_info_request(trustee_did)
-    results = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
+    req = ledger.build_get_validator_info_request(trustee_did)
+    results = await sign_and_submit_action(pool_handle, wallet_handle, trustee_did, req)
     try:
         result = json.loads(sample(results.items(), 1)[0][1])
     except JSONDecodeError:
@@ -935,27 +1128,27 @@ async def demote_random_node(pool_handle, wallet_handle, trustee_did):
             result = json.loads(sample(results.items(), 1)[0][1])
     alias = result['result']['data']['Node_info']['Name']
     target_did = result['result']['data']['Node_info']['did']
-    demote_data = json.dumps({'alias': alias, 'services': []})
-    demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
-    demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
-    assert demote_res['op'] == 'REPLY'
+    demote_data = {'alias': alias, 'services': []}
+    demote_req = ledger.build_node_request(trustee_did, target_did, demote_data)
+    demote_res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req)
+    assert demote_res['txnMetadata']['seqNo'] is not None
 
     return alias, target_did
 
 
 async def demote_node(pool_handle, wallet_handle, trustee_did, alias, target_did):
-    demote_data = json.dumps({'alias': alias, 'services': []})
-    demote_req = await ledger.build_node_request(trustee_did, target_did, demote_data)
-    demote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req))
-    assert demote_res['op'] == 'REPLY'
+    demote_data = {'alias': alias, 'services': []}
+    demote_req = ledger.build_node_request(trustee_did, target_did, demote_data)
+    demote_res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, demote_req)
+    assert demote_res['txnMetadata']['seqNo'] is not None
 
 
 async def promote_node(pool_handle, wallet_handle, trustee_did, alias, target_did):
-    promote_data = json.dumps({'alias': alias, 'services': ['VALIDATOR']})
-    promote_req = await ledger.build_node_request(trustee_did, target_did, promote_data)
-    promote_res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req))
-    assert promote_res['op'] == 'REPLY'
-    host = testinfra.get_host('ssh://node'+alias[4:])
+    promote_data = {'alias': alias, 'services': ['VALIDATOR']}
+    promote_req = ledger.build_node_request(trustee_did, target_did, promote_data)
+    promote_res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, promote_req)
+    assert promote_res['txnMetadata']['seqNo'] is not None
+    host = testinfra.get_host('ssh://node' + alias[4:])
     host.run('systemctl restart indy-node')
 
 
@@ -970,7 +1163,7 @@ async def eventually_positive(func, *args, cycles_limit=15, sleep=30, **kwargs):
             res = await func(*args, **kwargs)
             print('NO ERRORS HERE SO BREAK THE LOOP!')
             break
-        except AssertionError or IndyError:
+        except AssertionError or VdrError:
             if cycles >= cycles_limit:
                 print('CYCLES LIMIT IS EXCEEDED BUT LEDGERS ARE NOT IN SYNC!')
                 raise AssertionError
@@ -982,17 +1175,15 @@ async def eventually_positive(func, *args, cycles_limit=15, sleep=30, **kwargs):
 # TODO replace with eventually
 async def write_eventually_positive(func, *args, cycles_limit=40):
     cycles = 0
-    res = dict()
-    res['op'] = ''
-    while res['op'] != 'REPLY':
+    res = {'txnMetadata': {'seqNo': None}}
+    while res['txnMetadata']['seqNo'] is None:
         try:
             cycles += 1
             if cycles >= cycles_limit:
                 print('CYCLES LIMIT IS EXCEEDED!')
                 break
             res = await func(*args)
-            await asyncio.sleep(10)
-        except IndyError:
+        except VdrError:
             await asyncio.sleep(10)
             pass
     return res
@@ -1002,13 +1193,13 @@ async def write_eventually_positive(func, *args, cycles_limit=40):
 async def read_eventually_positive(func, *args, cycles_limit=30):
     cycles = 0
     res = await func(*args)
-    while res['result']['seqNo'] is None:
+    while res['seqNo'] is None:
+        await asyncio.sleep(5)
         cycles += 1
         if cycles >= cycles_limit:
             print('CYCLES LIMIT IS EXCEEDED!')
             break
         res = await func(*args)
-        await asyncio.sleep(5)
     return res
 
 
@@ -1025,7 +1216,7 @@ async def eventually_negative(func, *args, cycles_limit=15):
             if cycles >= cycles_limit:
                 print('CYCLES LIMIT IS EXCEEDED BUT EXCEPTION HAS NOT BEEN RAISED!')
                 break
-        except IndyError:
+        except VdrError:
             print('EXPECTED INDY ERROR HAS BEEN RAISED!')
             is_exception_raised = True
             break
@@ -1112,11 +1303,8 @@ async def send_node(
             'services': services
         }
     )
-    req = await ledger.build_node_request(steward_did, node_dest, data)
-    res = json.loads(
-        await ledger.sign_and_submit_request(pool_handle, wallet_handle, steward_did, req)
-    )
-
+    req = ledger.build_node_request(steward_did, node_dest, data)
+    res = await sign_and_submit_request(pool_handle, wallet_handle, steward_did, req)
     return res
 
     # TODO implement helpers to get buildernet and stn genesis files from sovrin repo
@@ -1144,7 +1332,7 @@ def run_external_cmd(cmd):
 
 
 def update_config(string_to_push, nodes_num):
-    test_nodes = [NodeHost(i) for i in range(1, nodes_num+1)]
+    test_nodes = [NodeHost(i) for i in range(1, nodes_num + 1)]
     path_to_config = '/etc/indy/indy_config.py'
     separator = "echo ' '"
     update_res = [
@@ -1159,7 +1347,7 @@ def update_config(string_to_push, nodes_num):
 async def send_payments(pool_handle, wallet_handle, submitter_did, address_from, count):
     payment_method = 'sov'
 
-    for i in range(1, count+1):
+    for i in range(1, count + 1):
         address_to = await payment.create_payment_address(wallet_handle, payment_method, json.dumps({}))
         source, amount = await get_payment_sources(pool_handle, wallet_handle, address_from)
         print(source, amount)
@@ -1180,29 +1368,29 @@ async def send_payments(pool_handle, wallet_handle, submitter_did, address_from,
 
 async def send_nodes(pool_handle, wallet_handle, trustee_did, count, alias=None):
     # create single STEWARD to add ALIAS node once and change it by NODE txns
-    steward_did, steward_vk = await did.create_and_store_my_did(
-        wallet_handle, json.dumps({'seed': '00000000000000000000000Steward99'})
-    )
-    await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+    steward_did, steward_vk = await create_and_store_did(wallet_handle, seed='00000000000000000000000Steward99')
+    try:
+        await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
+    except VdrError:
+        logger.info('Steward has been already created!')
 
-    for i in range(1, count+1):
+    for i in range(1, count + 1):
         if not alias:  # create new STEWARD for each NODE txn
-            steward_did, steward_vk = await did.create_and_store_my_did(wallet_handle, '{}')
+            steward_did, steward_vk = await create_and_store_did(wallet_handle)
             await send_nym(pool_handle, wallet_handle, trustee_did, steward_did, steward_vk, None, 'STEWARD')
-        req = await ledger.build_node_request(
-            steward_did, steward_vk, json.dumps(
-                {
-                    'alias': alias if alias else '{}_{}'.format(random_string(10), i),
-                    'client_ip': '{}.{}.{}.{}'.format(randrange(1, 255), 0, 0, randrange(1, 255)),
-                    'client_port': randrange(1, 32767),
-                    'node_ip': '{}.{}.{}.{}'.format(randrange(1, 255), 0, 0, randrange(1, 255)),
-                    'node_port': randrange(1, 32767),
-                    'services': []
-                }
-            )
+        req = ledger.build_node_request(
+            steward_did, steward_vk,
+            {
+                'alias': alias if alias else '{}_{}'.format(random_string(10), i),
+                'client_ip': '{}.{}.{}.{}'.format(randrange(1, 255), 0, 0, randrange(1, 255)),
+                'client_port': randrange(1, 32767),
+                'node_ip': '{}.{}.{}.{}'.format(randrange(1, 255), 0, 0, randrange(1, 255)),
+                'node_port': randrange(1, 32767),
+                'services': []
+            }
         )
-        res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, steward_did, req))
-        assert res['op'] == 'REPLY'
+        res = await sign_and_submit_request(pool_handle, wallet_handle, steward_did, req)
+        assert res['txnMetadata']['seqNo'] is not None
 
 
 async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, count):
@@ -1220,12 +1408,13 @@ async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, c
     ]
     docker_7_schedule = json.dumps(
         dict(
-            {dest: datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=999+i*5), '%Y-%m-%dT%H:%M:%S%z')
+            {dest: datetime.strftime(datetime.now(tz=timezone.utc) + timedelta(minutes=999 + i * 5),
+                                     '%Y-%m-%dT%H:%M:%S%z')
              for dest, i in zip(dests, range(len(dests)))}
         )
     )
-    for i in range(1, count+1):
-        req = await ledger.build_pool_upgrade_request(
+    for i in range(1, count + 1):
+        req = ledger.build_pool_upgrade_request(
             trustee_did,
             '{}_{}'.format(random_string(10), i),
             version,
@@ -1238,13 +1427,18 @@ async def send_upgrades(pool_handle, wallet_handle, trustee_did, package_name, c
             True,
             package_name
         )
-        res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-        assert res['op'] == 'REPLY'
+        res = await sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req)
+        assert res['txnMetadata']['seqNo'] is not None
 
 
 async def check_get_something(func_name, *args):
     res = await func_name(*args)
-    assert res['result']['seqNo'] is not None
+    if 'result' in res:
+        assert res['result']['seqNo'] is not None
+    elif 'txnMetadata' in res:
+        assert res['txnMetadata']['seqNo'] is not None
+    else:
+        assert res['seqNo'] is not None
     return res
 
 
@@ -1254,8 +1448,16 @@ async def ensure_get_something(func_name, *args):
 
 
 async def check_cant_get_something(func_name, *args):
-    res = await func_name(*args)
-    assert res['result']['seqNo'] is None
+    try:
+        res = await func_name(*args)
+    except VdrError:
+        return True
+    if 'result' in res:
+        assert res['result']['seqNo'] is None
+    elif 'txnMetadata' in res:
+        assert res['txnMetadata']['seqNo'] is None
+    else:
+        assert res['seqNo'] is None
     return res
 
 
@@ -1265,16 +1467,13 @@ async def ensure_cant_get_something(func_name, *args):
 
 
 def upgrade_nodes_manually(containers, sovrin_ver, node_ver, plenum_ver, plugin_ver):
-
     for container in containers:
-
         assert container.exec_run(
             ['systemctl', 'stop', 'indy-node'],
             user='root'
         ).exit_code == 0
 
     for container in containers:
-
         assert container.exec_run(
             ['apt', 'update'],
             user='root'
@@ -1292,7 +1491,6 @@ def upgrade_nodes_manually(containers, sovrin_ver, node_ver, plenum_ver, plugin_
         ).exit_code == 0
 
     for container in containers:
-
         assert container.exec_run(
             ['systemctl', 'start', 'indy-node'],
             user='root'

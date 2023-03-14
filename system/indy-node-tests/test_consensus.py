@@ -16,10 +16,10 @@ async def test_consensus_restore_after_f_plus_one(
         pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture, nodes_num
 ):
     trustee_did, _ = get_default_trustee
-    did1, _ = await did.create_and_store_my_did(wallet_handler, '{}')
-    did2, _ = await did.create_and_store_my_did(wallet_handler, '{}')
-    did3, _ = await did.create_and_store_my_did(wallet_handler, '{}')
-    did4, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    did1, _ = await create_and_store_did(wallet_handler)
+    did2, _ = await create_and_store_did(wallet_handler)
+    did3, _ = await create_and_store_did(wallet_handler)
+    did4, _ = await create_and_store_did(wallet_handler)
     test_nodes = [NodeHost(i) for i in range(1, 8)]
 
     # 7/7 online - can w+r
@@ -34,16 +34,16 @@ async def test_consensus_restore_after_f_plus_one(
         send_nym, pool_handler, wallet_handler, trustee_did, did3, None, None, None
     )
     assert is_exception_raised1 is True
-    res1 = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did1)
-    assert res1['result']['seqNo'] is not None
+    res1 = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did1, retry_wait=10, timeout=120)
+    assert res1['seqNo'] is not None
     # 3/7 online - can r only
     test_nodes[3].stop_service()
     is_exception_raised2 = await eventually_negative(
         send_nym, pool_handler, wallet_handler, trustee_did, did4, None, None, None
     )
     assert is_exception_raised2 is True
-    res2 = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did2)
-    assert res2['result']['seqNo'] is not None
+    res2 = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did2, retry_wait=10, timeout=120)
+    assert res2['seqNo'] is not None
     # 5/7 online - can w+r
     for node in test_nodes[3:5]:
         node.start_service()
@@ -61,16 +61,15 @@ async def test_consensus_state_proof_reading(
         pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture
 ):
     trustee_did, _ = get_default_trustee
-    did1, _ = await did.create_and_store_my_did(wallet_handler, '{}')
-    did2, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    did1, _ = await create_and_store_did(wallet_handler)
     test_nodes = [NodeHost(i) for i in range(1, 8)]
 
     await send_and_get_nym(pool_handler, wallet_handler, trustee_did, did1)
     # Stop all except 1
     for node in test_nodes[1:]:
         node.stop_service()
-    res = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did1)
-    assert res['result']['seqNo'] is not None
+    res = await eventually(get_nym, pool_handler, wallet_handler, trustee_did, did1, retry_wait=10, timeout=120)
+    assert res['seqNo'] is not None
     # Stop the last one
     test_nodes[0].stop_service()
     # Start all
@@ -85,9 +84,9 @@ async def test_consensus_n_and_f_changing(
         pool_handler, wallet_handler, get_default_trustee, check_no_failures_fixture
 ):
     trustee_did, _ = get_default_trustee
-    did1, _ = await did.create_and_store_my_did(wallet_handler, '{}')
-    did2, _ = await did.create_and_store_my_did(wallet_handler, '{}')
-    did3, _ = await did.create_and_store_my_did(wallet_handler, '{}')
+    did1, _ = await create_and_store_did(wallet_handler)
+    did2, _ = await create_and_store_did(wallet_handler)
+    did3, _ = await create_and_store_did(wallet_handler)
     test_nodes = [NodeHost(i) for i in range(1, 8)]
 
     primary1, alias1, target_did1 = await get_primary(pool_handler, wallet_handler, trustee_did)
@@ -111,7 +110,7 @@ async def test_consensus_n_and_f_changing(
         node.stop_service()
     await ensure_primary_changed(pool_handler, wallet_handler, trustee_did, primary2)
     res2 = await eventually(send_nym, pool_handler, wallet_handler, trustee_did, did2, None, None, None)
-    assert res2['op'] == 'REPLY'
+    assert res2['txnMetadata']['seqNo'] is not None
     test_nodes[0].stop_service()
     is_exception_raised2 = await eventually_negative(
         send_nym, pool_handler, wallet_handler, trustee_did, did3, None, None, None
