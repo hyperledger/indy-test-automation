@@ -1,4 +1,4 @@
-name: extention-integration-test-automation
+name: indy-integration-test-automation
 on:
   workflow_call:
     inputs:
@@ -7,11 +7,6 @@ on:
         required: true
         type: string
         default: 'ubuntu-2004'
-      libsovtokenJSON:
-        description: "JSON encoded libsovtoken variables: install, version"
-        required: true
-        type: string
-        default: "{\"install\": \"yes\",  \"version\": \"1.0.5\"}"
       libIndyVersion:
         description: 'Version of Libindy'
         required: true
@@ -54,8 +49,7 @@ on:
 env:
   INPUT_UBUNTUVERSION: ${{ inputs.ubuntuVersion }}
 
-  INPUT_LIBSOVTOKEN_INSTALL: ${{ fromJSON(inputs.libsovtokenJSON).install }}
-  INPUT_LIBSOVTOKEN_VERSION: ${{ fromJSON(inputs.libsovtokenJSON).version }}
+  INPUT_LIBSOVTOKEN_INSTALL: "no"
 
   INPUT_LIBINDYVERSION: ${{ inputs.libIndyVersion }}
 
@@ -191,7 +185,7 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx
-      - name: Download Pipeline extention-deb artifact
+      - name: Download Pipeline node-deb artifact
         uses: actions/download-artifact@v3
         with:
           name: ${{ inputs.packageName }}
@@ -203,7 +197,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: ./system/docker/node
-          file: ./system/docker/node/Dockerfile.extention
+          file: ./system/docker/node/Dockerfile.node
           push: false
           tags: ${{ steps.prep.outputs.tags }}
           labels: |
@@ -279,7 +273,6 @@ jobs:
             DIND_CONTAINER_REGISTRY=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}
             DIND_IMAGE_NAME=dind:${{ env.INPUT_UBUNTUVERSION }}
             LIBSOVTOKEN_INSTALL=${{ env.INPUT_LIBSOVTOKEN_INSTALL }}
-            LIBSOVTOKEN_VERSION=${{ env.INPUT_LIBSOVTOKEN_VERSION }}
           outputs: type=docker,dest=/tmp/client_image_${{ env.INPUT_UBUNTUVERSION }}.tar
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
