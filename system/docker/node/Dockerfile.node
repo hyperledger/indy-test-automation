@@ -35,15 +35,11 @@ COPY * /
 
 ARG EXTENTION_DEB
 RUN : ${EXTENTION_DEB:?"EXTENTION_DEB must be provided"}
-ENV EXTENTION_DEB=${EXTENTION_DEB}
-RUN apt-get update -y && bash ./getDepsNode.sh ${EXTENTION_DEB} && \
-    aptStr=$(cat /tmp/aptStr) && \
-    echo "Installing dependancies:" && \
-    echo ${aptStr} && \
-    echo && \
-    apt install -y $(pwd)/${EXTENTION_DEB} $aptStr &&\
-    # fix missing path to libursa
-    ln -s /usr/lib/ursa/libursa.so /usr/lib/libursa.so
+ARG CALL_FROM_EXTENTION
+RUN : ${CALL_FROM_EXTENTION:?"CALL_FROM_EXTENTION must be provided"}
+ARG CALL_FROM_NODE
+RUN : ${CALL_FROM_NODE:?"CALL_FROM_NODE must be provided"}
+RUN EXTENTION_DEB=${EXTENTION_DEB} CALL_FROM_EXTENTION=${CALL_FROM_EXTENTION} CALL_FROM_NODE=${CALL_FROM_NODE} bash installDeps.sh
 
 # network config
 RUN echo " " >> /etc/indy/indy_config.py \
