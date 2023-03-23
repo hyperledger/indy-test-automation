@@ -33,6 +33,9 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3BC8C2DD662F1C45 \
 
 COPY * /
 
+ARG PACKAGE
+RUN if [ ! -z ${PACKAGE} ]; then echo "downloading ${PACKAGE}"; apt update && apt download ${PACKAGE}; fi
+
 ARG EXTENTION_DEB
 RUN : ${EXTENTION_DEB:?"EXTENTION_DEB must be provided"}
 ARG CALL_FROM_EXTENTION
