@@ -1,15 +1,15 @@
-name: indy-integration-test-automation
+name: indy-test-automation-dispatch
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
-      ubuntuVersion:
-        description: 'Version of Ubuntu base image'
-        required: true
+      libsovtokenJSON:
+        description: "JSON encoded libsovtoken variables: install, version"
+        required: false
         type: string
-        default: 'ubuntu-2004'
+        default: "{\"install\": \"yes\",  \"version\": \"1.0.5\"}"
       libIndyVersion:
         description: 'Version of Libindy'
-        required: true
+        required: false
         type: string
         default: "1.15.0~1625-bionic"
       networkJSON:
@@ -41,13 +41,19 @@ on:
         description: "The name of the deb package of the extention to install"
         required: true
         type: string
+        default: "indy-node*.deb"
       packageName:
-        description: "The name of the GHA package of the extention to download"
+        description: "The name of the package of the extention to download with version in apt format (i.e. `sovrin=1.2.0~dev1679329393`)"
         required: true
+        type: string
+      Extention:
+        description: "Extention yes if sovrin-like Package no for indy-node tests"
+        required: true
+        default: "no"
         type: string
 
 env:
-  INPUT_UBUNTUVERSION: ${{ inputs.ubuntuVersion }}
+  INPUT_UBUNTUVERSION: 'ubuntu-2004'
 
   INPUT_LIBSOVTOKEN_INSTALL: "no"
 
@@ -88,6 +94,8 @@ jobs:
             echo "DIND_BUILD_ARG=20.04" >> $GITHUB_OUTPUT
             echo "distribution=focal" >> $GITHUB_OUTPUT
           fi
+
+
 
   dind-image:
     name: Create DinD Image
@@ -185,15 +193,9 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx
-      - name: Download Pipeline node-deb artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ inputs.packageName }}
-          path: ./system/docker/node/
-      - name: LS DEBUG
-        run: ls ./system/docker/node/
-      - name: Build and cache image
-        if: steps.cache-image.outputs.cache-hit != 'true'
+
+      - name: Build image indy-node
+        if: inputs.Extention == 'no'
         uses: docker/build-push-action@v3
         with:
           context: ./system/docker/node
@@ -206,8 +208,30 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             EXTENTION_DEB=${{ env.INPUT_DEBNAME }}
-            CALL_FROM_EXTENTION=no
-            CALL_FROM_NODE=yes
+            CALL_FROM_EXTENTION="no"
+            CALL_FROM_NODE="yes"
+            PACKAGE=${{ inputs.packageName }}
+          outputs: type=docker,dest=/tmp/node_image_${{ env.INPUT_UBUNTUVERSION }}.tar
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+        
+      - name: Build image extention
+        if: inputs.Extention == 'yes'
+        uses: docker/build-push-action@v3
+        with:
+          context: ./system/docker/node
+          file: ./system/docker/node/Dockerfile.node
+          push: false
+          tags: ${{ steps.prep.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.created=${{ steps.prep.outputs.created }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          build-args: |
+            EXTENTION_DEB=${{ env.INPUT_DEBNAME }}
+            CALL_FROM_EXTENTION="yes"
+            CALL_FROM_NODE="no"
+            PACKAGE=${{ inputs.packageName }}
           outputs: type=docker,dest=/tmp/node_image_${{ env.INPUT_UBUNTUVERSION }}.tar
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
