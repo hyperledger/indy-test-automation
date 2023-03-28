@@ -1,11 +1,11 @@
 #!/bin/bash
 apt-get update -y
-if [[ "${CALL_FROM_NODE}" == "\"yes\"" ]]; then
+if [[ "${CALL_FROM_NODE}" == "yes" ]]; then
     echo "node get Deps"
     bash ./getDepsNode.sh ${EXTENTION_DEB}
 fi
 
-if [[ "${CALL_FROM_EXTENTION}" == "\"yes\"" ]]; then
+if [[ "${CALL_FROM_EXTENTION}" == "yes" ]]; then
     echo "sovrin get Deps"
     bash ./getDeps.sh ${EXTENTION_DEB}
 fi
