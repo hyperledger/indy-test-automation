@@ -147,7 +147,7 @@ jobs:
     steps:
       - name: Convert the GitHub repository name to lowercase
         id: repository-name
-        uses: ASzc/change-string-case-action@v5
+        uses: ASzc/change-string-case-action@v6
         with:
           string: ${{ github.repository }}
 
@@ -172,7 +172,7 @@ jobs:
       DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
     steps:
       - name: Git checkout teracyhq/docker-files
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: teracyhq/docker-files
 
@@ -186,24 +186,24 @@ jobs:
           echo "created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
       - name: Log into the GitHub Container Registry
         if: steps.cache-image.outputs.cache-hit != 'true'
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Cache Docker layers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx
       - name: Build and push image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: ./ubuntu/base
           push: ${{ github.event_name != 'pull_request' }}
@@ -229,7 +229,7 @@ jobs:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -246,17 +246,17 @@ jobs:
           echo "created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >>  $GITHUB_OUTPUT
       - name: Set up Docker Buildx
         if: steps.cache-image.outputs.cache-hit != 'true'
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Cache Docker layers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx
       - name: Download Pipeline sovrin-deb artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: sovrin-deb
           path: ./system/docker/node/
@@ -264,7 +264,7 @@ jobs:
         run: ls ./system/docker/node/
       - name: Build and cache image
         if: steps.cache-image.outputs.cache-hit != 'true'
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: ./system/docker/node
           file: ./system/docker/node/Dockerfile.${{ env.INPUT_UBUNTUVERSION }}
@@ -288,7 +288,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
       - name: Upload node docker image artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: node_image
           path: /tmp/node_image_${{ env.INPUT_UBUNTUVERSION }}.tar
@@ -308,7 +308,7 @@ jobs:
       DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -322,17 +322,17 @@ jobs:
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
           echo "created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
 
       - name: Cache Docker layers
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx
       - name: Build and cache image
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v5
         with:
           context: ./system/docker/client/
           file: ./system/docker/client/Dockerfile.${{ env.INPUT_UBUNTUVERSION }}
@@ -353,7 +353,7 @@ jobs:
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
       - name: Upload client docker image artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: client_image
           path: /tmp/client_image_${{ env.INPUT_UBUNTUVERSION }}.tar
@@ -371,7 +371,7 @@ jobs:
       payment-modules: ${{ steps.get-payment-module-list.outputs.file_names }}
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -421,7 +421,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -430,13 +430,13 @@ jobs:
         run: |
           docker network create --subnet="${{ env.NETWORK_SUBNET }}" "${{ env.NETWORK_NAME }}"
       - name: Download client artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: node_image
           path: /tmp
@@ -470,7 +470,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.test_Matrix == 'failure') && failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: detailed-test-result-test_consensus
           path: test-result-indy-test-automation-${{ matrix.module }}-vdr.txt
@@ -488,7 +488,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -497,13 +497,13 @@ jobs:
         run: |
           docker network create --subnet="${{ env.NETWORK_SUBNET }}" "${{ env.NETWORK_NAME }}"
       - name: Download client artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: node_image
           path: /tmp
@@ -537,7 +537,7 @@ jobs:
       - name: Upload Detailed Test Failure Results
         # The test runner only emits the detailed test results if the tests fail.
         if: (steps.test_Matrix == 'failure') && failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: detailed-test-result-test_consensus
           path: test-result-indy-test-automation-${{ matrix.module }}-payment.txt
