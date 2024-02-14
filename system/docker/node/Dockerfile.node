@@ -29,7 +29,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9692C00E657DDE61 \
 
 # Sovrin Artifactory
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3BC8C2DD662F1C45 \
-    && echo "deb https://sovrin.jfrog.io/artifactory/deb focal dev rc master" >> /etc/apt/sources.list
+    && echo "deb https://sovrin.jfrog.io/artifactory/deb focal dev rc stable" >> /etc/apt/sources.list
 
 COPY * /
 
