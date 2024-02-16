@@ -1,18 +1,17 @@
 #!/bin/bash
 apt-get update -y
-if [[ "${CALL_FROM_NODE}" == "yes" ]]; then
-    echo "node get Deps"
-    bash ./getDepsNode.sh ${EXTENTION_DEB}
-fi
 
-if [[ "${CALL_FROM_EXTENTION}" == "yes" ]]; then
-    echo "sovrin get Deps"
-    bash ./getDeps.sh ${EXTENTION_DEB}
-fi
+echo "Getting the top level dependencies for ${EXTENTION_DEB} ..."
+MAX_DEPENDANCY_DEPTH=0 bash ./getDeps.sh ${EXTENTION_DEB}
 
 aptStr=$(cat /tmp/aptStr)
-echo "Installing dependancies:"
+echo "======================================================================="
+echo "Installing the following dependancies along with ${EXTENTION_DEB}:"
+echo "-----------------------------------------------------------------------"
 echo "${aptStr}"
+echo "======================================================================="
 echo
 apt install -y $(pwd)/${EXTENTION_DEB} ${aptStr}
-ln -s /usr/lib/ursa/libursa.so /usr/lib/libursa.so
+if [ -f "/usr/lib/ursa/libursa.so" ]; then
+  ln -s /usr/lib/ursa/libursa.so /usr/lib/libursa.so
+fi
