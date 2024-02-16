@@ -38,11 +38,7 @@ RUN if [ ! -z ${PACKAGE} ]; then echo "downloading ${PACKAGE}"; apt update && ap
 
 ARG EXTENTION_DEB
 RUN : ${EXTENTION_DEB:?"EXTENTION_DEB must be provided"}
-ARG CALL_FROM_EXTENTION
-RUN : ${CALL_FROM_EXTENTION:?"CALL_FROM_EXTENTION must be provided"}
-ARG CALL_FROM_NODE
-RUN : ${CALL_FROM_NODE:?"CALL_FROM_NODE must be provided"}
-RUN EXTENTION_DEB=${EXTENTION_DEB} CALL_FROM_EXTENTION=${CALL_FROM_EXTENTION} CALL_FROM_NODE=${CALL_FROM_NODE} bash installDeps.sh
+RUN EXTENTION_DEB=${EXTENTION_DEB} bash installDeps.sh
 
 # network config
 RUN echo " " >> /etc/indy/indy_config.py \
