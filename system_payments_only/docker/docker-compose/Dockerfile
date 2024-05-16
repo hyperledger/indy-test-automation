@@ -1,4 +1,4 @@
-FROM teracy/ubuntu:16.04-dind-latest
+FROM teracy/ubuntu:20.04-dind-latest
 
 ARG DOCKER_COMPOSE_VERSION
 ENV DOCKER_COMPOSE_VERSION=${DOCKER_COMPOSE_VERSION:-1.24.0}
