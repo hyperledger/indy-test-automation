@@ -7,6 +7,5 @@
 
 ## `pytest` custom options
 
-- '--payments': run payment tests as well, default: not set
 - '--gatherlogs': gather node logs for failed tests, default: not set
 - '--logsdir PATH': directory name to store node logs, default: `_build/logs`

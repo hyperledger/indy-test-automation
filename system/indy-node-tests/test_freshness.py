@@ -1,7 +1,6 @@
 import pytest
 import time
 import asyncio
-from indy import did, payment
 from system.utils import *
 import logging
 

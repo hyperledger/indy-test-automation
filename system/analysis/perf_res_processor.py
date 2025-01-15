@@ -62,8 +62,6 @@ class PerformanceReport:
         self._columns = columns if columns else [
             'DOMAIN_TXNS_WRITTEN',
             # 'DOMAIN_TXNS_EXPECTED',
-            'TOKEN_TXNS_WRITTEN',
-            # 'TOKEN_TXNS_EXPECTED',
             'VIEW_NO',
             'VC_IN_PROGRESS',
             'HAS_WRITE_CONSENSUS'
@@ -136,11 +134,6 @@ class PerformanceReport:
                     result['Node_info']['Metrics']['transaction-count']['ledger']
             except KeyError:
                 self._report.loc[[i], ['DOMAIN_TXNS_WRITTEN']] = None
-            try:
-                self._report.loc[[i], ['TOKEN_TXNS_WRITTEN']] = \
-                    result['Node_info']['Metrics']['transaction-count']['1001']
-            except KeyError:
-                self._report.loc[[i], ['TOKEN_TXNS_WRITTEN']] = None
             try:
                 self._report.loc[[i], ['VIEW_NO']] = \
                     result['Node_info']['View_change_status']['View_No']

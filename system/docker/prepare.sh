@@ -49,16 +49,11 @@ node_env_variables=" \
     PYTHON3_PYZMQ_VERSION \
     SOVRIN_INSTALL \
     SOVRIN_VERSION \
-    SOVTOKEN_VERSION \
-    SOVTOKENFEES_VERSION \
-    TOKEN_PLUGINS_INSTALL \
     URSA_VERSION \
 "
 
 client_env_variables=" \
     LIBINDY_CRYPTO_VERSION \
-    LIBSOVTOKEN_INSTALL \
-    LIBSOVTOKEN_VERSION \
     DIND_CONTAINER_REGISTRY \
     DIND_IMAGE_NAME\
     UBUNTU_VERSION \
@@ -89,8 +84,6 @@ docker run -t --rm \
     -e "IMAGE_REPOSITORY=$image_repository" \
     -e u_id="$user_id" \
     -e LIBINDY_VERSION \
-    -e LIBSOVTOKEN_INSTALL \
-    -e LIBSOVTOKEN_VERSION \
     -e DIND_CONTAINER_REGISTRY \
     -e DIND_IMAGE_NAME \
     -e UBUNTU_VERSION \
@@ -107,11 +100,8 @@ docker run -t --rm \
     -e u_id="$user_id" \
     -e INDY_NODE_VERSION \
     -e INDY_PLENUM_VERSION \
-    -e TOKEN_PLUGINS_INSTALL \
     -e SOVRIN_VERSION \
     -e SOVRIN_INSTALL \
-    -e SOVTOKEN_VERSION \
-    -e SOVTOKENFEES_VERSION \
     -e URSA_VERSION \
     -e PYTHON3_PYZMQ_VERSION \
     -e UBUNTU_VERSION \
