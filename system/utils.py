@@ -18,7 +18,6 @@ import testinfra
 import json
 from json import JSONDecodeError
 import hashlib
-from indy import did, payment
 import indy_vdr
 from indy_vdr import ledger, open_pool
 from aries_askar import Store, Key, KeyAlg, AskarError, AskarErrorCode
@@ -349,13 +348,6 @@ async def create_and_store_revoc_reg(wallet_handle, submitter_did, revoc_def_typ
 
 async def default_trustee(wallet_handle):
     return await create_and_store_did(wallet_handle, seed='000000000000000000000000Trustee1')
-
-
-# TODO why we need that async ???
-async def payment_initializer(library_name, initializer_name):
-    library = CDLL(library_name)
-    init = getattr(library, initializer_name)
-    init()
 
 
 async def eventually(awaited_func,
@@ -695,10 +687,8 @@ async def check_pool_is_in_sync(node_ids=None, nodes_num=7):
     print('\nDOMAIN LEDGER SYNC: {}'.format([result for result in domain_results]))
     audit_results = [host.run('read_ledger --type=audit --count') for host in hosts]
     print('\nAUDIT LEDGER SYNC: {}'.format([result for result in audit_results]))
-    token_results = [host.run('read_ledger --type=sovtoken --count') for host in hosts]
-    print('\nTOKEN LEDGER SYNC: {}'.format([result for result in token_results]))
 
-    for res in (pool_results, config_results, domain_results, audit_results, token_results):
+    for res in (pool_results, config_results, domain_results, audit_results):
         assert len(set(res)) == 1
 
 
@@ -1310,17 +1300,6 @@ async def send_node(
     # TODO implement helpers to get buildernet and stn genesis files from sovrin repo
 
 
-async def get_payment_sources(pool_handle, wallet_handle, address):
-    payment_method = 'sov'
-    req, _ = await payment.build_get_payment_sources_request(wallet_handle, None, address)
-    res = await ledger.submit_request(pool_handle, req)
-    res = json.loads(await payment.parse_get_payment_sources_response(payment_method, res))
-    source = res[0]['source']
-    amount = res[0]['amount']
-
-    return source, amount
-
-
 # use it for shell commands with pipe
 def run_external_cmd(cmd):
     ret = subprocess.run(cmd,
@@ -1342,28 +1321,6 @@ def update_config(string_to_push, nodes_num):
     assert all(res == '' for res in update_res)
     restart_res = [node.restart_service() for node in test_nodes]
     assert all(res == '' for res in restart_res)
-
-
-async def send_payments(pool_handle, wallet_handle, submitter_did, address_from, count):
-    payment_method = 'sov'
-
-    for i in range(1, count + 1):
-        address_to = await payment.create_payment_address(wallet_handle, payment_method, json.dumps({}))
-        source, amount = await get_payment_sources(pool_handle, wallet_handle, address_from)
-        print(source, amount)
-        req, _ = await payment.build_payment_req(
-            wallet_handle, submitter_did, json.dumps([source]), json.dumps(
-                [
-                    {'recipient': address_to, 'amount': 100000},
-                    {'recipient': address_from, 'amount': amount - 100000}
-                ]
-            ), None
-        )
-        res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, submitter_did, req))
-        if res['op'] == 'REJECT' and 'InvalidFundsError' in res['reason']:
-            pass  # handle bad payment source from lagged node due to state proof reading
-        else:
-            assert res['op'] == 'REPLY'
 
 
 async def send_nodes(pool_handle, wallet_handle, trustee_did, count, alias=None):
@@ -1484,8 +1441,6 @@ def upgrade_nodes_manually(containers, sovrin_ver, node_ver, plenum_ver, plugin_
              '{}={}'.format('sovrin', sovrin_ver),
              '{}={}'.format('indy-node', node_ver),
              '{}={}'.format('indy-plenum', plenum_ver),
-             '{}={}'.format('sovtoken', plugin_ver),
-             '{}={}'.format('sovtokenfees', plugin_ver),
              '-y', '--allow-change-held-packages'],
             user='root'
         ).exit_code == 0
@@ -1495,205 +1450,3 @@ def upgrade_nodes_manually(containers, sovrin_ver, node_ver, plenum_ver, plugin_
             ['systemctl', 'start', 'indy-node'],
             user='root'
         ).exit_code == 0
-
-
-async def fees_setter(
-        pool_handle, wallet_handle, trustee_did, libsovtoken_payment_method, fees=None
-):
-    trustee_did2, trustee_vk2 = await did.create_and_store_my_did(
-        wallet_handle, json.dumps({"seed": str('000000000000000000000000Trustee2')})
-    )
-    trustee_did3, trustee_vk3 = await did.create_and_store_my_did(
-        wallet_handle, json.dumps({"seed": str('000000000000000000000000Trustee3')})
-    )
-
-    res = await send_nym(pool_handle, wallet_handle, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
-    assert res['op'] == 'REPLY'
-    res = await send_nym(pool_handle, wallet_handle, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
-    assert res['op'] == 'REPLY'
-
-    # set fees
-    if not fees:
-        fees = {
-            'nym': 0,  # don't break nym sending in tests
-            'attrib': 2,
-            'schema': 3,
-            'cred_def': 4,
-            'rev_reg_def': 5,
-            'rev_reg_entry': 6
-        }
-    req = await payment.build_set_txn_fees_req(
-        wallet_handle, trustee_did, libsovtoken_payment_method, json.dumps(fees)
-    )
-    req = await ledger.multi_sign_request(wallet_handle, trustee_did, req)
-    req = await ledger.multi_sign_request(wallet_handle, trustee_did2, req)
-    req = await ledger.multi_sign_request(wallet_handle, trustee_did3, req)
-    res = json.loads(await ledger.submit_request(pool_handle, req))
-    assert res['op'] == 'REPLY'
-
-    # set auth rule for nym (identity owner)
-    req = await ledger.build_auth_rule_request(trustee_did, '1', 'ADD', 'role', '*', None,
-                                               json.dumps({
-                                                   'constraint_id': 'OR',
-                                                   'auth_constraints': [
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '0',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'nym'}
-                                                       },
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '2',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'nym'}
-                                                       },
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '101',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'nym'}
-                                                       }
-                                                   ]
-                                               }))
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-    assert res['op'] == 'REPLY'
-
-    # set auth rule for attrib
-    req = await ledger.build_auth_rule_request(trustee_did, '100', 'ADD', '*', None, '*',
-                                               json.dumps({
-                                                   'constraint_id': 'ROLE',
-                                                   'role': '*',
-                                                   'sig_count': 1,
-                                                   'need_to_be_owner': False,
-                                                   'metadata': {'fees': 'attrib'}
-                                               }))
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-    assert res['op'] == 'REPLY'
-
-    # set auth rule for schema
-    req = await ledger.build_auth_rule_request(trustee_did, '101', 'ADD', '*', None, '*',
-                                               json.dumps({
-                                                   'constraint_id': 'OR',
-                                                   'auth_constraints': [
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '0',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'schema'}
-                                                       },
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '2',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'schema'}
-                                                       },
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '101',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'schema'}
-                                                       }
-                                                   ]
-                                               }))
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-    assert res['op'] == 'REPLY'
-
-    # set auth rule for cred def
-    req = await ledger.build_auth_rule_request(trustee_did, '102', 'ADD', '*', None, '*',
-                                               json.dumps({
-                                                   'constraint_id': 'OR',
-                                                   'auth_constraints': [
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '0',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'cred_def'}
-                                                       },
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '2',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'cred_def'}
-                                                       },
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '101',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'cred_def'}
-                                                       }
-                                                   ]
-                                               }))
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-    assert res['op'] == 'REPLY'
-
-    # set auth rule for rev reg def
-    req = await ledger.build_auth_rule_request(trustee_did, '113', 'ADD', '*', None, '*',
-                                               json.dumps({
-                                                   'constraint_id': 'OR',
-                                                   'auth_constraints': [
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '0',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'rev_reg_def'}
-                                                       },
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '2',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'rev_reg_def'}
-                                                       },
-                                                       {
-                                                           'constraint_id': 'ROLE',
-                                                           'role': '101',
-                                                           'sig_count': 1,
-                                                           'need_to_be_owner': False,
-                                                           'metadata': {'fees': 'rev_reg_def'}
-                                                       }
-                                                   ]
-                                               }))
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-    assert res['op'] == 'REPLY'
-
-    # set auth rule for rev reg entry
-    req = await ledger.build_auth_rule_request(trustee_did, '114', 'ADD', '*', None, '*',
-                                               json.dumps({
-                                                   'constraint_id': 'ROLE',
-                                                   'role': '*',
-                                                   'sig_count': 1,
-                                                   'need_to_be_owner': False,
-                                                   'metadata': {'fees': 'rev_reg_entry'}
-                                               }))
-    res = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req))
-    assert res['op'] == 'REPLY'
-
-    return fees
-
-
-async def add_fees_and_send_request(
-        pool_handle, wallet_handle, trustee_did, address, req_without_fees, req_fee
-):
-    source, amount = await get_payment_sources(pool_handle, wallet_handle, address)
-    req_with_fees_json, _ = await payment.add_request_fees(
-        wallet_handle, trustee_did, req_without_fees, json.dumps([source]), json.dumps(
-            [{'recipient': address, 'amount': amount - req_fee}]
-        ), None
-    )
-    res = json.loads(
-        await ledger.sign_and_submit_request(pool_handle, wallet_handle, trustee_did, req_with_fees_json)
-    )
-    assert res['op'] == 'REPLY'
-
-    return res
