@@ -15,18 +15,6 @@ updates:
 
   # Maintain dependencies for Python Packages
   - package-ecosystem: "pip"
-    directory: "/chaos"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-      timezone: "Canada/Pacific"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-
-  # Maintain dependencies for Python Packages
-  - package-ecosystem: "pip"
     directory: "/system"
     schedule:
       interval: "weekly"
@@ -36,15 +24,6 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
-
-  # Maintain dependencies for docker
-  - package-ecosystem: "docker"
-    directory: "/environments/chaos/docker"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-      timezone: "Canada/Pacific"
 
   # Maintain dependencies for docker
   - package-ecosystem: "docker"
