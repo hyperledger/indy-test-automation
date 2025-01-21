@@ -22,11 +22,6 @@ on:
         required: false
         type: string
         default: "system/indy-node-tests"
-      includePaymentTests:
-        description: "Include payment tests.  Defaults to false."
-        required: false
-        type: boolean
-        default: false
       testAutomationBranch:
         description: "Branch of Indy-Test-Automation to use"
         required: false
@@ -49,8 +44,6 @@ on:
 env:
   INPUT_UBUNTUVERSION: ${{ inputs.ubuntuVersion }}
 
-  INPUT_LIBSOVTOKEN_INSTALL: "no"
-
   INPUT_LIBINDYVERSION: ${{ inputs.libIndyVersion }}
 
   TEST_AUTOMATION_BRANCH: ${{ inputs.testAutomationBranch }}
@@ -58,7 +51,6 @@ env:
   NETWORK_NAME: ${{ fromJSON(inputs.networkJSON).networkName }}
   NETWORK_SUBNET: ${{ fromJSON(inputs.networkJSON).networkSubnet }}
   TEST_DIRECTORY: ${{ inputs.testDirectory }}
-  INCLUDE_PAYMENT_TESTS: ${{ inputs.includePaymentTests }}
 
   INPUT_DEBNAME: ${{ inputs.debName }}
 
@@ -272,7 +264,6 @@ jobs:
             LIBINDY_VERSION=${{ env.INPUT_LIBINDYVERSION}}
             DIND_CONTAINER_REGISTRY=ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}
             DIND_IMAGE_NAME=dind:${{ env.INPUT_UBUNTUVERSION }}
-            LIBSOVTOKEN_INSTALL=${{ env.INPUT_LIBSOVTOKEN_INSTALL }}
           outputs: type=docker,dest=/tmp/client_image_${{ env.INPUT_UBUNTUVERSION }}.tar
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
@@ -369,9 +360,6 @@ jobs:
           cd ./system/docker
 
           TEST_PARAMS="-l -v --junit-xml=${{ matrix.module }}-report.xml"
-          if [[ ${INCLUDE_PAYMENT_TESTS} == "true" ]]; then
-            TEST_PARAMS+="${TEST_PARAMS} --payments"
-          fi
 
           UBUNTU_VERSION="${{ env.INPUT_UBUNTUVERSION }}" \
           IMAGE_REPOSITORY="ghcr.io/${{ env.GITHUB_REPOSITORY_NAME }}/" \

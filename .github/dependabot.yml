@@ -25,18 +25,6 @@ updates:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
-  # Maintain dependencies for Python Packages
-  - package-ecosystem: "pip"
-    directory: "/system_payments_only"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-      timezone: "Canada/Pacific"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]  
-
   # Maintain dependencies for docker
   - package-ecosystem: "docker"
     directory: "/system/indy-sdk-tests"
@@ -67,33 +55,6 @@ updates:
   # Maintain dependencies for docker
   - package-ecosystem: "docker"
     directory: "/system/docker/node"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-      timezone: "Canada/Pacific"
-
-  # Maintain dependencies for docker
-  - package-ecosystem: "docker"
-    directory: "/system_payments_only/docker/client"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-      timezone: "Canada/Pacific"
-
-  # Maintain dependencies for docker
-  - package-ecosystem: "docker"
-    directory: "/system_payments_only/docker/docker-compose"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "04:00"
-      timezone: "Canada/Pacific"
-
-  # Maintain dependencies for docker
-  - package-ecosystem: "docker"
-    directory: "/system_payments_only/docker/node"
     schedule:
       interval: "weekly"
       day: "monday"

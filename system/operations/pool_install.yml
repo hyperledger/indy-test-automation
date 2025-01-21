@@ -32,7 +32,7 @@
       run_once: yes
 
     - name: Install indy-node
-      apt: "name=sovrin={{ sovrin_ver}},indy-node={{ node_ver }},indy-plenum={{ plenum_ver }},libindy-crypto={{ libindy_crypto_ver }},python3-indy-crypto={{ python_indy_crypto_ver }},python3-pyzmq={{ python_pyzmq_ver }},sovtoken={{ plugin_ver }},sovtokenfees={{ plugin_ver }} force=yes update_cache=yes"
+      apt: "name=sovrin={{ sovrin_ver}},indy-node={{ node_ver }},indy-plenum={{ plenum_ver }},libindy-crypto={{ libindy_crypto_ver }},python3-indy-crypto={{ python_indy_crypto_ver }},python3-pyzmq={{ python_pyzmq_ver }}, force=yes update_cache=yes"
       become: yes
     
     - name: Make indy config dir

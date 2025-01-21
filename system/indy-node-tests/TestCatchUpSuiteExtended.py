@@ -1,8 +1,5 @@
 import pytest
-import asyncio
 from system.utils import *
-import docker
-from system.docker_setup import NETWORK_NAME
 
 
 WRITE_READ_TIMEOUT = 360

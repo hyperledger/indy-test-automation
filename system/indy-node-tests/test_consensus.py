@@ -1,5 +1,4 @@
 import pytest
-import logging
 from async_generator import async_generator, yield_
 
 from system.utils import *

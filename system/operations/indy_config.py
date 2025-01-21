@@ -29,8 +29,4 @@ METRICS_COLLECTOR_TYPE = 'kv'
 
 ENABLED_PLUGINS = []
 
-ENABLED_PLUGINS.append('sovtoken')
-
-ENABLED_PLUGINS.append('sovtokenfees')
-
 ForceViewChangeFreq = 1800

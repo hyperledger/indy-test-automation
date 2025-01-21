@@ -1,14 +1,10 @@
 import pytest
 from system.utils import *
-import asyncio
-from hypothesis import settings, given, strategies, Phase, Verbosity, reproduce_failure
+from hypothesis import settings, given, strategies, Verbosity
 from hypothesis.strategies import composite
 from string import printable, ascii_letters
 import hashlib
 import copy
-import os
-import sys
-from indy import payment, error
 
 max_size = 1e+17
 
@@ -256,48 +252,3 @@ class TestPropertyBasedSuite:
         except KeyError:
             res = {k: json.loads(v) for k, v in res.items()}
             assert all([v['op'] == 'REQNACK' for k, v in res.items()])
-
-    @settings(deadline=None, max_examples=10000, verbosity=Verbosity.verbose)
-    @given(amount=strategies.integers(min_value=0, max_value=max_size),
-           seqno=strategies.integers(min_value=0, max_value=max_size),
-           signatures=strategies.text(ascii_letters, min_size=0, max_size=max_size),
-           reqid=strategies.integers(min_value=1, max_value=max_size))
-    @pytest.mark.asyncio
-    async def test_case_invalid_payment(
-            self, payment_init, pool_handler, wallet_handler, get_default_trustee, amount, seqno, signatures, reqid
-    ):
-        libsovtoken_payment_method = 'sov'
-        trustee_did, _ = get_default_trustee
-        try:
-            address1 = await payment.create_payment_address(
-                wallet_handler, libsovtoken_payment_method, json.dumps({'seed': '0000000000000000000000000Wallet1'})
-            )
-            address2 = await payment.create_payment_address(
-                wallet_handler, libsovtoken_payment_method, json.dumps({'seed': '0000000000000000000000000Wallet2'})
-            )
-        except IndyError:
-            address1 = 'pay:sov:aRczGoccsHV7mNJgpBVYwCveytvyL8JBa1X28GFSwD44m76eE'
-            address2 = 'pay:sov:H8v7bJwwKEnEUjd5dGec3oTbLMwgFLUVHL7kDKtVqBtLaQ2JG'
-        req = {
-            'operation':
-                {'type': '10001',
-                 'outputs': [
-                     {'address': address2.split(':')[-1],
-                      'amount': amount}
-                 ],
-                 'inputs': [
-                     {'address': address1.split(':')[-1],
-                      'seqNo': seqno}
-                 ],
-                 'signatures':
-                     [signatures]},
-            'reqId': reqid,
-            'protocolVersion': 2,
-            'identifier': trustee_did
-        }
-        print(req)
-        res = json.loads(
-            await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, json.dumps(req))
-        )
-        print(res)
-        assert res['op'] == 'REQNACK'

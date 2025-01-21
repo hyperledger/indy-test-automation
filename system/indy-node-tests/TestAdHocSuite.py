@@ -1,7 +1,6 @@
 import pytest
 from system.utils import *
 import docker
-from random import choice
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')

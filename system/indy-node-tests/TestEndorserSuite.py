@@ -1,7 +1,6 @@
 import pytest
 import asyncio
 from system.utils import *
-from indy import payment
 from indy_vdr.error import VdrError, VdrErrorCode
 
 import logging

@@ -5,7 +5,6 @@ import hashlib
 import time
 import asyncio
 import json
-from system.docker_setup import client
 
 
 @pytest.mark.asyncio
@@ -18,16 +17,12 @@ from system.docker_setup import client
 # read TAA txns written and send ledger txns signed with TAA
 # check ledgers and states
 async def test_pool_upgrade_new_taa(
-        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
-        check_no_failures_fixture, initial_token_minting, nodes_num
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
+        check_no_failures_fixture, nodes_num
 ):
     # SETUP ------------------------------------------------------------------------------------------------------------
     trustee_did, _ = get_default_trustee
     timestamp1 = int(time.time()) - 24*60*60
-    libsovtoken_payment_method = 'sov'
-    address1 = initial_token_minting
-    address2 = await payment.create_payment_address(wallet_handler, libsovtoken_payment_method, json.dumps({}))
-
     steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
     res = await send_nym(
         pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, 'Steward8', 'STEWARD'
@@ -84,25 +79,6 @@ async def test_pool_upgrade_new_taa(
     assert res1['op'] == 'REPLY'
     parsed = json.loads(await ledger.get_response_metadata(json.dumps(res1)))
     assert res1['result']['txnMetadata']['seqNo'] == parsed['seqNo']
-
-    # add taa to payment
-    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
-    res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    source1 = json.loads(
-        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res)
-    )[0]['source']
-    extra = await payment.prepare_payment_extra_with_acceptance_data(
-        None, 'taa 1 text', '1.0', None, aml_key, int(time.time())
-    )
-    req, _ = await payment.build_payment_req(
-        wallet_handler, trustee_did, json.dumps([source1]),
-        json.dumps([{"recipient": address2, "amount": 100 * 100000}, {"recipient": address1, "amount": 900 * 100000}]),
-        extra)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    print(res)
-    assert res['op'] == 'REPLY'
-    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
-    assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     # add taa to schema
     schema_id, schema_json = await anoncreds.issuer_create_schema(
@@ -301,25 +277,6 @@ async def test_pool_upgrade_new_taa(
     assert res9['op'] == 'REPLY'
     parsed = json.loads(await ledger.get_response_metadata(json.dumps(res9)))
     assert res9['result']['txnMetadata']['seqNo'] == parsed['seqNo']
-
-    # add TAA3 to payment - pass
-    req, _ = await payment.build_get_payment_sources_request(wallet_handler, trustee_did, address1)
-    res = await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req)
-    source1 = json.loads(
-        await payment.parse_get_payment_sources_response(libsovtoken_payment_method, res)
-    )[0]['source']
-    extra = await payment.prepare_payment_extra_with_acceptance_data(
-        None, 'taa 3 text', '3.0', None, aml_key, int(time.time())
-    )
-    req, _ = await payment.build_payment_req(
-        wallet_handler, trustee_did, json.dumps([source1]),
-        json.dumps([{"recipient": address2, "amount": 100 * 100000}, {"recipient": address1, "amount": 800 * 100000}]),
-        extra)
-    res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
-    print(res)
-    assert res['op'] == 'REPLY'
-    parsed = json.loads(await ledger.get_response_metadata(json.dumps(res)))
-    assert res['result']['txnMetadata']['seqNo'] == parsed['seqNo']
 
     # retire taa with text
     req33 = await ledger.build_txn_author_agreement_request(trustee_did, 'taa 3 text', '3.0', retirement_ts=timestamp1)

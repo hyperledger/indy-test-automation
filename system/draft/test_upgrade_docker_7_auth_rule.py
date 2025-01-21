@@ -17,7 +17,7 @@ import json
 # write auth rule txns with and without off_ledger_signature
 # check ledgers and states
 async def test_pool_upgrade_auth_rule(
-        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, get_default_trustee,
+        docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee,
         check_no_failures_fixture
 ):
     # SETUP ------------------------------------------------------------------------------------------------------------
@@ -223,7 +223,7 @@ async def test_pool_upgrade_auth_rule(
     node7 = NodeHost(7)
     node7.stop_service()
     time.sleep(3)
-    for _ledger in ['pool', 'domain', 'config', 'sovtoken']:
+    for _ledger in ['pool', 'domain', 'config']:
         print(node7.run('rm -rf /var/lib/indy/sandbox/data/Node7/{}_state'.format(_ledger)))
     time.sleep(3)
     node7.start_service()

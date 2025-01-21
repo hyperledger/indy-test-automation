@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import json
 import testinfra
 from system.docker_setup import client, pool_builder, pool_starter,\
-    DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME
+    DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NETWORK_NAME
 
 
 # TODO dynamic install of old version to upgrade from
@@ -16,7 +16,7 @@ from system.docker_setup import client, pool_builder, pool_starter,\
 @pytest.mark.asyncio
 # previous -> latest
 async def test_pool_upgrade_positive(
-        docker_setup_and_teardown, payment_init, pool_handler, wallet_handler, check_no_failures_fixture
+        docker_setup_and_teardown, pool_handler, wallet_handler, check_no_failures_fixture
 ):
     # ------------------EXTRA NODE SETUP--------------------------------------------------------------------------------
     # create extra node
@@ -77,8 +77,6 @@ async def test_pool_upgrade_positive(
          '{}={}'.format(sovrin_pkg, sovrin_ver),
          '{}={}'.format(node_pkg, node_ver),
          '{}={}'.format(plenum_pkg, plenum_ver),
-         '{}={}'.format('sovtoken', plugin_ver),
-         '{}={}'.format('sovtokenfees', plugin_ver),
          '-y', '--allow-change-held-packages'],
         user='root'
     )
@@ -217,7 +215,6 @@ async def test_pool_upgrade_positive(
     await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', 5)
     await send_upgrades(pool_handler, wallet_handler, trustee_did, 'sovrin', 5)
 
-    # old style fees setting before the upgrade
     trustee_did2, trustee_vk2 = await did.create_and_store_my_did(
         wallet_handler, json.dumps({"seed": str('000000000000000000000000Trustee2')})
     )
@@ -232,34 +229,6 @@ async def test_pool_upgrade_positive(
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did3, trustee_vk3, None, 'TRUSTEE')
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did4, trustee_vk4, None, 'TRUSTEE')
 
-    # fees = {'100': 1, '101': 1, '102': 1, '113': 1, '114': 1}
-    #
-    # req = await payment.build_set_txn_fees_req(wallet_handler, trustee_did, 'sov', json.dumps(fees))
-    #
-    # req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
-    # req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
-    # req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
-    # req = await ledger.multi_sign_request(wallet_handler, trustee_did4, req)
-    #
-    # res = json.loads(await ledger.submit_request(pool_handler, req))
-    # print(res)
-    # assert res['op'] == 'REPLY'
-
-    # mint and pay
-    address = await payment.create_payment_address(
-        wallet_handler, 'sov', json.dumps({"seed": str('0000000000000000000000000Wallet0')})
-    )
-    req, _ = await payment.build_mint_req(
-        wallet_handler, trustee_did, json.dumps([{'recipient': address, 'amount': 1000 * 100000}]), None
-    )
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
-    res = json.loads(await ledger.submit_request(pool_handler, req))
-    print(res)
-    assert res['op'] == 'REPLY'
-
-    await send_payments(pool_handler, wallet_handler, trustee_did, address, 5)
     # ---
 
     # # POOL UPGRADE TO THE LATEST STABLE BEFORE APT INSTALL TO THE LATEST MASTER
@@ -321,8 +290,6 @@ async def test_pool_upgrade_positive(
     #          '{}={}'.format(sovrin_pkg, sovrin_ver),
     #          '{}={}'.format(node_pkg, node_ver),
     #          '{}={}'.format(plenum_pkg, plenum_ver),
-    #          '{}={}'.format('sovtoken', plugin_ver),
-    #          '{}={}'.format('sovtokenfees', plugin_ver),
     #          '-y', '--allow-change-held-packages'],
     #         user='root'
     #     )
@@ -441,22 +408,6 @@ async def test_pool_upgrade_positive(
     res = json.loads(await ledger.sign_and_submit_request(pool_handler, wallet_handler, trustee_did, req))
     assert res['op'] == 'REPLY'
 
-    # write fees after the upgrade
-    fees = {'100_a': 2, '101_b': 2, '102_c': 2, '113_d': 2, '114_e': 2}
-
-    req = await payment.build_set_txn_fees_req(wallet_handler, trustee_did, 'sov', json.dumps(fees))
-
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did, req)
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did2, req)
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did3, req)
-    req = await ledger.multi_sign_request(wallet_handler, trustee_did4, req)
-
-    res = json.loads(await ledger.submit_request(pool_handler, req))
-    print(res)
-    assert res['op'] == 'REPLY'
-
-    await send_payments(pool_handler, wallet_handler, trustee_did, address, 5)
-
     # write and read NYM after the upgrade
     await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=5)
 
@@ -487,7 +438,7 @@ async def test_pool_upgrade_positive(
     node7 = NodeHost(7)
     node7.stop_service()
     time.sleep(3)
-    for _ledger in ['pool', 'domain', 'config', 'sovtoken']:
+    for _ledger in ['pool', 'domain', 'config']:
         print(node7.run('rm -rf /var/lib/indy/sandbox/data/Node7/{}_state'.format(_ledger)))
     time.sleep(3)
     node7.start_service()

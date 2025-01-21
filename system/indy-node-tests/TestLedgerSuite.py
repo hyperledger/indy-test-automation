@@ -1,7 +1,6 @@
 import datetime
 
 import pytest
-import asyncio
 from system.utils import *
 from async_generator import async_generator, yield_
 from indy_vdr.error import VdrError, VdrErrorCode

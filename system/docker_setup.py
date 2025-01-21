@@ -2,7 +2,6 @@ import os
 import subprocess
 import tarfile
 from pathlib import Path
-from subprocess import CalledProcessError
 import docker
 
 from .utils import (
@@ -222,8 +221,6 @@ def create_new_node(container_name, ip, alias, init_seed, sovrin_ver, node_ver, 
          '{}={}'.format('sovrin', sovrin_ver),
          '{}={}'.format('indy-node', node_ver),
          '{}={}'.format('indy-plenum', plenum_ver),
-         '{}={}'.format('sovtoken', plugin_ver),
-         '{}={}'.format('sovtokenfees', plugin_ver),
          '-y', '--allow-change-held-packages'],
         user='root'
     )

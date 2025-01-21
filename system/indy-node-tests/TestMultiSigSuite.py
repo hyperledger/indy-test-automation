@@ -1,7 +1,5 @@
 import pytest
-import asyncio
 from system.utils import *
-from indy import payment
 
 
 @pytest.mark.usefixtures('docker_setup_and_teardown')
