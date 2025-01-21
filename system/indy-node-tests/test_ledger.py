@@ -2,7 +2,6 @@ import pytest
 import json
 import hashlib
 import time
-import logging
 import asyncio
 from async_generator import async_generator, yield_
 

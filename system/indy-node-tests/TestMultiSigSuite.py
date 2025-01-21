@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from system.utils import *
 
 

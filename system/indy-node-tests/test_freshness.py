@@ -2,7 +2,6 @@ import pytest
 import time
 import asyncio
 from system.utils import *
-import logging
 
 # logger = logging.getLogger(__name__)
 # logging.basicConfig(level=0, format='%(asctime)s %(message)s')

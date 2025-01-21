@@ -5,7 +5,6 @@ import hashlib
 import time
 import asyncio
 import json
-from system.docker_setup import client
 
 
 @pytest.mark.asyncio

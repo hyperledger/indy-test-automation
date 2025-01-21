@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import json
 import testinfra
 from system.docker_setup import client, pool_builder, pool_starter,\
-    DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME
+    DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NETWORK_NAME
 
 
 # TODO dynamic install of old version to upgrade from

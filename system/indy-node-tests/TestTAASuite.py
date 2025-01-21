@@ -1,6 +1,5 @@
 import pytest
 from system.utils import *
-from indy_vdr.error import VdrError, VdrErrorCode
 SEC_PER_DAY = 24 * 60 * 60
 
 

@@ -2,7 +2,6 @@ import os
 import subprocess
 import tarfile
 from pathlib import Path
-from subprocess import CalledProcessError
 import docker
 
 from .utils import (

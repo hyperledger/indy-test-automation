@@ -1,4 +1,3 @@
-import json
 import shutil
 from ansible.module_utils.common.collections import ImmutableDict
 from ansible.parsing.dataloader import DataLoader

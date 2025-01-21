@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from system.utils import *
 import hashlib
 from datetime import datetime, timedelta, timezone

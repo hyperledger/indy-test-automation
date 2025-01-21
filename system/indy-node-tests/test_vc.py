@@ -1,6 +1,5 @@
 import pytest
 import logging
-import asyncio
 from async_generator import async_generator, yield_
 
 from system.utils import *

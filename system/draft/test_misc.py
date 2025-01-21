@@ -9,13 +9,11 @@ from random import randrange as rr
 from random import sample, choice
 from datetime import datetime, timedelta, timezone
 import hashlib
-from hypothesis import errors, settings, Verbosity, given, strategies
+from hypothesis import settings, Verbosity, given, strategies
 import pprint
-import itertools
 import docker
-from string import ascii_letters
 from system.docker_setup import client, pool_builder, pool_starter,\
-    DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NODE_NAME_BASE, NETWORK_NAME
+    DOCKER_BUILD_CTX_PATH, DOCKER_IMAGE_NAME, NETWORK_NAME
 
 
 @pytest.mark.nodes_num(4)

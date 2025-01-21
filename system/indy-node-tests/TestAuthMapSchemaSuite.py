@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 from system.utils import *
 from aries_askar.error import AskarError, AskarErrorCode
 

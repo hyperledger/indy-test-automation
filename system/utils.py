@@ -13,7 +13,6 @@ from inspect import isawaitable
 import random
 import itertools
 import functools
-from ctypes import CDLL
 import testinfra
 import json
 from json import JSONDecodeError
