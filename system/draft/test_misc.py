@@ -1,7 +1,6 @@
 import pytest
-from indy import *
-from indy.error import *
 from system.utils import *
+from system.utils import create_and_store_did, pool_helper, wallet_helper
 import testinfra
 import subprocess
 import numpy as np
@@ -19,12 +18,10 @@ from system.docker_setup import client, pool_builder, pool_starter,\
 @pytest.mark.nodes_num(4)
 @pytest.mark.asyncio
 async def test_misc_get_nonexistent(docker_setup_and_teardown):
-    await pool.set_protocol_version(2)
     timestamp0 = int(time.time())
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
-    submitter_did, submitter_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
-        {'seed': '000000000000000000000000Trustee1'}))
+    submitter_did, submitter_vk = await create_and_store_did(wallet_handle, seed='000000000000000000000000Trustee1')
     timestamp1 = int(time.time())
 
     res1 = json.dumps(
@@ -74,13 +71,12 @@ async def test_misc_get_nonexistent(docker_setup_and_teardown):
 @pytest.mark.asyncio
 async def test_misc_wallet():
     wallet_handle, _, _ = await wallet_helper('abc', 'abc', 'ARGON2I_MOD')
-    await did.create_and_store_my_did(wallet_handle, json.dumps({'seed': '000000000000000000000000Trustee1'}))
+    await create_and_store_did(wallet_handle, seed='000000000000000000000000Trustee1')
 
 
 @pytest.mark.nodes_num(4)
 @pytest.mark.asyncio
 async def test_misc_get_txn_by_seqno(docker_setup_and_teardown):
-    await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     req = await ledger.build_get_txn_request(None, None, 1)
     res = json.loads(await ledger.submit_request(pool_handle, req))
@@ -90,7 +86,6 @@ async def test_misc_get_txn_by_seqno(docker_setup_and_teardown):
 
 @pytest.mark.asyncio
 async def test_misc_stn_slowness():
-    await pool.set_protocol_version(2)
     schema_timings = []
     cred_def_timings = []
     nodes = [
@@ -150,26 +145,25 @@ async def test_misc_stn_slowness():
 @pytest.mark.asyncio
 async def test_new_role(docker_setup_and_teardown):
     # INDY-1916 / IS-1123
-    await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
     role_under_test = 'NETWORK_MONITOR'
 
-    did1, vk1 = await did.create_and_store_my_did(wallet_handle, '{}')
-    did2, vk2 = await did.create_and_store_my_did(wallet_handle, '{}')
-    did3, vk3 = await did.create_and_store_my_did(wallet_handle, '{}')
-    did4, vk4 = await did.create_and_store_my_did(wallet_handle, '{}')
-    did5, vk5 = await did.create_and_store_my_did(wallet_handle, '{}')
+    did1, vk1 = await create_and_store_did(wallet_handle)
+    did2, vk2 = await create_and_store_did(wallet_handle)
+    did3, vk3 = await create_and_store_did(wallet_handle)
+    did4, vk4 = await create_and_store_did(wallet_handle)
+    did5, vk5 = await create_and_store_did(wallet_handle)
 
-    trustee_did, trustee_vk = await did.create_and_store_my_did(
-        wallet_handle, json.dumps({'seed': '000000000000000000000000Trustee1'})
+    trustee_did, trustee_vk = await create_and_store_did(
+        wallet_handle, seed='000000000000000000000000Trustee1'
     )
-    steward_did, steward_vk = await did.create_and_store_my_did(
-        wallet_handle, json.dumps({'seed': '000000000000000000000000Steward1'})
+    steward_did, steward_vk = await create_and_store_did(
+        wallet_handle, seed='000000000000000000000000Steward1'
     )
-    anchor_did, anchor_vk = await did.create_and_store_my_did(wallet_handle, '{}')
+    anchor_did, anchor_vk = await create_and_store_did(wallet_handle)
     await send_nym(pool_handle, wallet_handle, trustee_did, anchor_did, anchor_vk, 'trust anchor', 'TRUST_ANCHOR')
-    user_did, user_vk = await did.create_and_store_my_did(wallet_handle, '{}')
+    user_did, user_vk = await create_and_store_did(wallet_handle)
     await send_nym(pool_handle, wallet_handle, trustee_did, user_did, user_vk, 'user without role', None)
 
     # Trustee adds NETWORK_MONITOR NYM
@@ -225,13 +219,12 @@ async def test_new_role(docker_setup_and_teardown):
 
 @pytest.mark.asyncio
 async def test_misc_pool_config(docker_setup_and_teardown):
-    await pool.set_protocol_version(2)
     pool_handle, _ = await pool_helper()
     wallet_handle, _, _ = await wallet_helper()
-    trustee_did, trustee_vk = await did.create_and_store_my_did(
-        wallet_handle, json.dumps({'seed': '000000000000000000000000Trustee1'})
+    trustee_did, trustee_vk = await create_and_store_did(
+        wallet_handle, seed='000000000000000000000000Trustee1'
     )
-    new_steward_did, new_steward_vk = await did.create_and_store_my_did(wallet_handle, '{}')
+    new_steward_did, new_steward_vk = await create_and_store_did(wallet_handle)
     await send_nym(pool_handle, wallet_handle, trustee_did, new_steward_did, new_steward_vk, 'steward', 'STEWARD')
 
     res0 = await send_nym(pool_handle, wallet_handle, trustee_did, random_did_and_json()[0])
@@ -261,13 +254,13 @@ async def test_misc_pool_config(docker_setup_and_teardown):
 
 @pytest.mark.asyncio
 async def test_misc_error_handling(docker_setup_and_teardown, pool_handler, wallet_handler):
-    d, vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    d, vk = await create_and_store_did(wallet_handler)
     with pytest.raises(CommonInvalidStructure) as e1:
         await anoncreds.issuer_create_schema(d, random_string(5), random_string(5), json.dumps([{}]))
     with pytest.raises(CommonInvalidStructure) as e2:
         await crypto.get_key_metadata(wallet_handler, random_string(10))
     with pytest.raises(CommonInvalidStructure) as e3:
-        await did.create_and_store_my_did(wallet_handler, json.dumps({'did': ''}))
+        await create_and_store_did(wallet_handler, json.dumps({'did': ''}))
     with pytest.raises(WalletItemNotFound) as e4:
         await ledger.sign_and_submit_request(pool_handler, wallet_handler, '3fyKjNLV6foqDxoEbBiQhY', json.dumps({}))
     with pytest.raises(WalletInvalidHandle) as e5:
@@ -299,8 +292,8 @@ async def test_misc_permission_error_messages(
 ):
     # INDY-1963
     trustee_did, _ = get_default_trustee
-    did1, vk1 = await did.create_and_store_my_did(wallet_handler, '{}')
-    did2, vk2 = await did.create_and_store_my_did(wallet_handler, '{}')
+    did1, vk1 = await create_and_store_did(wallet_handler)
+    did2, vk2 = await create_and_store_did(wallet_handler)
     await send_nym(pool_handler, wallet_handler, trustee_did, did1, vk1, None, role)
 
     res1 = await send_nym(pool_handler, wallet_handler, trustee_did, did1, vk2, None, None)
@@ -338,7 +331,7 @@ async def test_misc_indy_1933(docker_setup_and_teardown, pool_handler, wallet_ha
 @pytest.mark.asyncio
 async def test_misc_is_1158(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee):
     issuer_did, _ = get_default_trustee
-    prover_did, prover_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    prover_did, prover_vk = await create_and_store_did(wallet_handler)
     schema_id, s_res = await send_schema(
         pool_handler, wallet_handler, issuer_did, random_string(5), '1.0', json.dumps(["hash", "enc", "raw"])
     )
@@ -376,7 +369,7 @@ async def test_misc_audit_ledger(docker_setup_and_teardown, pool_handler, wallet
     host = testinfra.get_host('ssh://node'+node_to_stop)
     trustee_did, _ = get_default_trustee
     for i in range(25):
-        steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        steward_did, steward_vk = await create_and_store_did(wallet_handler)
         await send_nym(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
         req1 = await ledger.build_node_request(
             steward_did, steward_vk, json.dumps(
@@ -396,7 +389,7 @@ async def test_misc_audit_ledger(docker_setup_and_teardown, pool_handler, wallet
     output = host.check_output('systemctl stop indy-node')
     print(output)
     for i in range(25):
-        steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+        steward_did, steward_vk = await create_and_store_did(wallet_handler)
         await send_nym(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
         req1 = await ledger.build_node_request(
             steward_did, steward_vk, json.dumps(
@@ -438,7 +431,7 @@ async def test_misc_is_1201(
 @pytest.mark.asyncio
 async def test_misc_nodes_adding(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
-    steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    steward_did, steward_vk = await create_and_store_did(wallet_handler)
     await send_nym(pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, None, 'STEWARD')
     req1 = await ledger.build_node_request(
         steward_did, steward_vk, json.dumps(
@@ -476,7 +469,7 @@ async def test_misc_indy_1554_can_write_true(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     trustee_did, _ = get_default_trustee
-    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    new_did, new_vk = await create_and_store_did(wallet_handler)
     await send_nym(pool_handler, wallet_handler, trustee_did, new_did, new_vk, None, None)
 
     schema_id, _ = await send_schema(
@@ -519,8 +512,8 @@ async def test_misc_indy_1554_can_write_false(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     trustee_did, _ = get_default_trustee
-    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-    t_did, t_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    new_did, new_vk = await create_and_store_did(wallet_handler)
+    t_did, t_vk = await create_and_store_did(wallet_handler)
     await send_nym(pool_handler, wallet_handler, trustee_did, new_did, new_vk, None, None)
     await send_nym(pool_handler, wallet_handler, trustee_did, t_did, t_vk, None, 'TRUSTEE')
 
@@ -688,7 +681,7 @@ async def test_misc_role_changing(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, role_under_test
 ):
     trustee_did, _ = get_default_trustee
-    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    new_did, new_vk = await create_and_store_did(wallet_handler)
     res1 = await send_nym(pool_handler, wallet_handler, trustee_did, new_did, new_vk, None, role_under_test)
     print('\n{}'.format(res1))
     assert res1['op'] == 'REPLY'
@@ -761,9 +754,9 @@ async def test_misc_auth_rule_special_case(docker_setup_and_teardown, get_defaul
 @pytest.mark.asyncio
 async def test_case_nym_special_case(docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee):
     trustee_did, _ = get_default_trustee
-    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-    reader_did, _ = await did.create_and_store_my_did(wallet_handler, '{}')
-    editor_did, editor_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    new_did, new_vk = await create_and_store_did(wallet_handler)
+    reader_did, _ = await create_and_store_did(wallet_handler)
+    editor_did, editor_vk = await create_and_store_did(wallet_handler)
     res1 = await send_nym(pool_handler, wallet_handler, trustee_did, editor_did, editor_vk)
     assert res1['op'] == 'REPLY'
     res2 = await send_nym(pool_handler, wallet_handler, trustee_did, new_did)
@@ -785,7 +778,7 @@ async def test_misc_nym_alias(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee, target_alias
 ):
     trustee_did, _ = get_default_trustee
-    new_did, new_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    new_did, new_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, new_did, None, target_alias, None)
     assert res['op'] == 'REPLY'
 
@@ -820,7 +813,7 @@ async def test_misc_slow_pool_valid_response_test(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     trustee_did, _ = get_default_trustee
-    target_did, target_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    target_did, target_vk = await create_and_store_did(wallet_handler)
 
     # send valid request
     res1 = await send_nym(pool_handler, wallet_handler, trustee_did, target_did, target_vk)
@@ -912,8 +905,7 @@ async def test_misc_slow_pool_valid_response_live():
     SEC_PER_DAY = 24 * 60 * 60
     pool_handle, _ = await pool_helper(path_to_genesis='../buildernet_genesis')
     wallet_handle, _, _ = await wallet_helper()
-    builder_did, builder_vk = await did.create_and_store_my_did(wallet_handle, json.dumps(
-        {'seed': str('I22aXMicTRh1ILWojMVJMvvzznlFwVUj')}))
+    builder_did, builder_vk = await create_and_store_did(wallet_handle, seed='I22aXMicTRh1ILWojMVJMvvzznlFwVUj')
     req0 = await ledger.build_get_txn_author_agreement_request(builder_did, None)
     res_taa = json.loads(await ledger.sign_and_submit_request(pool_handle, wallet_handle, builder_did, req0))
 
@@ -935,9 +927,9 @@ async def test_misc_endorser(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     trustee_did, _ = get_default_trustee
-    off_did, off_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-    e_did, e_vk = await did.create_and_store_my_did(wallet_handler, '{}')
-    test_did, test_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    off_did, off_vk = await create_and_store_did(wallet_handler)
+    e_did, e_vk = await create_and_store_did(wallet_handler)
+    test_did, test_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(pool_handler, wallet_handler, trustee_did, off_did, off_vk, 'No role', None)
     assert res['op'] == 'REPLY'
     res = await send_nym(pool_handler, wallet_handler, trustee_did, e_did, e_vk, 'Endorser', 'ENDORSER')
@@ -1020,7 +1012,7 @@ async def test_misc_revocation_proof_without_timestamps(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     issuer_did, _ = get_default_trustee
-    prover_did, prover_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    prover_did, prover_vk = await create_and_store_did(wallet_handler)
 
     schema_id, res1 = await send_schema(
         pool_handler, wallet_handler, issuer_did, 'Schema 1', '1.0', json.dumps(['name', 'age'])
@@ -1250,7 +1242,7 @@ async def test_misc_upgrade_ledger_with_old_auth_rule(
     ).exit_code == 0
 
     trustee_did, _ = get_default_trustee
-    steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    steward_did, steward_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(
         pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, 'Steward5', 'STEWARD'
     )
@@ -1507,9 +1499,9 @@ async def test_misc_error_message(
 ):
     trustee_did, _ = get_default_trustee
 
-    trustee_did_2, trustee_vk_2 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-    trustee_did_3, trustee_vk_3 = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
-    some_did, some_vk = await did.create_and_store_my_did(wallet_handler, json.dumps({}))
+    trustee_did_2, trustee_vk_2 = await create_and_store_did(wallet_handler, json.dumps({}))
+    trustee_did_3, trustee_vk_3 = await create_and_store_did(wallet_handler, json.dumps({}))
+    some_did, some_vk = await create_and_store_did(wallet_handler, json.dumps({}))
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_2, trustee_vk_2, None, 'TRUSTEE')
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did_3, trustee_vk_3, None, 'TRUSTEE')
     await send_nym(pool_handler, wallet_handler, trustee_did, some_did, some_vk, None, None)
@@ -1573,8 +1565,8 @@ async def test_misc_rotate_bls_and_get_txn(
 ):
     docker_client = docker.from_env()
     trustee_did, _ = get_default_trustee
-    steward_did, steward_vk = await did.create_and_store_my_did(
-        wallet_handler, json.dumps({'seed': '000000000000000000000000Steward4'})
+    steward_did, steward_vk = await create_and_store_did(
+        wallet_handler, seed='000000000000000000000000Steward4'
     )
     await ensure_pool_performs_write_read(pool_handler, wallet_handler, trustee_did, nyms_count=3)
 
@@ -1800,7 +1792,7 @@ async def test_misc_multiple_restrictions(
         docker_setup_and_teardown, pool_handler, wallet_handler, get_default_trustee
 ):
     issuer_did, _ = get_default_trustee
-    prover_did, prover_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    prover_did, prover_vk = await create_and_store_did(wallet_handler)
 
     schema_id, res1 = await send_schema(
         pool_handler, wallet_handler, issuer_did, 'Schema 1', '1.0', json.dumps(['first_name', 'last_name', 'age'])
@@ -2600,7 +2592,7 @@ def test_misc_aws_demotion_promotion():
     interval = 180
     nodes_num = 3
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(pool.set_protocol_version(2))
+    loop.run_until_complete(indy_vdr.set_protocol_version(2))
     pool_cfg = json.dumps({"genesis_txn": "../aws_genesis_test"})
     pool_name = "pool_{}".format(random_string(24))
     loop.run_until_complete(pool.create_pool_ledger_config(pool_name, pool_cfg))
@@ -2610,7 +2602,7 @@ def test_misc_aws_demotion_promotion():
     loop.run_until_complete(wallet.create_wallet(wallet_cfg, wallet_creds))
     wallet_handle = loop.run_until_complete(wallet.open_wallet(wallet_cfg, wallet_creds))
     trustee_did, _ = loop.run_until_complete(
-        did.create_and_store_my_did(wallet_handle, json.dumps({'seed': '000000000000000000000000Trustee1'}))
+        create_and_store_did(wallet_handle, seed='000000000000000000000000Trustee1')
     )
 
     # read genesis to get aliases and dests
