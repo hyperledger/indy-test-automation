@@ -13,7 +13,7 @@ on:
         type: string
         default: "{\"networkName\": \"indy-test-automation-network\", \"networkSubnet\": \"10.0.0.0/24\"}"
       testDirectory:
-        description: "The directory, relative to the indy-test-automantion project folder, containing the tests to be executed."
+        description: "The directory, relative to the indy-test-automation project folder, containing the tests to be executed."
         required: false
         type: string
         default: "system/indy-node-tests"
@@ -28,12 +28,12 @@ on:
         type: string
         default: "skip-,TestEndorserSuite,TestLedgerSuite,TestCatchUpSuite"
       debName:
-        description: "The name of the deb package of the extention to install"
+        description: "The name of the deb package of the extension to install"
         required: true
         type: string
         default: "indy-node*.deb"
       packageName:
-        description: "The name of the package of the extention to download with version in apt format (i.e. `sovrin=1.2.0~dev1679329393`)"
+        description: "The name of the package of the extension to download with version in apt format (i.e. `sovrin=1.2.0~dev1679329393`)"
         required: true
         type: string
 
