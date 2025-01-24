@@ -31,19 +31,14 @@ RUN python3 -m pip install -U \
     pipenv \
     && pip3 list
 
-# sovrin repo init
-
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
-    && add-apt-repository "deb https://repo.sovrin.org/sdk/deb bionic master" \
-    && apt-get update
-
 # indy dependency
 ARG LIBINDY_VERSION
 RUN : ${LIBINDY_VERSION:?"LIBINDY_VERSION must be provided"}
 ENV LIBINDY_VERSION=${LIBINDY_VERSION}
 
-RUN apt-get install -y \
-    libindy=${LIBINDY_VERSION} 
+RUN apt-get update && apt-get install -y \
+    libindy=${LIBINDY_VERSION} \
+    && rm -rf /var/lib/apt/lists/*
 
 # TODO workaround (suggested by http://click.pocoo.org/5/python3/)
 # to use pipenv's dependency 'click' (http://click.pocoo.org)
