@@ -1,5 +1,5 @@
 from system.utils import *
-from indy import did
+from system.utils import create_and_store_did
 import pytest
 import hashlib
 import time
@@ -59,7 +59,7 @@ async def test_pool_upgrade_positive(
     #     [
     #         'sed',
     #         '-i',
-    #         '50c\\deb https://repo.sovrin.org/deb xenial master',
+    #             #TODO: find replacement for SOVRIN debs repo,
     #         '/etc/apt/sources.list'
     #     ]
     # )
@@ -111,8 +111,8 @@ async def test_pool_upgrade_positive(
     force = False
     package = 'sovrin'
     random_did = random_did_and_json()[0]
-    trustee_did, trustee_vk = await did.create_and_store_my_did(
-        wallet_handler, json.dumps({'seed': '000000000000000000000000Trustee1'})
+    trustee_did, trustee_vk = await create_and_store_did(
+        wallet_handler, seed='000000000000000000000000Trustee1'
     )
 
     # time.sleep(60)
@@ -127,7 +127,7 @@ async def test_pool_upgrade_positive(
 
     timestamp0 = int(time.time())
 
-    steward_did, steward_vk = await did.create_and_store_my_did(wallet_handler, '{}')
+    steward_did, steward_vk = await create_and_store_did(wallet_handler)
     res = await send_nym(
         pool_handler, wallet_handler, trustee_did, steward_did, steward_vk, 'Steward5', 'STEWARD'
     )
@@ -215,14 +215,14 @@ async def test_pool_upgrade_positive(
     await send_upgrades(pool_handler, wallet_handler, trustee_did, 'indy-node', 5)
     await send_upgrades(pool_handler, wallet_handler, trustee_did, 'sovrin', 5)
 
-    trustee_did2, trustee_vk2 = await did.create_and_store_my_did(
-        wallet_handler, json.dumps({"seed": str('000000000000000000000000Trustee2')})
+    trustee_did2, trustee_vk2 = await create_and_store_did(
+        wallet_handler, seed='000000000000000000000000Trustee2'
     )
-    trustee_did3, trustee_vk3 = await did.create_and_store_my_did(
-        wallet_handler, json.dumps({"seed": str('000000000000000000000000Trustee3')})
+    trustee_did3, trustee_vk3 = await create_and_store_did(
+        wallet_handler, seed='000000000000000000000000Trustee3'
     )
-    trustee_did4, trustee_vk4 = await did.create_and_store_my_did(
-        wallet_handler, json.dumps({"seed": str('000000000000000000000000Trustee4')})
+    trustee_did4, trustee_vk4 = await create_and_store_did(
+        wallet_handler, seed='000000000000000000000000Trustee4'
     )
 
     await send_nym(pool_handler, wallet_handler, trustee_did, trustee_did2, trustee_vk2, None, 'TRUSTEE')
@@ -271,7 +271,7 @@ async def test_pool_upgrade_positive(
     #         [
     #             'sed',
     #             '-i',
-    #             '50c\\deb https://repo.sovrin.org/deb xenial master',
+    #             #TODO: find replacement for SOVRIN debs repo,
     #             '/etc/apt/sources.list'
     #         ]
     #     )

@@ -1,5 +1,5 @@
 from system.utils import *
-from indy import did
+from system.utils import create_and_store_did
 import pytest
 import hashlib
 import time
@@ -45,9 +45,9 @@ async def test_pool_upgrade_positive():
     pool_handle, _ = await pool_helper(path_to_genesis='../aws_genesis')
     wallet_handle, _, _ = await wallet_helper()
     random_did = random_did_and_json()[0]
-    trustee_did, trustee_vk = await did.create_and_store_my_did(
-        wallet_handle, json.dumps({'seed': '000000000000000000000000Trustee1'})
-    )
+    trustee_did, _trustee_vk = await create_and_store_did(
+        wallet_handle, seed='000000000000000000000000Trustee1'
+        )
 
     timestamp0 = int(time.time())
 
