@@ -18,18 +18,10 @@ RUN apt-get update -y && apt-get install -y \
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32 \
     && echo "deb http://security.ubuntu.com/ubuntu bionic-security main"  >> /etc/apt/sources.list
 
-# sovrin repo
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
-    && echo "deb https://repo.sovrin.org/deb bionic master" >> /etc/apt/sources.list
-
 # Hyperledger Artifactory
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 9692C00E657DDE61 \
     && echo "deb https://hyperledger.jfrog.io/artifactory/indy focal dev rc stable" >> /etc/apt/sources.list \
     && printf '%s\n%s\n%s\n' 'Package: *' 'Pin: origin hyperledger.jfrog.io' 'Pin-Priority: 1001' >> /etc/apt/preferences
-
-# Sovrin Artifactory
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3BC8C2DD662F1C45 \
-    && echo "deb https://sovrin.jfrog.io/artifactory/deb focal dev rc stable" >> /etc/apt/sources.list
 
 COPY * /
 
