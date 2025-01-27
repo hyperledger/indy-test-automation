@@ -41,7 +41,8 @@ RUN : ${EXTENTION_DEB:?"EXTENTION_DEB must be provided"}
 RUN EXTENTION_DEB=${EXTENTION_DEB} bash installDeps.sh
 
 # network config
-RUN echo " " >> /etc/indy/indy_config.py \
+RUN mkdir /etc/indy/ \
+    && echo " " > /etc/indy/indy_config.py \
     && echo "NETWORK_NAME = 'sandbox'" >> /etc/indy/indy_config.py \
     && echo " " >> /etc/indy/indy_config.py \
     && echo "logLevel = 0" >> /etc/indy/indy_config.py \
