@@ -121,7 +121,7 @@ jobs:
             ${{ runner.os }}-buildx
 
       - name: Build and push image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./ubuntu/base
           push: ${{ github.event_name != 'pull_request' }}
@@ -177,7 +177,7 @@ jobs:
             ${{ runner.os }}-buildx
 
       - name: Build image indy-node
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./system/docker/node
           file: ./system/docker/node/Dockerfile.node
@@ -242,7 +242,7 @@ jobs:
             ${{ runner.os }}-buildx
 
       - name: Build and cache image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./system/docker/client/
           file: ./system/docker/client/Dockerfile.${{ env.INPUT_UBUNTUVERSION }}
