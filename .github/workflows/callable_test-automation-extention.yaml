@@ -178,7 +178,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx
       - name: Download Pipeline extention-deb artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: ${{ inputs.packageName }}
           path: ./system/docker/node/
@@ -338,13 +338,13 @@ jobs:
           docker network create --subnet="${{ env.NETWORK_SUBNET }}" "${{ env.NETWORK_NAME }}"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: node_image
           path: /tmp
