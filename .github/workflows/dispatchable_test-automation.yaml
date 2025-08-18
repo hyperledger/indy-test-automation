@@ -88,7 +88,7 @@ jobs:
       DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
     steps:
       - name: Git checkout teracyhq/docker-files
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: teracyhq/docker-files
 
@@ -148,7 +148,7 @@ jobs:
       GITHUB_REPOSITORY_NAME: ${{ needs.workflow-setup.outputs.GITHUB_REPOSITORY_NAME }}
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -216,7 +216,7 @@ jobs:
       DIND_BUILD_ARG: ${{ needs.workflow-setup.outputs.DIND_BUILD_ARG }}
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -279,7 +279,7 @@ jobs:
       modules: ${{ steps.get-module-list.outputs.file_names }}
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -320,7 +320,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Git checkout hyperledger/indy-test-automation
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: hyperledger/indy-test-automation
           ref: ${{ env.TEST_AUTOMATION_BRANCH }}
@@ -330,13 +330,13 @@ jobs:
           docker network create --subnet="${{ env.NETWORK_SUBNET }}" "${{ env.NETWORK_NAME }}"
 
       - name: Download client artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: client_image
           path: /tmp
 
       - name: Download node artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: node_image
           path: /tmp
