@@ -5,3 +5,4 @@ testinfra==1.14.1
 python3-indy==1.16.0
 docker==3.7.0
 more-itertools==8.10.0
+requests>=2.32.4 # not directly required, pinned by Snyk to avoid a vulnerability
